@@ -378,8 +378,14 @@ class ChronoTrack_API {
         error_log("ChronoTrack API: Processing results for " . count($all_results_by_bib) . " athletes");
         error_log("DEBUG: all_results_by_bib keys: " . count($all_results_by_bib));
 
+        if (empty($all_results_by_bib)) {
+            error_log("⚠️ CRITICAL: all_results_by_bib is EMPTY! No results to process!");
+            return array();
+        }
+
         $processed_results = array();
         $skipped_count = 0;
+        $null_count = 0;
         $first_bib_logged = false;
 
         foreach ($all_results_by_bib as $bib => $data) {
@@ -402,6 +408,8 @@ class ChronoTrack_API {
                 error_log("SEX DATA: " . print_r($sex_data, true));
                 error_log("AGE DATA: " . print_r($age_data, true));
                 error_log("MAIN RESULT interval_name: " . ($result['results_interval_name'] ?? 'NULL'));
+                error_log("MAIN RESULT results_bib: " . ($result['results_bib'] ?? 'NULL'));
+                error_log("MAIN RESULT results_first_name: " . ($result['results_first_name'] ?? 'NULL'));
                 $first_bib_logged = true;
             }
 
@@ -411,10 +419,15 @@ class ChronoTrack_API {
                 if (count($processed_results) === 0) {
                     error_log("FIRST PROCESSED RESULT:");
                     error_log("  BIB: " . $processed_result['bib_number']);
+                    error_log("  Name: " . $processed_result['first_name'] . ' ' . $processed_result['last_name']);
+                    error_log("  Position: " . $processed_result['position']);
                     error_log("  Gender position: " . $processed_result['gender_position']);
                     error_log("  Category position: " . $processed_result['category_position']);
                 }
                 $processed_results[] = $processed_result;
+            } else {
+                $null_count++;
+                error_log("⚠️ process_single_result returned NULL/false for BIB {$bib}");
             }
         }
 

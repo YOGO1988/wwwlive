@@ -283,7 +283,19 @@ class ChronoTrack_Database {
         error_log("After deduplication: " . count($deduplicated) . " unique BIBs");
 
         $saved_count = 0;
+        $first_logged = false;
         foreach ($deduplicated as $result) {
+            // Debug first result
+            if (!$first_logged) {
+                error_log("========== FIRST RESULT TO SAVE ==========");
+                error_log("BIB: " . ($result['bib_number'] ?? 'NULL'));
+                error_log("Name: " . ($result['first_name'] ?? '') . ' ' . ($result['last_name'] ?? ''));
+                error_log("Position: " . ($result['position'] ?? 'NULL'));
+                error_log("Finish time: " . ($result['finish_time'] ?? 'NULL'));
+                error_log("==========================================");
+                $first_logged = true;
+            }
+
             $data = array(
                 'event_id' => sanitize_text_field($event_id),
                 'participant_id' => sanitize_text_field($result['participant_id'] ?? ''),
@@ -329,18 +341,22 @@ class ChronoTrack_Database {
                     }
                 }
 
-                $result = $wpdb->update(
+                $update_result = $wpdb->update(
                     $table,
                     $data,
                     array('id' => $existing->id)
                 );
-                if ($result !== false) {
+                if ($update_result !== false) {
                     $saved_count++;
+                } else {
+                    error_log("⚠️ UPDATE FAILED for BIB {$data['bib_number']}: " . $wpdb->last_error);
                 }
             } else {
-                $result = $wpdb->insert($table, $data);
-                if ($result !== false) {
+                $insert_result = $wpdb->insert($table, $data);
+                if ($insert_result !== false) {
                     $saved_count++;
+                } else {
+                    error_log("⚠️ INSERT FAILED for BIB {$data['bib_number']}: " . $wpdb->last_error);
                 }
             }
         }
