@@ -538,19 +538,21 @@
                 html += '<table class="chronotrack-details-table">';
                 participant.split_times.forEach((split) => {
                     if (split.interval_name && split.formatted_time) {
-                        // Build interval name with distance in km and position
+                        // Build interval name with distance in km if available
                         let intervalLabel = this.escapeHtml(split.interval_name);
                         if (split.distance_km) {
                             intervalLabel += ' (' + this.escapeHtml(split.distance_km) + ')';
                         }
-                        // Add position to interval label
-                        if (split.position && split.position > 0) {
-                            intervalLabel += ' <span class="chronotrack-split-position">(mce: ' + split.position + ')</span>';
-                        }
 
                         html += '<tr>';
                         html += '<th>' + intervalLabel + ':</th>';
-                        html += '<td class="chronotrack-time">' + this.escapeHtml(split.formatted_time) + '</td>';
+                        html += '<td>';
+                        html += '<span class="chronotrack-time">' + this.escapeHtml(split.formatted_time) + '</span>';
+                        // Add position if available - AFTER the time
+                        if (split.position && split.position > 0) {
+                            html += ' <span class="chronotrack-split-position">(miejsce: ' + split.position + ')</span>';
+                        }
+                        html += '</td>';
                         html += '</tr>';
                     }
                 });
