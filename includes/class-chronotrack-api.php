@@ -266,10 +266,21 @@ class ChronoTrack_API {
             if ($response && isset($response['event_results']) && !empty($response['event_results'])) {
                 error_log("ChronoTrack API: Page {$page}: found " . count($response['event_results']) . " records");
 
+                // Debug first result to see ALL fields
+                static $first_result_logged = false;
+                if (!$first_result_logged && !empty($response['event_results'])) {
+                    error_log("========== FIRST RAW RESULT FROM API ==========");
+                    error_log(print_r($response['event_results'][0], true));
+                    error_log("===============================================");
+                    $first_result_logged = true;
+                }
+
                 // Process results from this page
+                $skipped_empty_bib = 0;
                 foreach ($response['event_results'] as $result) {
                     $bib = $result['results_bib'] ?? '';
                     if (empty($bib)) {
+                        $skipped_empty_bib++;
                         continue;
                     }
 
