@@ -68,7 +68,8 @@ class ChronoTrack_Database {
             KEY participant_id (participant_id),
             KEY finish_timestamp (finish_timestamp),
             KEY position (position),
-            KEY distance (distance)
+            KEY distance (distance),
+            UNIQUE KEY event_bib (event_id, bib_number)
         ) $charset_collate;";
 
         // Split times table
@@ -226,7 +227,21 @@ class ChronoTrack_Database {
         global $wpdb;
         $table = $wpdb->prefix . 'chronotrack_results';
 
+        // Deduplicate results by bib_number before saving
+        $deduplicated = array();
         foreach ($results_data as $result) {
+            $bib = $result['bib_number'] ?? '';
+            if (empty($bib)) {
+                continue; // Skip results without bib number
+            }
+
+            // Keep only the first occurrence of each bib number
+            if (!isset($deduplicated[$bib])) {
+                $deduplicated[$bib] = $result;
+            }
+        }
+
+        foreach ($deduplicated as $result) {
             $data = array(
                 'event_id' => sanitize_text_field($event_id),
                 'participant_id' => sanitize_text_field($result['participant_id'] ?? ''),
@@ -553,5 +568,59 @@ class ChronoTrack_Database {
                 )
             );
         }
+    }
+
+    /**
+     * Clean duplicate results from database
+     * Keeps only the most recent record for each (event_id, bib_number) pair
+     */
+    public function clean_duplicate_results($event_id = null) {
+        global $wpdb;
+        $table = $wpdb->prefix . 'chronotrack_results';
+
+        // Build query to find duplicates
+        $where = $event_id ? $wpdb->prepare("WHERE event_id = %s", $event_id) : "";
+
+        // Delete duplicates, keeping the one with highest ID (most recent)
+        $query = "DELETE t1 FROM $table t1
+                  INNER JOIN $table t2
+                  WHERE t1.event_id = t2.event_id
+                    AND t1.bib_number = t2.bib_number
+                    AND t1.id < t2.id
+                  $where";
+
+        $deleted = $wpdb->query($query);
+
+        return $deleted;
+    }
+
+    /**
+     * Add unique constraint to results table if it doesn't exist
+     */
+    public function add_unique_constraint() {
+        global $wpdb;
+        $table = $wpdb->prefix . 'chronotrack_results';
+
+        // Check if constraint already exists
+        $constraint_exists = $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM INFORMATION_SCHEMA.STATISTICS
+             WHERE table_schema = %s
+             AND table_name = %s
+             AND index_name = 'event_bib'",
+            DB_NAME,
+            $table
+        ));
+
+        if (!$constraint_exists) {
+            // Clean duplicates first
+            $this->clean_duplicate_results();
+
+            // Add unique constraint
+            $wpdb->query("ALTER TABLE $table ADD UNIQUE KEY event_bib (event_id, bib_number)");
+
+            return true;
+        }
+
+        return false;
     }
 }

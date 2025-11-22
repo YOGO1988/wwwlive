@@ -15,6 +15,7 @@ class ChronoTrack_Admin {
         add_action('admin_post_chronotrack_delete_event', array($this, 'delete_event'));
         add_action('admin_post_chronotrack_save_columns', array($this, 'save_columns'));
         add_action('admin_post_chronotrack_fetch_results', array($this, 'manual_fetch_results'));
+        add_action('admin_post_chronotrack_clean_duplicates', array($this, 'clean_duplicates'));
         add_action('admin_enqueue_scripts', array($this, 'enqueue_admin_scripts'));
         add_action('wp_ajax_chronotrack_fetch_event_info', array($this, 'ajax_fetch_event_info'));
     }
@@ -409,5 +410,34 @@ class ChronoTrack_Admin {
         } else {
             wp_send_json_error(array('message' => 'Nie można pobrać danych wydarzenia z API'));
         }
+    }
+
+    /**
+     * Clean duplicate results from database
+     */
+    public function clean_duplicates() {
+        if (!current_user_can('manage_options')) {
+            wp_die('Unauthorized');
+        }
+
+        check_admin_referer('chronotrack_clean_duplicates');
+
+        $event_id = isset($_GET['event_id']) ? sanitize_text_field($_GET['event_id']) : null;
+
+        $db = chronotrack_live_results()->db;
+        $deleted = $db->clean_duplicate_results($event_id);
+
+        // Try to add unique constraint if it doesn't exist
+        $db->add_unique_constraint();
+
+        $message = $deleted > 0
+            ? sprintf(__('Usunięto %d zduplikowanych rekordów.', 'chronotrack-live'), $deleted)
+            : __('Nie znaleziono duplikatów.', 'chronotrack-live');
+
+        wp_redirect(add_query_arg(array(
+            'page' => 'chronotrack-live',
+            'message' => urlencode($message)
+        ), admin_url('admin.php')));
+        exit;
     }
 }
