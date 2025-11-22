@@ -328,7 +328,7 @@
                 row.append($('<td>').addClass('col-name').append(nameLink));
 
                 row.append($('<td>').addClass('col-category').text(result.category));
-                row.append($('<td>').addClass('col-club').text(result.club));
+                row.append($('<td>').addClass('col-club').text(this.formatClub(result.club)));
                 row.append($('<td>').addClass('col-time').text(result.finish_time));
             }
 
@@ -396,7 +396,7 @@
             row.append($('<td>').addClass('col-name').append(nameLink));
 
             row.append($('<td>').addClass('col-category').text(result.category));
-            row.append($('<td>').addClass('col-club').text(result.club));
+            row.append($('<td>').addClass('col-club').text(this.formatClub(result.club)));
             row.append($('<td>').addClass('col-time').text(result.finish_time));
             row.append($('<td>').addClass('col-position').text(result.position));
 
@@ -420,7 +420,6 @@
         filterResults: function() {
             const searchTerm = $('#chronotrack-search').val().toLowerCase();
             const category = $('#chronotrack-category-filter').val();
-            const gender = $('#chronotrack-gender-filter').val();
             const distance = this.selectedDistance;
 
             const tbody = this.currentView === 'meta' ?
@@ -516,7 +515,7 @@
             html += '<tr><th>Wiek:</th><td>' + participant.age + '</td></tr>';
             html += '<tr><th>Płeć:</th><td>' + this.escapeHtml(participant.gender) + '</td></tr>';
             html += '<tr><th>Miejscowość:</th><td>' + this.escapeHtml(participant.city) + '</td></tr>';
-            html += '<tr><th>Klub:</th><td>' + this.escapeHtml(participant.club) + '</td></tr>';
+            html += '<tr><th>Klub:</th><td>' + this.escapeHtml(this.formatClub(participant.club)) + '</td></tr>';
             html += '<tr><th>Kategoria:</th><td>' + this.escapeHtml(participant.category) + '</td></tr>';
             html += '</table>';
             html += '</div>';
@@ -525,9 +524,9 @@
             html += '<div class="chronotrack-details-section">';
             html += '<h3>Wyniki</h3>';
             html += '<table class="chronotrack-details-table">';
-            html += '<tr><th>Miejsce Open:</th><td class="chronotrack-position">' + participant.position + '</td></tr>';
-            html += '<tr><th>Miejsce w kategorii:</th><td class="chronotrack-position">' + participant.category_position + '</td></tr>';
-            html += '<tr><th>Miejsce M/K:</th><td class="chronotrack-position">' + participant.gender_position + '</td></tr>';
+            html += '<tr><th>Miejsce Open:</th><td class="chronotrack-position">' + this.formatPosition(participant.position) + '</td></tr>';
+            html += '<tr><th>Miejsce w kategorii:</th><td class="chronotrack-position">' + this.formatPosition(participant.category_position) + '</td></tr>';
+            html += '<tr><th>Miejsce M/K:</th><td class="chronotrack-position">' + this.formatPosition(participant.gender_position) + '</td></tr>';
             html += '<tr><th>Czas brutto:</th><td class="chronotrack-time">' + this.escapeHtml(participant.finish_time) + '</td></tr>';
             html += '<tr><th>Czas netto:</th><td class="chronotrack-time">' + this.escapeHtml(participant.net_time) + '</td></tr>';
             html += '</table>';
@@ -654,6 +653,26 @@
 
         showError: function(message) {
             console.error('ChronoTrack Error:', message);
+        },
+
+        /**
+         * Format position - show '-' if position is 0
+         */
+        formatPosition: function(value) {
+            if (value === 0 || value === '0' || value === '' || value === null || value === undefined) {
+                return '-';
+            }
+            return value;
+        },
+
+        /**
+         * Format club - show empty string if club is '-'
+         */
+        formatClub: function(value) {
+            if (value === '-' || value === '' || value === null || value === undefined) {
+                return '';
+            }
+            return value;
         },
 
         escapeHtml: function(text) {

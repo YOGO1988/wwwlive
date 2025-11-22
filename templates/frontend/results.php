@@ -37,8 +37,12 @@ $columns = $db->get_event_columns($event->event_id, true);
             <?php endif; ?>
         </div>
 
-        <h1 class="chronotrack-event-name"><?php echo esc_html($event->event_name); ?></h1>
-        <div class="chronotrack-event-date"><?php echo date_i18n(get_option('date_format'), strtotime($event->event_date)); ?></div>
+        <div class="chronotrack-event-date">
+            <?php echo date_i18n(get_option('date_format'), strtotime($event->event_date)); ?>
+            <?php if (!empty($event->event_location)): ?>
+                · <?php echo esc_html($event->event_location); ?>
+            <?php endif; ?>
+        </div>
     </div>
 
     <!-- View Toggle -->
@@ -71,12 +75,6 @@ $columns = $db->get_event_columns($event->event_id, true);
 
         <select id="chronotrack-category-filter" class="chronotrack-filter">
             <option value="">Wszystkie kategorie</option>
-        </select>
-
-        <select id="chronotrack-gender-filter" class="chronotrack-filter">
-            <option value="">K/M</option>
-            <option value="M">Mężczyźni</option>
-            <option value="F">Kobiety</option>
         </select>
     </div>
 

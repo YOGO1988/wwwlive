@@ -339,11 +339,16 @@ class ChronoTrack_API {
 
                 // Check for more pages
                 if (isset($response['page']) && isset($response['page_count'])) {
-                    $has_more_pages = intval($response['page']) < intval($response['page_count']);
+                    $current_page = intval($response['page']);
+                    $total_pages = intval($response['page_count']);
+                    $has_more_pages = $current_page < $total_pages;
+                    error_log("ChronoTrack API OPEN: Page {$current_page} of {$total_pages} (has_more: " . ($has_more_pages ? 'YES' : 'NO') . ")");
                 } elseif (count($response['event_results']) >= 100) {
                     $has_more_pages = true;
+                    error_log("ChronoTrack API OPEN: Got 100 results, assuming more pages exist");
                 } else {
                     $has_more_pages = false;
+                    error_log("ChronoTrack API OPEN: Got " . count($response['event_results']) . " results (< 100), this is the last page");
                 }
 
                 $page++;
