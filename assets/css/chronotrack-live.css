@@ -4,12 +4,12 @@
 
 /* Container */
 .chronotrack-results-container {
-    max-width: 1400px;
-    margin: 20px auto;
+    max-width: 100%;
+    width: 100%;
+    margin: 0;
     padding: 20px;
     background: #fff;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    box-sizing: border-box;
 }
 
 /* Header */
@@ -312,6 +312,7 @@
     color: #000;
     border-bottom: 3px solid #000;
     padding-bottom: 10px;
+    font-size: 1.5em;
 }
 
 .chronotrack-details-grid {
@@ -323,33 +324,35 @@
 
 .chronotrack-details-section {
     background: #f9f9f9;
-    padding: 20px;
+    padding: 15px;
     border-radius: 4px;
 }
 
 .chronotrack-details-section h3 {
     margin-top: 0;
     color: #555;
-    font-size: 18px;
+    font-size: 14px;
     border-bottom: 2px solid #ddd;
-    padding-bottom: 8px;
+    padding-bottom: 6px;
+    margin-bottom: 10px;
 }
 
 .chronotrack-details-table {
     width: 100%;
     border-collapse: collapse;
+    font-size: 13px;
 }
 
 .chronotrack-details-table th {
     text-align: left;
-    padding: 8px 10px;
+    padding: 6px 8px;
     font-weight: 600;
     color: #666;
     width: 50%;
 }
 
 .chronotrack-details-table td {
-    padding: 8px 10px;
+    padding: 6px 8px;
     border-bottom: 1px solid #eee;
 }
 
@@ -358,19 +361,19 @@
 }
 
 .chronotrack-position {
-    font-size: 20px;
+    font-size: 16px;
     font-weight: 700;
     color: #000;
 }
 
 .chronotrack-time {
-    font-size: 18px;
+    font-size: 14px;
     font-weight: 600;
     color: #000;
 }
 
 .chronotrack-split-position {
-    font-size: 14px;
+    font-size: 12px;
     font-weight: 400;
     color: #666;
     margin-left: 8px;

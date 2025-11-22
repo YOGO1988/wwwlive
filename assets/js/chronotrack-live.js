@@ -309,15 +309,15 @@
                             .html('<strong>' + this.escapeHtml(value) + '</strong>');
                         cell.append(nameLink);
                     } else {
-                        cell.text(value);
+                        cell.text(this.cleanValue(value));
                     }
 
                     row.append(cell);
                 });
             } else {
                 // Fallback to hardcoded columns
-                row.append($('<td>').addClass('col-position').text(result.position));
-                row.append($('<td>').addClass('col-bib').text(result.bib_number));
+                row.append($('<td>').addClass('col-position').text(this.cleanValue(result.position)));
+                row.append($('<td>').addClass('col-bib').text(this.cleanValue(result.bib_number)));
 
                 // Make name clickable in fallback mode too
                 const nameLink = $('<a>')
@@ -327,9 +327,9 @@
                     .html('<strong>' + this.escapeHtml(result.full_name) + '</strong>');
                 row.append($('<td>').addClass('col-name').append(nameLink));
 
-                row.append($('<td>').addClass('col-category').text(result.category));
-                row.append($('<td>').addClass('col-club').text(this.formatClub(result.club)));
-                row.append($('<td>').addClass('col-time').text(result.finish_time));
+                row.append($('<td>').addClass('col-category').text(this.cleanValue(result.category)));
+                row.append($('<td>').addClass('col-club').text(this.cleanValue(result.club)));
+                row.append($('<td>').addClass('col-time').text(this.cleanValue(result.finish_time)));
             }
 
             // No separate actions column - name is now clickable
@@ -385,7 +385,7 @@
             const finishTime = new Date(result.finish_timestamp).toLocaleTimeString();
 
             row.append($('<td>').addClass('col-finish-time').text(finishTime));
-            row.append($('<td>').addClass('col-bib').text(result.bib_number));
+            row.append($('<td>').addClass('col-bib').text(this.cleanValue(result.bib_number)));
 
             // Make name clickable
             const nameLink = $('<a>')
@@ -395,10 +395,10 @@
                 .html('<strong>' + this.escapeHtml(result.full_name) + '</strong>');
             row.append($('<td>').addClass('col-name').append(nameLink));
 
-            row.append($('<td>').addClass('col-category').text(result.category));
-            row.append($('<td>').addClass('col-club').text(this.formatClub(result.club)));
-            row.append($('<td>').addClass('col-time').text(result.finish_time));
-            row.append($('<td>').addClass('col-position').text(result.position));
+            row.append($('<td>').addClass('col-category').text(this.cleanValue(result.category)));
+            row.append($('<td>').addClass('col-club').text(this.cleanValue(result.club)));
+            row.append($('<td>').addClass('col-time').text(this.cleanValue(result.finish_time)));
+            row.append($('<td>').addClass('col-position').text(this.cleanValue(result.position)));
 
             // No separate actions column - name is now clickable
 
@@ -538,21 +538,19 @@
                 html += '<table class="chronotrack-details-table">';
                 participant.split_times.forEach((split) => {
                     if (split.interval_name && split.formatted_time) {
-                        // Build interval name with distance in km if available
+                        // Build interval name with distance in km and position
                         let intervalLabel = this.escapeHtml(split.interval_name);
                         if (split.distance_km) {
                             intervalLabel += ' (' + this.escapeHtml(split.distance_km) + ')';
                         }
+                        // Add position to interval label
+                        if (split.position && split.position > 0) {
+                            intervalLabel += ' <span class="chronotrack-split-position">(mce: ' + split.position + ')</span>';
+                        }
 
                         html += '<tr>';
                         html += '<th>' + intervalLabel + ':</th>';
-                        html += '<td>';
-                        html += '<span class="chronotrack-time">' + this.escapeHtml(split.formatted_time) + '</span>';
-                        // Add position if available
-                        if (split.position && split.position > 0) {
-                            html += ' <span class="chronotrack-split-position">(miejsce: ' + split.position + ')</span>';
-                        }
-                        html += '</td>';
+                        html += '<td class="chronotrack-time">' + this.escapeHtml(split.formatted_time) + '</td>';
                         html += '</tr>';
                     }
                 });
