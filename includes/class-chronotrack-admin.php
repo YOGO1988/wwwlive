@@ -250,7 +250,7 @@ class ChronoTrack_Admin {
         $page_data = array(
             'post_title' => $event_name,
             'post_name' => sanitize_title($event_name . '-' . $event_id),
-            'post_content' => '[chronotrack_results event_id="' . $event_id . '"]',
+            'post_content' => '', // Empty - results added automatically by the_content filter
             'post_status' => 'publish',
             'post_type' => 'page',
             'post_author' => get_current_user_id(),

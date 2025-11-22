@@ -191,7 +191,6 @@
                     this.showError(errorMsg + ' (błąd ' + this.consecutiveErrors + '/' + this.maxConsecutiveErrors + ')');
                 },
                 complete: () => {
-                    console.log('✅ AJAX Complete - resetting isLoading');
                     this.isLoading = false;
                     this.hideLoading();
                 }
@@ -199,12 +198,10 @@
         },
 
         renderResults: function(results) {
-            console.log('🎨 renderResults called, results:', results ? results.length : 'NULL');
             const tbody = $('#chronotrack-results-body');
 
             // Clear only if we have new data
             if (!results || results.length === 0) {
-                console.log('❌ No results to render');
                 tbody.html('<tr><td colspan="20" class="chronotrack-no-results">Brak wyników</td></tr>');
                 return;
             }
@@ -435,7 +432,7 @@
 
         startAutoRefresh: function() {
             // Default 3.5 seconds (between 3-4 as requested)
-            const interval = 3500; // Always 3.5 seconds
+            const interval = chronotrackData.refreshInterval || 3500;
             this.currentInterval = interval;
 
             console.log('▶️ Starting auto-refresh with interval:', interval + 'ms');
