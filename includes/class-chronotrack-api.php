@@ -317,6 +317,12 @@ class ChronoTrack_API {
             }
         }
 
+        // Fetch SEX bracket results (gender positions)
+        $sex_results = $this->fetch_sex_bracket_results($event_id);
+
+        // Fetch AGE bracket results (category positions)
+        $age_results = $this->fetch_age_bracket_results($event_id);
+
         // Process collected results
         error_log("ChronoTrack API: Processing results for " . count($all_results_by_bib) . " athletes");
 
@@ -329,7 +335,12 @@ class ChronoTrack_API {
 
             $result = $data['main_result'];
             $entry = $entries_by_bib[$bib] ?? array();
-            $processed_result = $this->process_single_result($result, $data['split_times'], $entry);
+
+            // Get gender and category positions from bracket results
+            $sex_data = $sex_results[$bib] ?? array();
+            $age_data = $age_results[$bib] ?? array();
+
+            $processed_result = $this->process_single_result($result, $data['split_times'], $entry, $sex_data, $age_data);
             if ($processed_result) {
                 $processed_results[] = $processed_result;
             }
@@ -347,9 +358,9 @@ class ChronoTrack_API {
 
     /**
      * Process single result from API
-     * Merges result data with entry data (for city, club, etc.)
+     * Merges result data with entry data (for city, club, etc.) and bracket data
      */
-    private function process_single_result($result, $split_times = array(), $entry = array()) {
+    private function process_single_result($result, $split_times = array(), $entry = array(), $sex_data = array(), $age_data = array()) {
         // Sort split times by time (shortest first)
         usort($split_times, function($a, $b) {
             return $this->parse_time_to_seconds($a['formatted_time']) - $this->parse_time_to_seconds($b['formatted_time']);
@@ -374,26 +385,6 @@ class ChronoTrack_API {
         // Distance - prefer entry data
         $distance = $entry['distance'] ?? $result['results_race_name'] ?? $result['race_distance'] ?? '';
 
-        // Debug logging - show ALL fields from API
-        static $debug_logged = false;
-        if (!$debug_logged) {
-            error_log('========================================');
-            error_log('ChronoTrack API - Raw result (ALL FIELDS):');
-            error_log(print_r($result, true));
-            error_log('========================================');
-            error_log('ChronoTrack API - Checking specific rank fields:');
-            error_log('  results_sex: ' . ($result['results_sex'] ?? 'NULL'));
-            error_log('  results_gender_rank: ' . ($result['results_gender_rank'] ?? 'NULL'));
-            error_log('  results_sex_rank: ' . ($result['results_sex_rank'] ?? 'NULL'));
-            error_log('  results_bracket_rank: ' . ($result['results_bracket_rank'] ?? 'NULL'));
-            error_log('  results_division_rank: ' . ($result['results_division_rank'] ?? 'NULL'));
-            error_log('  results_rank_in_bracket: ' . ($result['results_rank_in_bracket'] ?? 'NULL'));
-            error_log('  results_race_name: ' . ($result['results_race_name'] ?? 'NULL'));
-            error_log('  results_primary_bracket_name: ' . ($result['results_primary_bracket_name'] ?? 'NULL'));
-            error_log('========================================');
-            $debug_logged = true;
-        }
-
         return array(
             'participant_id' => $participant_id,
             'bib_number' => $result['results_bib'] ?? '',
@@ -412,18 +403,18 @@ class ChronoTrack_API {
             'distance' => $distance,
             'race_name' => $distance,  // Alternative field name
             'race_distance' => $distance,  // Alternative field name
-            'category' => $result['results_primary_bracket_name'] ?? '',
-            'bracket_name' => $result['results_primary_bracket_name'] ?? '',  // Alternative
-            'results_primary_bracket_name' => $result['results_primary_bracket_name'] ?? '',  // Alternative
+            'category' => $age_data['category'] ?? $result['results_primary_bracket_name'] ?? '',
+            'bracket_name' => $age_data['category'] ?? $result['results_primary_bracket_name'] ?? '',  // Alternative
+            'results_primary_bracket_name' => $age_data['category'] ?? $result['results_primary_bracket_name'] ?? '',  // Alternative
             'position' => $result['results_rank'] ?? 0,
             'overall_place' => $result['results_rank'] ?? 0,  // Alternative
             'results_rank' => $result['results_rank'] ?? 0,  // Alternative
-            'category_position' => $result['results_bracket_rank'] ?? $result['results_division_rank'] ?? $result['results_rank_in_bracket'] ?? 0,
-            'division_place' => $result['results_bracket_rank'] ?? $result['results_division_rank'] ?? $result['results_rank_in_bracket'] ?? 0,  // Alternative
-            'results_division_rank' => $result['results_bracket_rank'] ?? $result['results_division_rank'] ?? $result['results_rank_in_bracket'] ?? 0,  // Alternative
-            'gender_position' => $result['results_gender_rank'] ?? $result['results_sex_rank'] ?? 0,
-            'sex_place' => $result['results_gender_rank'] ?? $result['results_sex_rank'] ?? 0,  // Alternative
-            'results_sex_rank' => $result['results_gender_rank'] ?? $result['results_sex_rank'] ?? 0,  // Alternative
+            'category_position' => $age_data['category_position'] ?? 0,
+            'division_place' => $age_data['category_position'] ?? 0,  // Alternative
+            'results_division_rank' => $age_data['category_position'] ?? 0,  // Alternative
+            'gender_position' => $sex_data['gender_position'] ?? 0,
+            'sex_place' => $sex_data['gender_position'] ?? 0,  // Alternative
+            'results_sex_rank' => $sex_data['gender_position'] ?? 0,  // Alternative
             'finish_time' => $this->format_time($result['results_gun_time'] ?? ''),
             'gun_time' => $this->format_time($result['results_gun_time'] ?? ''),  // Alternative
             'results_gun_time' => $this->format_time($result['results_gun_time'] ?? ''),  // Alternative
@@ -438,6 +429,118 @@ class ChronoTrack_API {
             'finish_timestamp' => current_time('mysql'),
             'status' => $result['results_status'] ?? 'OK',
         );
+    }
+
+    /**
+     * Fetch SEX bracket results (gender positions)
+     * Returns array indexed by BIB with gender_position
+     */
+    private function fetch_sex_bracket_results($event_id) {
+        error_log("ChronoTrack API: Fetching SEX bracket results for event {$event_id}");
+
+        $sex_results = array();
+        $page = 1;
+        $has_more_pages = true;
+        $max_pages = 50; // Safety limit
+
+        while ($has_more_pages && $page <= $max_pages) {
+            $params = array(
+                'format' => 'json',
+                'page' => $page,
+                'size' => 100,
+                'bracket' => 'SEX',
+            );
+
+            $endpoint = "/api/event/{$event_id}/results";
+            $response = $this->make_api_request($endpoint, $params);
+
+            if ($response && isset($response['event_results']) && !empty($response['event_results'])) {
+                error_log("ChronoTrack API: SEX bracket page {$page}: found " . count($response['event_results']) . " records");
+
+                foreach ($response['event_results'] as $result) {
+                    $bib = $result['results_bib'] ?? '';
+                    if (!empty($bib)) {
+                        // In SEX bracket, results_rank is the gender position
+                        $sex_results[$bib] = array(
+                            'gender_position' => $result['results_rank'] ?? 0,
+                            'gender' => $result['results_sex'] ?? '',
+                        );
+                    }
+                }
+
+                // Check for more pages
+                if (isset($response['page']) && isset($response['page_count'])) {
+                    $has_more_pages = intval($response['page']) < intval($response['page_count']);
+                } elseif (count($response['event_results']) >= 100) {
+                    $has_more_pages = true;
+                } else {
+                    $has_more_pages = false;
+                }
+
+                $page++;
+            } else {
+                $has_more_pages = false;
+            }
+        }
+
+        error_log("ChronoTrack API: Fetched gender positions for " . count($sex_results) . " athletes");
+        return $sex_results;
+    }
+
+    /**
+     * Fetch AGE bracket results (category positions)
+     * Returns array indexed by BIB with category_position
+     */
+    private function fetch_age_bracket_results($event_id) {
+        error_log("ChronoTrack API: Fetching AGE bracket results for event {$event_id}");
+
+        $age_results = array();
+        $page = 1;
+        $has_more_pages = true;
+        $max_pages = 50; // Safety limit
+
+        while ($has_more_pages && $page <= $max_pages) {
+            $params = array(
+                'format' => 'json',
+                'page' => $page,
+                'size' => 100,
+                'bracket' => 'AGE',
+            );
+
+            $endpoint = "/api/event/{$event_id}/results";
+            $response = $this->make_api_request($endpoint, $params);
+
+            if ($response && isset($response['event_results']) && !empty($response['event_results'])) {
+                error_log("ChronoTrack API: AGE bracket page {$page}: found " . count($response['event_results']) . " records");
+
+                foreach ($response['event_results'] as $result) {
+                    $bib = $result['results_bib'] ?? '';
+                    if (!empty($bib)) {
+                        // In AGE bracket, results_rank is the category position
+                        $age_results[$bib] = array(
+                            'category_position' => $result['results_rank'] ?? 0,
+                            'category' => $result['results_primary_bracket_name'] ?? '',
+                        );
+                    }
+                }
+
+                // Check for more pages
+                if (isset($response['page']) && isset($response['page_count'])) {
+                    $has_more_pages = intval($response['page']) < intval($response['page_count']);
+                } elseif (count($response['event_results']) >= 100) {
+                    $has_more_pages = true;
+                } else {
+                    $has_more_pages = false;
+                }
+
+                $page++;
+            } else {
+                $has_more_pages = false;
+            }
+        }
+
+        error_log("ChronoTrack API: Fetched category positions for " . count($age_results) . " athletes");
+        return $age_results;
     }
 
     /**
