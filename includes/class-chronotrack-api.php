@@ -365,10 +365,21 @@ class ChronoTrack_API {
         }
 
         // Save to database
+        error_log("========== SAVING TO DATABASE ==========");
+        error_log("Processed results count: " . count($processed_results));
+
         if (!empty($processed_results)) {
+            error_log("First 3 processed results:");
+            foreach (array_slice($processed_results, 0, 3) as $idx => $res) {
+                error_log("  [{$idx}] BIB: {$res['bib_number']}, Gender pos: {$res['gender_position']}, Cat pos: {$res['category_position']}");
+            }
+
             $db = chronotrack_live_results()->db;
-            $db->save_results($event_id, $processed_results);
-            error_log("ChronoTrack API: Saved " . count($processed_results) . " results to database");
+            error_log("Calling save_results() for event {$event_id}...");
+            $saved_count = $db->save_results($event_id, $processed_results);
+            error_log("ChronoTrack API: Saved {$saved_count} results to database");
+        } else {
+            error_log("⚠️ WARNING: processed_results is EMPTY! Nothing to save.");
         }
 
         return $processed_results;

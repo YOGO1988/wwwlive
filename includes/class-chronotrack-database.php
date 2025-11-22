@@ -227,11 +227,14 @@ class ChronoTrack_Database {
         global $wpdb;
         $table = $wpdb->prefix . 'chronotrack_results';
 
+        error_log("DB save_results() called: event_id={$event_id}, input count=" . count($results_data));
+
         // Deduplicate results by bib_number before saving
         $deduplicated = array();
         foreach ($results_data as $result) {
             $bib = $result['bib_number'] ?? '';
             if (empty($bib)) {
+                error_log("  Skipping result without bib_number");
                 continue; // Skip results without bib number
             }
 
@@ -241,6 +244,9 @@ class ChronoTrack_Database {
             }
         }
 
+        error_log("After deduplication: " . count($deduplicated) . " unique BIBs");
+
+        $saved_count = 0;
         foreach ($deduplicated as $result) {
             $data = array(
                 'event_id' => sanitize_text_field($event_id),
@@ -287,15 +293,24 @@ class ChronoTrack_Database {
                     }
                 }
 
-                $wpdb->update(
+                $result = $wpdb->update(
                     $table,
                     $data,
                     array('id' => $existing->id)
                 );
+                if ($result !== false) {
+                    $saved_count++;
+                }
             } else {
-                $wpdb->insert($table, $data);
+                $result = $wpdb->insert($table, $data);
+                if ($result !== false) {
+                    $saved_count++;
+                }
             }
         }
+
+        error_log("DB save_results() complete: saved {$saved_count} records to database");
+        return $saved_count;
     }
 
     /**
