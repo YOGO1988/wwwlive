@@ -46,11 +46,10 @@ $max_logo_height = get_option('chronotrack_max_logo_height', 200);
             META (Linia mety)
         </button>
         <button class="chronotrack-manual-refresh">
-            🔄 Odśwież teraz
+            🔄 Odśwież
         </button>
         <div class="chronotrack-last-update">
-            Ostatnia aktualizacja: <span id="chronotrack-timestamp">--:--:--</span>
-            <span class="chronotrack-autorefresh-status">(auto: co 3-4 sek)</span>
+            <span id="chronotrack-timestamp"></span>
         </div>
     </div>
 

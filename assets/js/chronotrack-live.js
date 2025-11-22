@@ -14,6 +14,9 @@
         isLoading: false,
         consecutiveErrors: 0,
         maxConsecutiveErrors: 3,
+        lastResultCount: 0,
+        unchangedCount: 0,
+        currentInterval: 3500, // Start with 3.5 seconds
 
         init: function() {
             console.log('=== ChronoTrack Live Init START ===');
@@ -137,6 +140,30 @@
                     console.log('✅ AJAX Success:', response);
                     if (response.success) {
                         this.consecutiveErrors = 0; // Reset error counter
+
+                        const newCount = response.data.count || 0;
+                        const hasChanges = newCount !== this.lastResultCount;
+
+                        if (hasChanges) {
+                            console.log('🆕 New results detected:', newCount, '(was:', this.lastResultCount + ')');
+                            this.lastResultCount = newCount;
+                            this.unchangedCount = 0;
+
+                            // Reset to fast interval when there are changes
+                            if (this.currentInterval !== 3500) {
+                                this.adjustRefreshInterval(3500);
+                            }
+                        } else {
+                            this.unchangedCount++;
+                            console.log('⏸️ No changes, count:', this.unchangedCount);
+
+                            // After 10 unchanged checks (~35 seconds), slow down to 60 seconds
+                            if (this.unchangedCount >= 10 && this.currentInterval !== 60000) {
+                                console.log('⏱️ Slowing refresh to 60 seconds (no changes detected)');
+                                this.adjustRefreshInterval(60000);
+                            }
+                        }
+
                         if (view === 'meta') {
                             this.renderMetaResults(response.data.results);
                         } else {
@@ -172,18 +199,23 @@
 
         renderResults: function(results) {
             const tbody = $('#chronotrack-results-body');
-            tbody.empty();
 
+            // Clear only if we have new data
             if (!results || results.length === 0) {
-                tbody.html('<tr><td colspan="20" class="chronotrack-no-results">' +
-                    chronotrackData.strings.noResults + '</td></tr>');
+                tbody.html('<tr><td colspan="20" class="chronotrack-no-results">Brak wyników</td></tr>');
                 return;
             }
 
+            // Clear existing rows
+            tbody.empty();
+
+            // Render each result
             results.forEach((result) => {
                 const row = this.createResultRow(result);
                 tbody.append(row);
             });
+
+            console.log('✅ Rendered', results.length, 'results');
         },
 
         createResultRow: function(result) {
@@ -401,6 +433,7 @@
         startAutoRefresh: function() {
             // Default 3.5 seconds (between 3-4 as requested)
             const interval = chronotrackData.refreshInterval || 3500;
+            this.currentInterval = interval;
 
             console.log('▶️ Starting auto-refresh with interval:', interval + 'ms');
 
@@ -417,10 +450,25 @@
             }
         },
 
+        adjustRefreshInterval: function(newInterval) {
+            console.log('🔄 Adjusting refresh interval from', this.currentInterval + 'ms to', newInterval + 'ms');
+            this.currentInterval = newInterval;
+
+            // Restart timer with new interval
+            this.stopAutoRefresh();
+            this.refreshInterval = setInterval(() => {
+                this.loadResults(this.currentView);
+            }, newInterval);
+        },
+
         updateTimestamp: function() {
             const now = new Date();
-            const timeString = now.toLocaleTimeString();
-            $('#chronotrack-timestamp').text(timeString);
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+            const timeString = hours + ':' + minutes + ':' + seconds;
+
+            $('#chronotrack-timestamp').text('Aktualizacja: ' + timeString);
         },
 
         showLoading: function() {
