@@ -28,10 +28,8 @@ class ChronoTrack_API {
      * Build API URL with authentication parameters
      */
     private function build_api_url($endpoint, $params = array()) {
-        // Add trailing slash if not present
-        if (substr($endpoint, -1) !== '/') {
-            $endpoint .= '/';
-        }
+        // Remove trailing slash if present (API doesn't like it with query params)
+        $endpoint = rtrim($endpoint, '/');
 
         // Authentication parameters
         $auth_params = array(
@@ -472,7 +470,9 @@ class ChronoTrack_API {
             );
 
             $endpoint = "/api/event/{$event_id}/results";
+            error_log("SEX BRACKET REQUEST: endpoint={$endpoint}, params=" . json_encode($params));
             $response = $this->make_api_request($endpoint, $params);
+            error_log("SEX BRACKET RESPONSE: " . (is_array($response) ? 'array with ' . count($response) . ' keys' : 'NULL or error'));
 
             if ($response && isset($response['event_results']) && !empty($response['event_results'])) {
                 error_log("ChronoTrack API: SEX bracket page {$page}: found " . count($response['event_results']) . " records");
@@ -528,7 +528,9 @@ class ChronoTrack_API {
             );
 
             $endpoint = "/api/event/{$event_id}/results";
+            error_log("AGE BRACKET REQUEST: endpoint={$endpoint}, params=" . json_encode($params));
             $response = $this->make_api_request($endpoint, $params);
+            error_log("AGE BRACKET RESPONSE: " . (is_array($response) ? 'array with ' . count($response) . ' keys' : 'NULL or error'));
 
             if ($response && isset($response['event_results']) && !empty($response['event_results'])) {
                 error_log("ChronoTrack API: AGE bracket page {$page}: found " . count($response['event_results']) . " records");
