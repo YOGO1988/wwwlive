@@ -14,6 +14,11 @@ class ChronoTrack_Frontend {
         add_filter('the_content', array($this, 'add_results_to_content'));
         add_action('wp_head', array($this, 'hide_sidebar_for_chronotrack'));
         add_filter('body_class', array($this, 'add_body_class'));
+
+        // Force disable sidebars at WordPress core level
+        add_filter('is_active_sidebar', array($this, 'disable_sidebar'), 10, 2);
+        add_filter('sidebars_widgets', array($this, 'remove_sidebar_widgets'));
+        add_filter('theme_page_templates', array($this, 'add_full_width_template'));
     }
 
     /**
@@ -183,7 +188,38 @@ class ChronoTrack_Frontend {
         if ($this->is_chronotrack_page()) {
             $classes[] = 'chronotrack-page';
             $classes[] = 'page-template-full-width';
+            $classes[] = 'page-template-default';
         }
         return $classes;
+    }
+
+    /**
+     * Disable sidebar on ChronoTrack pages at WordPress core level
+     */
+    public function disable_sidebar($is_active, $sidebar_id) {
+        if ($this->is_chronotrack_page()) {
+            // Disable ALL sidebars on ChronoTrack pages
+            return false;
+        }
+        return $is_active;
+    }
+
+    /**
+     * Remove all sidebar widgets on ChronoTrack pages
+     */
+    public function remove_sidebar_widgets($sidebars_widgets) {
+        if ($this->is_chronotrack_page()) {
+            // Return empty array for all sidebars
+            return array('wp_inactive_widgets' => array());
+        }
+        return $sidebars_widgets;
+    }
+
+    /**
+     * Add full-width template option
+     */
+    public function add_full_width_template($templates) {
+        $templates['chronotrack-full-width.php'] = 'ChronoTrack Full Width';
+        return $templates;
     }
 }
