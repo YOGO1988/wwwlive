@@ -46,12 +46,49 @@
 
             console.log('✅ chronotrackData loaded:', chronotrackData);
 
+            // Remove WordPress sidebar completely from DOM
+            this.removeSidebar();
+
             this.bindEvents();
 
             // Start auto-refresh immediately (user wants this!)
             this.startAutoRefresh();
 
             console.log('=== ChronoTrack Live Init END ===');
+        },
+
+        removeSidebar: function() {
+            // Aggressively remove all sidebar elements
+            const sidebarSelectors = [
+                '#secondary',
+                'aside.sidebar',
+                '.sidebar',
+                '.widget-area',
+                '#sidebar',
+                '[id*="sidebar"]',
+                '[class*="sidebar"]:not(.chronotrack-distance-filters)',
+                'aside:not(.chronotrack-results-container)'
+            ];
+
+            sidebarSelectors.forEach(selector => {
+                $(selector).remove();
+            });
+
+            // Force full width layout
+            $('.site-content, .hfeed, #content').css({
+                'display': 'block',
+                'width': '100%',
+                'max-width': '100%',
+                'grid-template-columns': 'none'
+            });
+
+            $('#primary, .content-area, article, main').css({
+                'width': '100%',
+                'max-width': '100%',
+                'flex': '0 0 100%'
+            });
+
+            console.log('✅ Sidebar removed from DOM');
         },
 
         bindEvents: function() {
@@ -220,21 +257,73 @@
                 return;
             }
 
-            // Clear all rows and re-render to avoid ID mismatches
-            tbody.empty();
-
-            // Render each result
-            results.forEach((result) => {
-                const row = this.createResultRow(result);
-                tbody.append(row);
+            // Build a map of existing rows by bib_number (unique identifier)
+            const existingRows = {};
+            tbody.find('tr[data-bib]').each(function() {
+                const bib = $(this).attr('data-bib');
+                existingRows[bib] = $(this);
             });
 
-            console.log('✅ Rendered', results.length, 'results');
+            // Track which bibs we've processed
+            const processedBibs = new Set();
+
+            // Debug first result
+            if (results.length > 0) {
+                console.log('🔍 First result data:', {
+                    bib: results[0].bib_number,
+                    name: results[0].full_name,
+                    category_position: results[0].category_position,
+                    gender_position: results[0].gender_position,
+                    city: results[0].city,
+                    club: results[0].club,
+                    distance: results[0].distance
+                });
+            }
+
+            // Update or add each result
+            results.forEach((result, index) => {
+                const bib = result.bib_number;
+
+                // Skip if we already processed this bib (prevent duplicates)
+                if (processedBibs.has(bib)) {
+                    console.warn('⚠️ Duplicate bib detected:', bib);
+                    return;
+                }
+                processedBibs.add(bib);
+
+                const existingRow = existingRows[bib];
+
+                if (existingRow) {
+                    // Update existing row in place - preserve position and visibility
+                    const isVisible = existingRow.is(':visible');
+                    const newRow = this.createResultRow(result);
+
+                    // Copy visibility state
+                    if (!isVisible) {
+                        newRow.hide();
+                    }
+
+                    existingRow.replaceWith(newRow);
+                    delete existingRows[bib];
+                } else {
+                    // New result - add it
+                    const newRow = this.createResultRow(result);
+                    tbody.append(newRow);
+                }
+            });
+
+            // Remove rows that no longer exist in results
+            $.each(existingRows, function(bib, row) {
+                row.remove();
+            });
+
+            console.log('✅ Rendered', results.length, 'results (background update, preserved filters)');
         },
 
         createResultRow: function(result) {
             const row = $('<tr>')
                 .attr('data-result-id', result.id)
+                .attr('data-bib', result.bib_number)
                 .attr('data-distance', result.distance || '');
 
             // Use dynamic columns if available
