@@ -319,9 +319,29 @@ class ChronoTrack_API {
                             $all_results_by_bib[$bib]['main_result'] = $result;
                         }
                     } else {
-                        // Split time
+                        // Split time - extract distance in meters for km conversion
+                        $distance_meters = 0;
+                        if (preg_match('/(\d+)\s*m/', $interval_name, $matches)) {
+                            $distance_meters = intval($matches[1]);
+                        } elseif (preg_match('/(\d+(?:\.\d+)?)\s*km/', $interval_name, $matches)) {
+                            $distance_meters = floatval($matches[1]) * 1000;
+                        }
+
+                        // Format distance for display
+                        $distance_km = '';
+                        if ($distance_meters > 0) {
+                            if ($distance_meters >= 1000) {
+                                $km = $distance_meters / 1000;
+                                $distance_km = ($km == intval($km)) ? intval($km) . ' km' : number_format($km, 1, '.', '') . ' km';
+                            } else {
+                                $distance_km = $distance_meters . ' m';
+                            }
+                        }
+
                         $split_data = array(
                             'interval_name' => $interval_name,
+                            'distance_km' => $distance_km,
+                            'position' => $result['results_rank'] ?? 0,
                             'time' => $result['results_time'] ?? '',
                             'pace' => $result['results_pace'] ?? '',
                             'formatted_time' => $this->format_time($result['results_time'] ?? ''),

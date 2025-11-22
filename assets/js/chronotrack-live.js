@@ -94,8 +94,8 @@
                 }
             });
 
-            // Manual refresh button
-            $(document).on('click', '.chronotrack-manual-refresh', (e) => {
+            // Manual refresh button (both old button and new icon)
+            $(document).on('click', '.chronotrack-manual-refresh, .chronotrack-manual-refresh-icon', (e) => {
                 e.preventDefault();
                 console.log('🔄 Manual refresh triggered');
                 this.loadResults(this.currentView);
@@ -511,12 +511,11 @@
             html += '<div class="chronotrack-details-section">';
             html += '<h3>Podstawowe informacje</h3>';
             html += '<table class="chronotrack-details-table">';
-            html += '<tr><th>Numer startowy:</th><td>' + this.escapeHtml(participant.bib_number) + '</td></tr>';
-            html += '<tr><th>Wiek:</th><td>' + participant.age + '</td></tr>';
-            html += '<tr><th>Płeć:</th><td>' + this.escapeHtml(participant.gender) + '</td></tr>';
-            html += '<tr><th>Miejscowość:</th><td>' + this.escapeHtml(participant.city) + '</td></tr>';
-            html += '<tr><th>Klub:</th><td>' + this.escapeHtml(this.formatClub(participant.club)) + '</td></tr>';
-            html += '<tr><th>Kategoria:</th><td>' + this.escapeHtml(participant.category) + '</td></tr>';
+            html += '<tr><th>Numer startowy:</th><td>' + this.escapeHtml(this.cleanValue(participant.bib_number)) + '</td></tr>';
+            html += '<tr><th>Płeć:</th><td>' + this.escapeHtml(this.cleanValue(participant.gender)) + '</td></tr>';
+            html += '<tr><th>Miejscowość:</th><td>' + this.escapeHtml(this.cleanValue(participant.city)) + '</td></tr>';
+            html += '<tr><th>Klub:</th><td>' + this.escapeHtml(this.cleanValue(participant.club)) + '</td></tr>';
+            html += '<tr><th>Kategoria:</th><td>' + this.escapeHtml(this.cleanValue(participant.category)) + '</td></tr>';
             html += '</table>';
             html += '</div>';
 
@@ -539,9 +538,21 @@
                 html += '<table class="chronotrack-details-table">';
                 participant.split_times.forEach((split) => {
                     if (split.interval_name && split.formatted_time) {
+                        // Build interval name with distance in km if available
+                        let intervalLabel = this.escapeHtml(split.interval_name);
+                        if (split.distance_km) {
+                            intervalLabel += ' (' + this.escapeHtml(split.distance_km) + ')';
+                        }
+
                         html += '<tr>';
-                        html += '<th>' + this.escapeHtml(split.interval_name) + ':</th>';
-                        html += '<td class="chronotrack-time">' + this.escapeHtml(split.formatted_time) + '</td>';
+                        html += '<th>' + intervalLabel + ':</th>';
+                        html += '<td>';
+                        html += '<span class="chronotrack-time">' + this.escapeHtml(split.formatted_time) + '</span>';
+                        // Add position if available
+                        if (split.position && split.position > 0) {
+                            html += ' <span class="chronotrack-split-position">(miejsce: ' + split.position + ')</span>';
+                        }
+                        html += '</td>';
                         html += '</tr>';
                     }
                 });
@@ -673,23 +684,27 @@
         },
 
         /**
-         * Format position - show empty string if position is 0
+         * Format any value - clean empty values (-, 0, null)
          */
-        formatPosition: function(value) {
-            if (value === 0 || value === '0' || value === '' || value === null || value === undefined) {
+        cleanValue: function(value) {
+            if (value === '-' || value === 0 || value === '0' || value === '' || value === null || value === undefined || value === 'null') {
                 return '';
             }
             return value;
         },
 
         /**
+         * Format position - show empty string if position is 0
+         */
+        formatPosition: function(value) {
+            return this.cleanValue(value);
+        },
+
+        /**
          * Format club - show empty string if club is '-'
          */
         formatClub: function(value) {
-            if (value === '-' || value === '' || value === null || value === undefined) {
-                return '';
-            }
-            return value;
+            return this.cleanValue(value);
         },
 
         escapeHtml: function(text) {
