@@ -93,12 +93,27 @@ class ChronoTrack_API {
 
         $event_data = $response['event'];
 
+        // Convert event_start_time to MySQL datetime format
+        $event_date = '';
+        if (!empty($event_data['event_start_time'])) {
+            $start_time = $event_data['event_start_time'];
+
+            // If it's a Unix timestamp (numeric)
+            if (is_numeric($start_time)) {
+                $event_date = date('Y-m-d H:i:s', intval($start_time));
+            }
+            // If it's already a datetime string
+            else if (strtotime($start_time)) {
+                $event_date = date('Y-m-d H:i:s', strtotime($start_time));
+            }
+        }
+
         return array(
             'event_id' => $event_data['event_id'] ?? '',
             'event_name' => $event_data['event_name'] ?? '',
-            'event_date' => $event_data['event_start_time'] ?? '',
+            'event_date' => $event_date,
             'timezone' => $event_data['location_time_zone'] ?? '',
-            'location' => ($event_data['location_city'] ?? '') . ', ' . ($event_data['location_country'] ?? ''),
+            'location' => trim(($event_data['location_city'] ?? '') . ', ' . ($event_data['location_country'] ?? ''), ', '),
             'status' => ($event_data['event_is_published'] ?? '0') === '1' ? 'active' : 'inactive',
         );
     }
@@ -269,7 +284,15 @@ class ChronoTrack_API {
                     $interval_name = $result['results_interval_name'] ?? '';
 
                     // Check if this is main result or split time
-                    if (in_array($interval_name, array('Full Course', 'Finish', '')) || empty($interval_name)) {
+                    // Main results have interval_name like: 'Full Course', 'Finish', distance name, or empty
+                    // Split times have checkpoint names like: 'T1', '10km', 'Swim', etc.
+                    // We'll consider it a split time ONLY if it looks like a checkpoint (short name, contains numbers/T)
+                    $is_split = !empty($interval_name) &&
+                                (preg_match('/^T\d+$/i', $interval_name) || // T1, T2, etc.
+                                 preg_match('/^\d+\s*(km|m|mi)$/i', $interval_name) || // 10km, 5m, etc.
+                                 in_array(strtolower($interval_name), array('swim', 'bike', 'run', 'kayak', 'mtb')));
+
+                    if (!$is_split) {
                         // Main result - only save if we don't have one yet
                         if ($all_results_by_bib[$bib]['main_result'] === null) {
                             $all_results_by_bib[$bib]['main_result'] = $result;
