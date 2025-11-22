@@ -284,15 +284,7 @@ class ChronoTrack_API {
                     $interval_name = $result['results_interval_name'] ?? '';
 
                     // Check if this is main result or split time
-                    // Main results have interval_name like: 'Full Course', 'Finish', distance name, or empty
-                    // Split times have checkpoint names like: 'T1', '10km', 'Swim', etc.
-                    // We'll consider it a split time ONLY if it looks like a checkpoint (short name, contains numbers/T)
-                    $is_split = !empty($interval_name) &&
-                                (preg_match('/^T\d+$/i', $interval_name) || // T1, T2, etc.
-                                 preg_match('/^\d+\s*(km|m|mi)$/i', $interval_name) || // 10km, 5m, etc.
-                                 in_array(strtolower($interval_name), array('swim', 'bike', 'run', 'kayak', 'mtb')));
-
-                    if (!$is_split) {
+                    if (in_array($interval_name, array('Full Course', 'Finish', '')) || empty($interval_name)) {
                         // Main result - only save if we don't have one yet
                         if ($all_results_by_bib[$bib]['main_result'] === null) {
                             $all_results_by_bib[$bib]['main_result'] = $result;
@@ -338,24 +330,39 @@ class ChronoTrack_API {
             }
         }
 
-        // Fetch SEX bracket results (gender positions)
-        error_log("========== FETCHING SEX BRACKET FOR EVENT {$event_id} ==========");
-        $sex_results = $this->fetch_sex_bracket_results($event_id);
-        error_log("SEX BRACKET COMPLETE: Got " . count($sex_results) . " gender positions");
+        // OPTION: Disable 3-endpoint merge temporarily for debugging
+        // Set to false to use simple mode (like v3.x)
+        $use_bracket_merge = true;
 
-        // Fetch AGE bracket results (category positions)
-        error_log("========== FETCHING AGE BRACKET FOR EVENT {$event_id} ==========");
-        $age_results = $this->fetch_age_bracket_results($event_id);
-        error_log("AGE BRACKET COMPLETE: Got " . count($age_results) . " category positions");
+        $sex_results = array();
+        $age_results = array();
+
+        if ($use_bracket_merge) {
+            // Fetch SEX bracket results (gender positions)
+            error_log("========== FETCHING SEX BRACKET FOR EVENT {$event_id} ==========");
+            $sex_results = $this->fetch_sex_bracket_results($event_id);
+            error_log("SEX BRACKET COMPLETE: Got " . count($sex_results) . " gender positions");
+
+            // Fetch AGE bracket results (category positions)
+            error_log("========== FETCHING AGE BRACKET FOR EVENT {$event_id} ==========");
+            $age_results = $this->fetch_age_bracket_results($event_id);
+            error_log("AGE BRACKET COMPLETE: Got " . count($age_results) . " category positions");
+        } else {
+            error_log("⚠️ Bracket merge DISABLED - using simple mode");
+        }
 
         // Process collected results
         error_log("ChronoTrack API: Processing results for " . count($all_results_by_bib) . " athletes");
+        error_log("DEBUG: all_results_by_bib keys: " . count($all_results_by_bib));
 
         $processed_results = array();
+        $skipped_count = 0;
         $first_bib_logged = false;
+
         foreach ($all_results_by_bib as $bib => $data) {
             if ($data['main_result'] === null) {
                 error_log("ChronoTrack API: No main result for BIB {$bib}, skipping");
+                $skipped_count++;
                 continue;
             }
 
@@ -371,6 +378,7 @@ class ChronoTrack_API {
                 error_log("========== MERGE DEBUG FOR BIB {$bib} ==========");
                 error_log("SEX DATA: " . print_r($sex_data, true));
                 error_log("AGE DATA: " . print_r($age_data, true));
+                error_log("MAIN RESULT interval_name: " . ($result['results_interval_name'] ?? 'NULL'));
                 $first_bib_logged = true;
             }
 
@@ -386,6 +394,8 @@ class ChronoTrack_API {
                 $processed_results[] = $processed_result;
             }
         }
+
+        error_log("DEBUG: Skipped {$skipped_count} results (no main_result)");
 
         // Save to database
         error_log("========== SAVING TO DATABASE ==========");

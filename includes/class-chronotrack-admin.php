@@ -367,13 +367,26 @@ class ChronoTrack_Admin {
         // Fetch results from API
         $results = $api->fetch_results($event_id);
 
+        // Check database to see what was actually saved
+        $db = chronotrack_live_results()->db;
+        $db_results = $db->get_results($event_id);
+        $db_count = count($db_results);
+
         $message = !empty($results) ? 'results_fetched' : 'no_results';
+
+        // Add debug info to message
+        if (!empty($results) && $db_count === 0) {
+            $message = urlencode("⚠️ PROBLEM: API zwróciło " . count($results) . " wyników, ale w bazie jest 0! Sprawdź format danych lub parametry API.");
+        } else if (!empty($results) && $db_count > 0) {
+            $message = urlencode("✅ Pobrano " . count($results) . " wyników z API i zapisano " . $db_count . " do bazy.");
+        }
 
         wp_redirect(add_query_arg(
             array(
                 'page' => 'chronotrack-live',
                 'message' => $message,
-                'count' => count($results)
+                'count' => count($results),
+                'db_count' => $db_count
             ),
             admin_url('admin.php')
         ));
