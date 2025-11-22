@@ -355,7 +355,7 @@ class ChronoTrack_API {
 
         // OPTION: Disable 3-endpoint merge temporarily for debugging
         // Set to false to use simple mode (like v3.x)
-        $use_bracket_merge = false;  // DISABLED FOR TESTING
+        $use_bracket_merge = true;  // ENABLED - fetch gender & category positions
 
         $sex_results = array();
         $age_results = array();
