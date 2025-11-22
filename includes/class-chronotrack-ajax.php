@@ -28,45 +28,77 @@ class ChronoTrack_Ajax {
      * Get results for an event
      */
     public function get_results() {
-        check_ajax_referer('chronotrack_nonce', 'nonce');
+        // Verify nonce
+        if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'chronotrack_nonce')) {
+            wp_send_json_error(array(
+                'message' => 'Nieprawidłowy nonce',
+                'debug' => array(
+                    'nonce_received' => isset($_POST['nonce']),
+                    'post_data' => array_keys($_POST)
+                )
+            ));
+            return;
+        }
 
         $event_id = sanitize_text_field($_POST['event_id'] ?? '');
 
         if (empty($event_id)) {
-            wp_send_json_error(array('message' => __('Event ID is required.', 'chronotrack-live')));
+            wp_send_json_error(array('message' => 'Brak Event ID'));
+            return;
         }
 
-        $db = chronotrack_live_results()->db;
-        $results = $db->get_results($event_id);
+        try {
+            $db = chronotrack_live_results()->db;
+            $results = $db->get_results($event_id);
 
-        wp_send_json_success(array(
-            'results' => $this->format_results($results),
-            'count' => count($results),
-            'timestamp' => current_time('timestamp'),
-        ));
+            wp_send_json_success(array(
+                'results' => $this->format_results($results),
+                'count' => count($results),
+                'timestamp' => current_time('timestamp'),
+                'event_id' => $event_id
+            ));
+        } catch (Exception $e) {
+            wp_send_json_error(array(
+                'message' => 'Błąd bazy danych: ' . $e->getMessage()
+            ));
+        }
     }
 
     /**
      * Get recent finishers (META button)
      */
     public function get_recent_finishers() {
-        check_ajax_referer('chronotrack_nonce', 'nonce');
+        // Verify nonce
+        if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'chronotrack_nonce')) {
+            wp_send_json_error(array(
+                'message' => 'Nieprawidłowy nonce'
+            ));
+            return;
+        }
 
         $event_id = sanitize_text_field($_POST['event_id'] ?? '');
         $limit = absint($_POST['limit'] ?? 50);
 
         if (empty($event_id)) {
-            wp_send_json_error(array('message' => __('Event ID is required.', 'chronotrack-live')));
+            wp_send_json_error(array('message' => 'Brak Event ID'));
+            return;
         }
 
-        $db = chronotrack_live_results()->db;
-        $results = $db->get_recent_finishers($event_id, $limit);
+        try {
+            $db = chronotrack_live_results()->db;
+            $results = $db->get_recent_finishers($event_id, $limit);
 
-        wp_send_json_success(array(
-            'results' => $this->format_results($results),
-            'count' => count($results),
-            'timestamp' => current_time('timestamp'),
-        ));
+            wp_send_json_success(array(
+                'results' => $this->format_results($results),
+                'count' => count($results),
+                'timestamp' => current_time('timestamp'),
+                'event_id' => $event_id
+            ));
+        } catch (Exception $e) {
+            wp_send_json_error(array(
+                'message' => 'Błąd bazy danych: ' . $e->getMessage()
+            ));
+        }
     }
 
     /**

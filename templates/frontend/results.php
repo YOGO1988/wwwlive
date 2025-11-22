@@ -40,13 +40,13 @@ $max_logo_height = get_option('chronotrack_max_logo_height', 200);
     <!-- View Toggle -->
     <div class="chronotrack-controls">
         <button class="chronotrack-view-toggle active" data-view="standings">
-            <?php _e('Standings', 'chronotrack-live'); ?>
+            Klasyfikacja
         </button>
         <button class="chronotrack-view-toggle" data-view="meta">
-            <?php _e('Finish Line (META)', 'chronotrack-live'); ?>
+            META (Linia mety)
         </button>
         <div class="chronotrack-last-update">
-            <?php _e('Last update:', 'chronotrack-live'); ?> <span id="chronotrack-timestamp">--:--:--</span>
+            Ostatnia aktualizacja: <span id="chronotrack-timestamp">--:--:--</span>
         </div>
     </div>
 
@@ -55,23 +55,23 @@ $max_logo_height = get_option('chronotrack_max_logo_height', 200);
         <input type="text"
                id="chronotrack-search"
                class="chronotrack-search"
-               placeholder="<?php _e('Search by name, bib number...', 'chronotrack-live'); ?>">
+               placeholder="Szukaj po nazwisku lub numerze...">
 
         <select id="chronotrack-category-filter" class="chronotrack-filter">
-            <option value=""><?php _e('All Categories', 'chronotrack-live'); ?></option>
+            <option value="">Wszystkie kategorie</option>
         </select>
 
         <select id="chronotrack-gender-filter" class="chronotrack-filter">
-            <option value=""><?php _e('All Genders', 'chronotrack-live'); ?></option>
-            <option value="M"><?php _e('Men', 'chronotrack-live'); ?></option>
-            <option value="F"><?php _e('Women', 'chronotrack-live'); ?></option>
+            <option value="">Wszystkie płcie</option>
+            <option value="M">Mężczyźni</option>
+            <option value="F">Kobiety</option>
         </select>
     </div>
 
     <!-- Loading Indicator -->
     <div class="chronotrack-loading" style="display: none;">
         <div class="chronotrack-spinner"></div>
-        <p><?php _e('Loading results...', 'chronotrack-live'); ?></p>
+        <p>Ładowanie wyników...</p>
     </div>
 
     <!-- Results Table - Standings View -->
@@ -80,12 +80,12 @@ $max_logo_height = get_option('chronotrack_max_logo_height', 200);
             <table class="chronotrack-results-table">
                 <thead>
                     <tr>
-                        <th class="col-position"><?php _e('Pos', 'chronotrack-live'); ?></th>
-                        <th class="col-bib"><?php _e('Bib', 'chronotrack-live'); ?></th>
-                        <th class="col-name"><?php _e('Name', 'chronotrack-live'); ?></th>
-                        <th class="col-category"><?php _e('Category', 'chronotrack-live'); ?></th>
-                        <th class="col-club"><?php _e('Club', 'chronotrack-live'); ?></th>
-                        <th class="col-time"><?php _e('Time', 'chronotrack-live'); ?></th>
+                        <th class="col-position">Miej.</th>
+                        <th class="col-bib">Nr</th>
+                        <th class="col-name">Imię i nazwisko</th>
+                        <th class="col-category">Kategoria</th>
+                        <th class="col-club">Klub</th>
+                        <th class="col-time">Czas</th>
                         <?php if (!empty($event->split_times_config)): ?>
                             <?php foreach ($event->split_times_config as $split): ?>
                                 <?php if ($split['show_in_main']): ?>
@@ -99,7 +99,7 @@ $max_logo_height = get_option('chronotrack_max_logo_height', 200);
                 <tbody id="chronotrack-results-body">
                     <tr>
                         <td colspan="20" class="chronotrack-no-results">
-                            <?php _e('No results available yet', 'chronotrack-live'); ?>
+                            Brak wyników
                         </td>
                     </tr>
                 </tbody>
@@ -110,26 +110,26 @@ $max_logo_height = get_option('chronotrack_max_logo_height', 200);
     <!-- Results Table - META (Finish Line) View -->
     <div class="chronotrack-view chronotrack-view-meta">
         <div class="chronotrack-meta-info">
-            <p><?php _e('Latest finishers - newest first', 'chronotrack-live'); ?></p>
+            <p>Najnowsi zawodnicy na mecie - od ostatniego wbiegającego</p>
         </div>
         <div class="chronotrack-table-wrapper">
             <table class="chronotrack-results-table chronotrack-meta-table">
                 <thead>
                     <tr>
-                        <th class="col-finish-time"><?php _e('Finish Time', 'chronotrack-live'); ?></th>
-                        <th class="col-bib"><?php _e('Bib', 'chronotrack-live'); ?></th>
-                        <th class="col-name"><?php _e('Name', 'chronotrack-live'); ?></th>
-                        <th class="col-category"><?php _e('Category', 'chronotrack-live'); ?></th>
-                        <th class="col-club"><?php _e('Club', 'chronotrack-live'); ?></th>
-                        <th class="col-time"><?php _e('Time', 'chronotrack-live'); ?></th>
-                        <th class="col-position"><?php _e('Position', 'chronotrack-live'); ?></th>
+                        <th class="col-finish-time">Godzina mety</th>
+                        <th class="col-bib">Nr</th>
+                        <th class="col-name">Imię i nazwisko</th>
+                        <th class="col-category">Kategoria</th>
+                        <th class="col-club">Klub</th>
+                        <th class="col-time">Czas</th>
+                        <th class="col-position">Miejsce</th>
                         <th class="col-actions"></th>
                     </tr>
                 </thead>
                 <tbody id="chronotrack-meta-body">
                     <tr>
                         <td colspan="20" class="chronotrack-no-results">
-                            <?php _e('No finishers yet', 'chronotrack-live'); ?>
+                            Brak zawodników na mecie
                         </td>
                     </tr>
                 </tbody>

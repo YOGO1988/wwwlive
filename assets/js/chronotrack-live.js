@@ -11,6 +11,9 @@
         refreshInterval: null,
         searchTimeout: null,
         lastUpdate: null,
+        isLoading: false,
+        consecutiveErrors: 0,
+        maxConsecutiveErrors: 3,
 
         init: function() {
             console.log('=== ChronoTrack Live Init START ===');
@@ -79,11 +82,27 @@
         },
 
         loadResults: function(view) {
-            view = view || this.currentView;
+            // Prevent concurrent requests
+            if (this.isLoading) {
+                console.log('⏳ Already loading, skipping...');
+                return;
+            }
 
+            // Stop if too many consecutive errors
+            if (this.consecutiveErrors >= this.maxConsecutiveErrors) {
+                console.error('❌ Too many consecutive errors, stopping auto-refresh');
+                this.stopAutoRefresh();
+                this.showError('Zbyt wiele błędów. Odświeżanie zatrzymane.');
+                return;
+            }
+
+            view = view || this.currentView;
+            this.isLoading = true;
             this.showLoading();
 
             const action = view === 'meta' ? 'chronotrack_get_recent_finishers' : 'chronotrack_get_results';
+
+            console.log('📡 Loading results, view:', view, 'action:', action);
 
             $.ajax({
                 url: chronotrackData.ajaxUrl,
@@ -93,8 +112,11 @@
                     event_id: this.eventId,
                     nonce: chronotrackData.nonce
                 },
+                timeout: 10000, // 10 second timeout
                 success: (response) => {
+                    console.log('✅ AJAX Success:', response);
                     if (response.success) {
+                        this.consecutiveErrors = 0; // Reset error counter
                         if (view === 'meta') {
                             this.renderMetaResults(response.data.results);
                         } else {
@@ -103,14 +125,26 @@
                         this.updateTimestamp();
                         this.populateFilters(response.data.results);
                     } else {
-                        this.showError(response.data.message);
+                        this.consecutiveErrors++;
+                        this.showError(response.data.message || 'Błąd pobierania wyników');
                     }
                 },
                 error: (xhr, status, error) => {
-                    console.error('AJAX Error:', error);
-                    this.showError(chronotrackData.strings.error);
+                    this.consecutiveErrors++;
+                    console.error('❌ AJAX Error:', {xhr, status, error});
+                    console.error('Response:', xhr.responseText);
+
+                    let errorMsg = 'Błąd pobierania wyników';
+                    if (status === 'timeout') {
+                        errorMsg = 'Przekroczono limit czasu';
+                    } else if (xhr.status === 0) {
+                        errorMsg = 'Brak połączenia z serwerem';
+                    }
+
+                    this.showError(errorMsg + ' (błąd ' + this.consecutiveErrors + '/' + this.maxConsecutiveErrors + ')');
                 },
                 complete: () => {
+                    this.isLoading = false;
                     this.hideLoading();
                 }
             });
