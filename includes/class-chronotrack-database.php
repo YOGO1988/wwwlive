@@ -19,7 +19,7 @@ class ChronoTrack_Database {
      */
     private function maybe_run_migrations() {
         $db_version = get_option('chronotrack_db_version', '0');
-        $current_version = '4.0.7';
+        $current_version = '4.0.8';
 
         if (version_compare($db_version, $current_version, '<')) {
             $this->run_migrations();
@@ -51,6 +51,15 @@ class ChronoTrack_Database {
         if (empty($distance_exists)) {
             error_log("Migration: Adding distance column to $results_table");
             $wpdb->query("ALTER TABLE $results_table ADD COLUMN distance varchar(255) AFTER club");
+        }
+
+        // Migration 3: Add bracket_positions column to results table
+        $bracket_positions_exists = $wpdb->get_results(
+            "SHOW COLUMNS FROM $results_table LIKE 'bracket_positions'"
+        );
+        if (empty($bracket_positions_exists)) {
+            error_log("Migration: Adding bracket_positions column to $results_table");
+            $wpdb->query("ALTER TABLE $results_table ADD COLUMN bracket_positions TEXT AFTER split_times");
         }
     }
 
@@ -327,6 +336,7 @@ class ChronoTrack_Database {
                 'net_time' => sanitize_text_field($result['net_time'] ?? ''),
                 'net_time_seconds' => absint($result['net_time_seconds'] ?? 0),
                 'split_times' => wp_json_encode($result['split_times'] ?? array()),
+                'bracket_positions' => wp_json_encode($result['bracket_positions'] ?? array()),
                 'finish_timestamp' => $result['finish_timestamp'] ?? current_time('mysql'),
                 'raw_data' => wp_json_encode($result),
             );
@@ -398,6 +408,9 @@ class ChronoTrack_Database {
             if (!empty($result->split_times)) {
                 $result->split_times = json_decode($result->split_times, true);
             }
+            if (!empty($result->bracket_positions)) {
+                $result->bracket_positions = json_decode($result->bracket_positions, true);
+            }
             if (!empty($result->raw_data)) {
                 $result->raw_data = json_decode($result->raw_data, true);
             }
@@ -438,6 +451,9 @@ class ChronoTrack_Database {
             if (!empty($result->split_times)) {
                 $result->split_times = json_decode($result->split_times, true);
             }
+            if (!empty($result->bracket_positions)) {
+                $result->bracket_positions = json_decode($result->bracket_positions, true);
+            }
             if (!empty($result->raw_data)) {
                 $result->raw_data = json_decode($result->raw_data, true);
             }
@@ -463,6 +479,9 @@ class ChronoTrack_Database {
         if ($result) {
             if (!empty($result->split_times)) {
                 $result->split_times = json_decode($result->split_times, true);
+            }
+            if (!empty($result->bracket_positions)) {
+                $result->bracket_positions = json_decode($result->bracket_positions, true);
             }
             if (!empty($result->raw_data)) {
                 $result->raw_data = json_decode($result->raw_data, true);

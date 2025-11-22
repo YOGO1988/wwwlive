@@ -148,6 +148,58 @@ class ChronoTrack_API {
     }
 
     /**
+     * Fetch all brackets (categories) for an event
+     */
+    public function fetch_event_brackets($event_id) {
+        error_log("ChronoTrack API: Fetching brackets for event {$event_id}");
+
+        $all_brackets = array();
+        $page = 1;
+        $has_more_pages = true;
+
+        while ($has_more_pages) {
+            $params = array(
+                'page' => $page,
+                'size' => 50,
+            );
+
+            $endpoint = "/api/event/{$event_id}/bracket";
+            $response = $this->make_api_request($endpoint, $params);
+
+            if ($response && isset($response['event_brackets']) && !empty($response['event_brackets'])) {
+                error_log("ChronoTrack API: Brackets page {$page}: found " . count($response['event_brackets']) . " brackets");
+
+                foreach ($response['event_brackets'] as $bracket) {
+                    $bracket_name = $bracket['bracket_name'] ?? '';
+                    if (!empty($bracket_name)) {
+                        $all_brackets[] = array(
+                            'name' => $bracket_name,
+                            'type' => $bracket['bracket_type'] ?? '',
+                            'id' => $bracket['bracket_id'] ?? '',
+                        );
+                    }
+                }
+
+                // Check for more pages
+                if (isset($response['page']) && isset($response['page_count'])) {
+                    $has_more_pages = intval($response['page']) < intval($response['page_count']);
+                } elseif (count($response['event_brackets']) >= 50) {
+                    $has_more_pages = true;
+                } else {
+                    $has_more_pages = false;
+                }
+
+                $page++;
+            } else {
+                $has_more_pages = false;
+            }
+        }
+
+        error_log("ChronoTrack API: Total brackets found: " . count($all_brackets));
+        return $all_brackets;
+    }
+
+    /**
      * Fetch participant entries from ChronoTrack API
      * This provides additional data like city, club, custom fields
      */
@@ -401,8 +453,31 @@ class ChronoTrack_API {
             error_log("========== FETCHING AGE BRACKET FOR EVENT {$event_id} ==========");
             $age_results = $this->fetch_age_bracket_results($event_id);
             error_log("AGE BRACKET COMPLETE: Got " . count($age_results) . " category positions");
+
+            // Fetch ALL brackets (categories) and their results
+            error_log("========== FETCHING ALL BRACKETS FOR EVENT {$event_id} ==========");
+            $all_brackets = $this->fetch_event_brackets($event_id);
+            error_log("BRACKETS COMPLETE: Found " . count($all_brackets) . " total brackets");
+
+            // Fetch results for each bracket to get category positions
+            $bracket_results = array();  // bib => [bracket_name => position]
+            foreach ($all_brackets as $bracket) {
+                $bracket_name = $bracket['name'];
+                error_log("Fetching results for bracket: {$bracket_name}");
+
+                $bracket_positions = $this->fetch_bracket_results($event_id, $bracket_name);
+
+                foreach ($bracket_positions as $bib => $position) {
+                    if (!isset($bracket_results[$bib])) {
+                        $bracket_results[$bib] = array();
+                    }
+                    $bracket_results[$bib][$bracket_name] = $position;
+                }
+            }
+            error_log("BRACKET RESULTS COMPLETE: Got positions for " . count($bracket_results) . " athletes across all brackets");
         } else {
             error_log("⚠️ Bracket merge DISABLED - using simple mode");
+            $bracket_results = array();
         }
 
         // Process collected results
@@ -432,19 +507,21 @@ class ChronoTrack_API {
             // Get gender and category positions from bracket results
             $sex_data = $sex_results[$bib] ?? array();
             $age_data = $age_results[$bib] ?? array();
+            $bracket_positions = $bracket_results[$bib] ?? array();
 
             // Debug first BIB
             if (!$first_bib_logged) {
                 error_log("========== MERGE DEBUG FOR BIB {$bib} ==========");
                 error_log("SEX DATA: " . print_r($sex_data, true));
                 error_log("AGE DATA: " . print_r($age_data, true));
+                error_log("BRACKET POSITIONS: " . print_r($bracket_positions, true));
                 error_log("MAIN RESULT interval_name: " . ($result['results_interval_name'] ?? 'NULL'));
                 error_log("MAIN RESULT results_bib: " . ($result['results_bib'] ?? 'NULL'));
                 error_log("MAIN RESULT results_first_name: " . ($result['results_first_name'] ?? 'NULL'));
                 $first_bib_logged = true;
             }
 
-            $processed_result = $this->process_single_result($result, $data['split_times'], $entry, $sex_data, $age_data);
+            $processed_result = $this->process_single_result($result, $data['split_times'], $entry, $sex_data, $age_data, $bracket_positions);
             if ($processed_result) {
                 // Debug first processed result
                 if (count($processed_results) === 0) {
@@ -489,7 +566,7 @@ class ChronoTrack_API {
      * Process single result from API
      * Merges result data with entry data (for city, club, etc.) and bracket data
      */
-    private function process_single_result($result, $split_times = array(), $entry = array(), $sex_data = array(), $age_data = array()) {
+    private function process_single_result($result, $split_times = array(), $entry = array(), $sex_data = array(), $age_data = array(), $bracket_positions = array()) {
         // Sort split times by time (shortest first)
         usort($split_times, function($a, $b) {
             return $this->parse_time_to_seconds($a['formatted_time']) - $this->parse_time_to_seconds($b['formatted_time']);
@@ -555,6 +632,7 @@ class ChronoTrack_API {
             'pace' => $this->format_pace($result['results_pace'] ?? ''),
             'formatted_pace' => $this->format_pace($result['results_pace'] ?? ''),  // Alternative
             'split_times' => $split_times,
+            'bracket_positions' => $bracket_positions,  // All bracket/category positions (bracket_name => position)
             'finish_timestamp' => current_time('mysql'),
             'status' => $result['results_status'] ?? 'OK',
         );
@@ -674,6 +752,56 @@ class ChronoTrack_API {
 
         error_log("ChronoTrack API: Fetched category positions for " . count($age_results) . " athletes");
         return $age_results;
+    }
+
+    /**
+     * Fetch results for a specific bracket (category)
+     * Returns: bib => position mapping
+     */
+    private function fetch_bracket_results($event_id, $bracket_name) {
+        $bracket_results = array();
+        $page = 1;
+        $has_more_pages = true;
+
+        while ($has_more_pages) {
+            $params = array(
+                'page' => $page,
+                'size' => 100,
+                'bracket' => $bracket_name,
+            );
+
+            $endpoint = "/api/event/{$event_id}/results";
+            $response = $this->make_api_request($endpoint, $params);
+
+            if ($response && isset($response['event_results']) && !empty($response['event_results'])) {
+                foreach ($response['event_results'] as $result) {
+                    $bib = $result['results_bib'] ?? '';
+                    $position = $result['results_rank'] ?? 0;
+
+                    if (!empty($bib) && $position > 0) {
+                        // Only store if not already stored (first position wins)
+                        if (!isset($bracket_results[$bib])) {
+                            $bracket_results[$bib] = $position;
+                        }
+                    }
+                }
+
+                // Check for more pages
+                if (isset($response['page']) && isset($response['page_count'])) {
+                    $has_more_pages = intval($response['page']) < intval($response['page_count']);
+                } elseif (count($response['event_results']) >= 100) {
+                    $has_more_pages = true;
+                } else {
+                    $has_more_pages = false;
+                }
+
+                $page++;
+            } else {
+                $has_more_pages = false;
+            }
+        }
+
+        return $bracket_results;
     }
 
     /**
