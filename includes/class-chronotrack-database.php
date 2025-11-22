@@ -49,6 +49,7 @@ class ChronoTrack_Database {
             gender varchar(10),
             city varchar(255),
             club varchar(255),
+            distance varchar(255),
             category varchar(255),
             position int(11),
             category_position int(11),
@@ -66,7 +67,8 @@ class ChronoTrack_Database {
             KEY event_id (event_id),
             KEY participant_id (participant_id),
             KEY finish_timestamp (finish_timestamp),
-            KEY position (position)
+            KEY position (position),
+            KEY distance (distance)
         ) $charset_collate;";
 
         // Split times table
@@ -235,6 +237,7 @@ class ChronoTrack_Database {
                 'gender' => sanitize_text_field($result['gender'] ?? ''),
                 'city' => sanitize_text_field($result['city'] ?? ''),
                 'club' => sanitize_text_field($result['club'] ?? ''),
+                'distance' => sanitize_text_field($result['distance'] ?? ''),
                 'category' => sanitize_text_field($result['category'] ?? ''),
                 'position' => absint($result['position'] ?? 0),
                 'category_position' => absint($result['category_position'] ?? 0),
@@ -248,14 +251,27 @@ class ChronoTrack_Database {
                 'raw_data' => wp_json_encode($result),
             );
 
-            // Check if result exists
+            // Check if result exists by bib_number (unique per event)
             $existing = $wpdb->get_row($wpdb->prepare(
-                "SELECT id FROM $table WHERE event_id = %s AND participant_id = %s",
+                "SELECT id FROM $table WHERE event_id = %s AND bib_number = %s",
                 $data['event_id'],
-                $data['participant_id']
+                $data['bib_number']
             ));
 
             if ($existing) {
+                // Update existing result - merge data instead of replacing
+                $existing_data = $wpdb->get_row($wpdb->prepare(
+                    "SELECT * FROM $table WHERE id = %d",
+                    $existing->id
+                ), ARRAY_A);
+
+                // Merge: use new data if available, keep old if new is empty
+                foreach ($data as $key => $value) {
+                    if (empty($value) && !empty($existing_data[$key])) {
+                        $data[$key] = $existing_data[$key];
+                    }
+                }
+
                 $wpdb->update(
                     $table,
                     $data,
@@ -295,6 +311,21 @@ class ChronoTrack_Database {
         }
 
         return $results;
+    }
+
+    /**
+     * Get unique distances for an event
+     */
+    public function get_unique_distances($event_id) {
+        global $wpdb;
+        $table = $wpdb->prefix . 'chronotrack_results';
+
+        $distances = $wpdb->get_col($wpdb->prepare(
+            "SELECT DISTINCT distance FROM $table WHERE event_id = %s AND distance != '' ORDER BY distance",
+            $event_id
+        ));
+
+        return $distances;
     }
 
     /**

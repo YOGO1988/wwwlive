@@ -111,60 +111,66 @@ class ChronoTrack_Frontend {
 
         ?>
         <style type="text/css">
-            /* Aggressively hide WordPress sidebar on ChronoTrack pages */
-            .chronotrack-page #secondary,
-            .chronotrack-page aside,
-            .chronotrack-page .sidebar,
-            .chronotrack-page .widget-area,
-            .chronotrack-page aside.sidebar,
-            .chronotrack-page #sidebar,
-            .chronotrack-page .secondary,
-            .chronotrack-page [id*="sidebar"],
-            .chronotrack-page [class*="sidebar"],
-            .chronotrack-page [class*="widget"] {
+            /* Completely remove WordPress sidebar on ChronoTrack pages */
+            body.chronotrack-page #secondary,
+            body.chronotrack-page aside,
+            body.chronotrack-page .sidebar,
+            body.chronotrack-page .widget-area,
+            body.chronotrack-page aside.sidebar,
+            body.chronotrack-page #sidebar,
+            body.chronotrack-page .secondary,
+            body.chronotrack-page [id*="sidebar"],
+            body.chronotrack-page [class*="sidebar"]:not(.chronotrack-distance-filters),
+            body.chronotrack-page [class*="widget"]:not(.chronotrack-table-wrapper) {
                 display: none !important;
-                visibility: hidden !important;
-                opacity: 0 !important;
-                height: 0 !important;
+                position: absolute !important;
+                left: -9999px !important;
                 width: 0 !important;
+                height: 0 !important;
                 margin: 0 !important;
                 padding: 0 !important;
+                overflow: hidden !important;
             }
 
-            /* Make content full width */
-            .chronotrack-page #primary,
-            .chronotrack-page .site-main,
-            .chronotrack-page .content-area,
-            .chronotrack-page .entry-content,
-            .chronotrack-page article,
-            .chronotrack-page main {
+            /* Force full width layout - remove grid/flex containers */
+            body.chronotrack-page .site-content,
+            body.chronotrack-page .hfeed,
+            body.chronotrack-page .site-main,
+            body.chronotrack-page #content {
+                display: block !important;
                 width: 100% !important;
                 max-width: 100% !important;
-                flex: 0 0 100% !important;
+                grid-template-columns: none !important;
+                grid-template-areas: none !important;
+            }
+
+            /* Make content full width - no flex basis */
+            body.chronotrack-page #primary,
+            body.chronotrack-page .site-main,
+            body.chronotrack-page .content-area,
+            body.chronotrack-page .entry-content,
+            body.chronotrack-page article,
+            body.chronotrack-page main {
+                width: 100% !important;
+                max-width: 100% !important;
+                flex-basis: 100% !important;
+                flex-grow: 1 !important;
+                flex-shrink: 0 !important;
                 margin-left: 0 !important;
                 margin-right: 0 !important;
             }
 
             /* Hide meta info */
-            .chronotrack-page .entry-meta,
-            .chronotrack-page .entry-footer,
-            .chronotrack-page .entry-header {
+            body.chronotrack-page .entry-meta,
+            body.chronotrack-page .entry-footer,
+            body.chronotrack-page .entry-header {
                 display: none !important;
             }
 
             /* Full width container */
-            .chronotrack-page .site-content,
-            .chronotrack-page .hfeed {
-                width: 100% !important;
-                max-width: 100% !important;
-                margin: 0 auto;
-                padding: 20px;
-            }
-
-            /* Force single column layout */
-            .chronotrack-page .site-content {
-                display: block !important;
-                grid-template-columns: 1fr !important;
+            body.chronotrack-page .site-content,
+            body.chronotrack-page .hfeed {
+                padding: 20px !important;
             }
         </style>
         <?php

@@ -19,6 +19,8 @@
         currentInterval: 10000, // 10 seconds for incremental updates
         fullCheckInterval: null, // Separate interval for full checks every 60 seconds
         columns: [], // Dynamic columns configuration
+        distances: [], // Available distances
+        selectedDistance: '', // Currently selected distance filter
 
         init: function() {
             console.log('=== ChronoTrack Live Init START ===');
@@ -70,6 +72,12 @@
             // Filters
             $(document).on('change', '.chronotrack-filter', () => {
                 this.filterResults();
+            });
+
+            // Distance filter buttons
+            $(document).on('click', '.chronotrack-distance-filter-btn', (e) => {
+                const distance = $(e.currentTarget).data('distance');
+                this.selectDistance(distance);
             });
 
             // Participant details
@@ -149,6 +157,13 @@
                             console.log('📋 Columns loaded:', this.columns.length);
                         }
 
+                        // Save and render distances
+                        if (response.data.distances && response.data.distances.length > 0) {
+                            this.distances = response.data.distances;
+                            console.log('📏 Distances loaded:', this.distances.length);
+                            this.renderDistanceButtons();
+                        }
+
                         const newCount = response.data.count || 0;
                         const hasChanges = newCount !== this.lastResultCount;
 
@@ -205,47 +220,22 @@
                 return;
             }
 
-            // Update in place to prevent page jumping and preserve filters
-            const existingRows = {};
-            tbody.find('tr[data-result-id]').each(function() {
-                const id = $(this).attr('data-result-id');
-                existingRows[id] = $(this);
+            // Clear all rows and re-render to avoid ID mismatches
+            tbody.empty();
+
+            // Render each result
+            results.forEach((result) => {
+                const row = this.createResultRow(result);
+                tbody.append(row);
             });
 
-            // Update or add each result
-            results.forEach((result, index) => {
-                const existingRow = existingRows[result.id];
-
-                if (existingRow) {
-                    // Update existing row in place
-                    const newRow = this.createResultRow(result);
-                    existingRow.replaceWith(newRow);
-                    delete existingRows[result.id];
-                } else {
-                    // New result - add it in the correct position
-                    const newRow = this.createResultRow(result);
-                    const rows = tbody.find('tr[data-result-id]');
-
-                    if (index === 0 || rows.length === 0) {
-                        tbody.prepend(newRow);
-                    } else if (index >= rows.length) {
-                        tbody.append(newRow);
-                    } else {
-                        rows.eq(index - 1).after(newRow);
-                    }
-                }
-            });
-
-            // Remove rows that no longer exist in results
-            $.each(existingRows, function(id, row) {
-                row.fadeOut(200, function() { $(this).remove(); });
-            });
-
-            console.log('✅ Rendered', results.length, 'results (in-place update)');
+            console.log('✅ Rendered', results.length, 'results');
         },
 
         createResultRow: function(result) {
-            const row = $('<tr>').attr('data-result-id', result.id);
+            const row = $('<tr>')
+                .attr('data-result-id', result.id)
+                .attr('data-distance', result.distance || '');
 
             // Use dynamic columns if available
             if (this.columns && this.columns.length > 0) {
@@ -374,6 +364,7 @@
             const searchTerm = $('#chronotrack-search').val().toLowerCase();
             const category = $('#chronotrack-category-filter').val();
             const gender = $('#chronotrack-gender-filter').val();
+            const distance = this.selectedDistance;
 
             const tbody = this.currentView === 'meta' ?
                 $('#chronotrack-meta-body') :
@@ -381,9 +372,10 @@
 
             tbody.find('tr').each(function() {
                 const row = $(this);
-                const name = row.find('.col-name').text().toLowerCase();
-                const bib = row.find('.col-bib').text().toLowerCase();
+                const name = row.find('.col-name, .col-full_name').text().toLowerCase();
+                const bib = row.find('.col-bib, .col-entry_bib').text().toLowerCase();
                 const rowCategory = row.find('.col-category').text();
+                const rowDistance = row.attr('data-distance') || '';
 
                 let show = true;
 
@@ -394,6 +386,11 @@
 
                 // Category filter
                 if (category && rowCategory !== category) {
+                    show = false;
+                }
+
+                // Distance filter
+                if (distance && rowDistance !== distance) {
                     show = false;
                 }
 
@@ -491,6 +488,43 @@
 
         closeModal: function() {
             $('#chronotrack-modal').fadeOut(200);
+        },
+
+        renderDistanceButtons: function() {
+            const container = $('#chronotrack-distance-filters');
+            if (!container.length) return;
+
+            container.empty();
+
+            // Add "Wszystkie" (All) button
+            const allBtn = $('<button>')
+                .addClass('chronotrack-distance-filter-btn')
+                .addClass(this.selectedDistance === '' ? 'active' : '')
+                .attr('data-distance', '')
+                .text('Wszystkie');
+            container.append(allBtn);
+
+            // Add buttons for each distance
+            this.distances.forEach((distance) => {
+                const btn = $('<button>')
+                    .addClass('chronotrack-distance-filter-btn')
+                    .addClass(this.selectedDistance === distance ? 'active' : '')
+                    .attr('data-distance', distance)
+                    .text(distance);
+                container.append(btn);
+            });
+        },
+
+        selectDistance: function(distance) {
+            this.selectedDistance = distance;
+            console.log('📏 Selected distance:', distance || 'Wszystkie');
+
+            // Update button states
+            $('.chronotrack-distance-filter-btn').removeClass('active');
+            $('.chronotrack-distance-filter-btn[data-distance="' + distance + '"]').addClass('active');
+
+            // Filter results
+            this.filterResults();
         },
 
         startAutoRefresh: function() {

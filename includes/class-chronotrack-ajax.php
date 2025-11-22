@@ -51,10 +51,12 @@ class ChronoTrack_Ajax {
             $db = chronotrack_live_results()->db;
             $results = $db->get_results($event_id);
             $columns = $db->get_event_columns($event_id, true);
+            $distances = $db->get_unique_distances($event_id);
 
             wp_send_json_success(array(
                 'results' => $this->format_results($results),
                 'columns' => $this->format_columns($columns),
+                'distances' => $distances,
                 'count' => count($results),
                 'timestamp' => current_time('timestamp'),
                 'event_id' => $event_id
@@ -174,6 +176,7 @@ class ChronoTrack_Ajax {
                 'gender' => $result->gender,
                 'city' => $result->city,
                 'club' => $result->club,
+                'distance' => $result->distance ?? '',
                 'category' => $result->category,
                 'position' => $result->position,
                 'category_position' => $result->category_position,
@@ -222,6 +225,7 @@ class ChronoTrack_Ajax {
             'gender' => $result->gender,
             'city' => $result->city,
             'club' => $result->club,
+            'distance' => $result->distance ?? '',
             'category' => $result->category,
             'position' => $result->position,
             'category_position' => $result->category_position,

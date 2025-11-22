@@ -183,6 +183,9 @@ class ChronoTrack_API {
                                 }
                             }
 
+                            // Extract distance/race name
+                            $distance = $entry['race_distance'] ?? $entry['race_name'] ?? $entry['reg_choice_name'] ?? '';
+
                             $all_entries[$bib] = array(
                                 'city' => $city,
                                 'club' => $club,
@@ -190,6 +193,8 @@ class ChronoTrack_API {
                                 'athlete_club' => $club,
                                 'location_city' => $entry['location_city'] ?? '',
                                 'birthdate' => $entry['athlete_birthdate'] ?? $entry['reg_transaction_account_birthdate'] ?? '',
+                                'distance' => $distance,
+                                'race_name' => $distance,
                             );
                         }
                     }
@@ -362,6 +367,9 @@ class ChronoTrack_API {
         // Club - prefer entry data
         $club = $entry['club'] ?? $result['results_club'] ?? '';
 
+        // Distance - prefer entry data
+        $distance = $entry['distance'] ?? $result['results_race_name'] ?? $result['race_distance'] ?? '';
+
         return array(
             'participant_id' => $participant_id,
             'bib_number' => $result['results_bib'] ?? '',
@@ -377,6 +385,9 @@ class ChronoTrack_API {
             'athlete_club' => $club,  // Alternative field name
             'birth_year' => $birth_year,
             'birthdate' => $entry['birthdate'] ?? $result['results_birthdate'] ?? '',  // Alternative field name
+            'distance' => $distance,
+            'race_name' => $distance,  // Alternative field name
+            'race_distance' => $distance,  // Alternative field name
             'category' => $result['results_primary_bracket_name'] ?? '',
             'bracket_name' => $result['results_primary_bracket_name'] ?? '',  // Alternative
             'results_primary_bracket_name' => $result['results_primary_bracket_name'] ?? '',  // Alternative

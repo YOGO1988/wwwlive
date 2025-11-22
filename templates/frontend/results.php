@@ -57,6 +57,11 @@ $columns = $db->get_event_columns($event->event_id, true);
         </div>
     </div>
 
+    <!-- Distance Filter Buttons -->
+    <div class="chronotrack-distance-filters" id="chronotrack-distance-filters" style="margin: 20px 0;">
+        <!-- Distance buttons will be populated by JavaScript -->
+    </div>
+
     <!-- Search/Filter -->
     <div class="chronotrack-filters">
         <input type="text"
@@ -69,7 +74,7 @@ $columns = $db->get_event_columns($event->event_id, true);
         </select>
 
         <select id="chronotrack-gender-filter" class="chronotrack-filter">
-            <option value="">Wszystkie płcie</option>
+            <option value="">K/M</option>
             <option value="M">Mężczyźni</option>
             <option value="F">Kobiety</option>
         </select>
