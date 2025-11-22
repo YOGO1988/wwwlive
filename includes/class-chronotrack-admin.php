@@ -189,6 +189,7 @@ class ChronoTrack_Admin {
             'event_id' => sanitize_text_field($_POST['event_id']),
             'event_name' => sanitize_text_field($_POST['event_name']),
             'event_date' => sanitize_text_field($_POST['event_date']),
+            'event_location' => sanitize_text_field($_POST['event_location'] ?? ''),
             'event_logo_url' => $event_logo_url,
             'sponsor_logo_url' => $sponsor_logo_url,
             'event_status' => sanitize_text_field($_POST['event_status'] ?? 'active'),
@@ -383,7 +384,7 @@ class ChronoTrack_Admin {
      * AJAX: Fetch event info from API
      */
     public function ajax_fetch_event_info() {
-        check_ajax_referer('chronotrack_admin', 'nonce');
+        check_ajax_referer('chronotrack_fetch_event_info', 'nonce');
 
         if (!current_user_can('manage_options')) {
             wp_send_json_error(array('message' => 'Unauthorized'));
@@ -401,14 +402,24 @@ class ChronoTrack_Admin {
         $event_info = $api->fetch_event_info($event_id);
 
         if ($event_info) {
+            // Format date for display
+            $event_date_formatted = 'N/A';
+            if (!empty($event_info['event_date'])) {
+                $timestamp = is_numeric($event_info['event_date'])
+                    ? $event_info['event_date']
+                    : strtotime($event_info['event_date']);
+                $event_date_formatted = date_i18n(get_option('date_format') . ' ' . get_option('time_format'), $timestamp);
+            }
+
             wp_send_json_success(array(
                 'event_name' => $event_info['event_name'],
                 'event_date' => $event_info['event_date'],
+                'event_date_formatted' => $event_date_formatted,
                 'location' => $event_info['location'],
                 'status' => $event_info['status'],
             ));
         } else {
-            wp_send_json_error(array('message' => 'Nie można pobrać danych wydarzenia z API'));
+            wp_send_json_error(array('message' => 'Nie można pobrać danych wydarzenia z API. Sprawdź czy Event ID jest prawidłowy.'));
         }
     }
 
