@@ -550,7 +550,7 @@
                         html += '<span class="chronotrack-time">' + this.escapeHtml(split.formatted_time) + '</span>';
                         // Add position if available - AFTER the time
                         if (split.position && split.position > 0) {
-                            html += ' <span class="chronotrack-split-position">(miejsce: ' + split.position + ')</span>';
+                            html += ' <span class="chronotrack-split-position">(mce: ' + split.position + ')</span>';
                         }
                         html += '</td>';
                         html += '</tr>';

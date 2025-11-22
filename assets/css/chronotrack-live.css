@@ -116,9 +116,6 @@ body.chronotrack-page .container {
 
 /* Live Indicator */
 .chronotrack-live-indicator {
-    display: flex;
-    align-items: center;
-    gap: 8px;
     margin-left: auto;
 }
 
@@ -126,6 +123,8 @@ body.chronotrack-page .container {
     color: #dc3545;
     font-weight: 600;
     font-size: 14px;
+    display: block;
+    margin-bottom: 4px;
 }
 
 .chronotrack-manual-refresh-icon {
@@ -136,6 +135,8 @@ body.chronotrack-page .container {
     color: #666;
     transition: all 0.3s ease;
     border-radius: 4px;
+    display: block;
+    margin: 0 auto;
 }
 
 .chronotrack-manual-refresh-icon:hover {
