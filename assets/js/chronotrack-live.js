@@ -720,6 +720,29 @@
         // Delay initialization to let Divi load first
         setTimeout(function() {
             ChronoTrackResults.init();
+
+            // Force container visibility after init
+            setTimeout(function() {
+                const container = $('.chronotrack-results-container');
+                if (container.length) {
+                    container.css({
+                        'display': 'block !important',
+                        'visibility': 'visible !important',
+                        'opacity': '1 !important'
+                    });
+
+                    // Check what's covering the page
+                    const centerX = window.innerWidth / 2;
+                    const centerY = window.innerHeight / 2;
+                    const elementsAtCenter = document.elementsFromPoint(centerX, centerY);
+
+                    console.log('🔍 Elements at center after 500ms:', elementsAtCenter.slice(0, 5).map(el => ({
+                        tag: el.tagName,
+                        class: el.className,
+                        id: el.id
+                    })));
+                }
+            }, 500);
         }, 100);
     });
 

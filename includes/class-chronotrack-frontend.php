@@ -111,6 +111,24 @@ class ChronoTrack_Frontend {
 
         ?>
         <style type="text/css">
+            /* Force ChronoTrack container to be visible */
+            body.chronotrack-page .chronotrack-results-container {
+                display: block !important;
+                visibility: visible !important;
+                opacity: 1 !important;
+                position: relative !important;
+                z-index: 100 !important;
+            }
+
+            /* Hide any loading overlays or loaders */
+            body.chronotrack-page .et-pb-loading,
+            body.chronotrack-page .et-pb-loading-overlay,
+            body.chronotrack-page .et-pb-loader,
+            body.chronotrack-page #et-pb-loader,
+            body.chronotrack-page .et_pb_section_video_bg {
+                display: none !important;
+            }
+
             /* Completely remove WordPress sidebar on ChronoTrack pages */
             body.chronotrack-page #secondary,
             body.chronotrack-page aside,
