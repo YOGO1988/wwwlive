@@ -19,7 +19,7 @@ class ChronoTrack_Database {
      */
     private function maybe_run_migrations() {
         $db_version = get_option('chronotrack_db_version', '0');
-        $current_version = '4.0.4';
+        $current_version = '4.0.7';
 
         if (version_compare($db_version, $current_version, '<')) {
             $this->run_migrations();
@@ -33,13 +33,24 @@ class ChronoTrack_Database {
     private function run_migrations() {
         global $wpdb;
         $events_table = $wpdb->prefix . 'chronotrack_events';
+        $results_table = $wpdb->prefix . 'chronotrack_results';
 
-        // Migration: Add event_location column if it doesn't exist
+        // Migration 1: Add event_location column to events table
         $column_exists = $wpdb->get_results(
             "SHOW COLUMNS FROM $events_table LIKE 'event_location'"
         );
         if (empty($column_exists)) {
+            error_log("Migration: Adding event_location column to $events_table");
             $wpdb->query("ALTER TABLE $events_table ADD COLUMN event_location varchar(500) AFTER event_date");
+        }
+
+        // Migration 2: Add distance column to results table
+        $distance_exists = $wpdb->get_results(
+            "SHOW COLUMNS FROM $results_table LIKE 'distance'"
+        );
+        if (empty($distance_exists)) {
+            error_log("Migration: Adding distance column to $results_table");
+            $wpdb->query("ALTER TABLE $results_table ADD COLUMN distance varchar(255) AFTER club");
         }
     }
 
