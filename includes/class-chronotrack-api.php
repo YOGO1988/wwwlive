@@ -241,6 +241,10 @@ class ChronoTrack_API {
                 'format' => 'json',
                 'page' => $page,
                 'per_page' => 100,
+                'include_all_fields' => 'true',
+                'need_athlete_birthdate' => 'true',
+                'need_transaction_account' => 'true',
+                'interval' => 'ALL',
             );
 
             $endpoint = "/api/event/{$event_id}/results";
