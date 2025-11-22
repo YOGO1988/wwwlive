@@ -1,0 +1,2886 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YO&GO Events Results Printer</title>
+    <style>
+        :root {
+            --primary-color: #FF8C00;
+            --secondary-color: #FF7000;
+            --success-color: #28a745;
+            --error-color: #dc3545;
+            --light-bg: #f8f9fa;
+            --border-color: #ddd;
+            --text-color: #333;
+            --receipt-width: 80mm;
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.4;
+            color: var(--text-color);
+            background-color: #f5f5f5;
+            padding: 8px;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            height: calc(100vh - 16px);
+            display: flex;
+            flex-direction: column;
+        }
+        
+        header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 8px 16px;
+            text-align: center;
+            position: relative;
+        }
+        
+        header h1 {
+            margin: 0;
+            font-size: 20px;
+        }
+        
+        .app-version {
+            position: absolute;
+            right: 10px;
+            bottom: 5px;
+            font-size: 10px;
+            opacity: 0.8;
+        }
+        
+        .screen {
+            display: none;
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+        }
+        
+        .screen.active {
+            display: block;
+        }
+        
+        .form-group {
+            margin-bottom: 8px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 3px;
+            font-weight: 500;
+        }
+        
+        input[type="text"],
+        input[type="password"],
+        select {
+            width: 100%;
+            padding: 6px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        input[type="text"]:focus,
+        input[type="password"]:focus,
+        select:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 2px rgba(255, 140, 0, 0.2);
+        }
+        
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 8px 15px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        button:hover {
+            background-color: var(--secondary-color);
+        }
+        
+        button.secondary {
+            background-color: #6c757d;
+        }
+        
+        button.secondary:hover {
+            background-color: #5a6268;
+        }
+        
+        .btn-lg {
+            padding: 12px 20px;
+            font-size: 16px;
+            width: 100%;
+            margin-top: 15px;
+        }
+        
+        .flex-container {
+            display: flex;
+            gap: 15px;
+        }
+        
+        .flex-column {
+            flex: 1;
+        }
+        
+        .panel {
+            background-color: white;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .panel h2 {
+            margin-top: 0;
+            margin-bottom: 8px;
+            font-size: 15px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .status {
+            padding: 6px;
+            margin: 6px 0;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        
+        .status.success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        
+        .status.error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        
+        .status.loading {
+            background-color: #e2e3e5;
+            color: #383d41;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        .receipt-container {
+            max-width: var(--receipt-width);
+            margin: 0 auto;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            transform-origin: top center;
+            transition: transform 0.3s;
+            height: 100%;
+            overflow-y: auto;
+        }
+        
+        .receipt {
+            width: var(--receipt-width);
+            background-color: white;
+            border: 1px dashed #ccc;
+            padding: 10px;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .receipt-header {
+            text-align: center;
+            margin-bottom: 10px;
+            border-bottom: 1px solid black;
+            padding-bottom: 8px;
+        }
+        
+        .receipt-header h2 {
+            font-size: 14px;
+            margin: 0;
+            margin-bottom: 5px;
+        }
+        
+        .receipt-header p {
+            font-size: 11px;
+            margin: 0;
+        }
+        
+        .athlete-info {
+            text-align: center;
+            margin: 8px 0;
+            font-weight: bold;
+        }
+        
+        .category-info {
+            display: flex;
+            justify-content: space-between;
+            font-style: italic;
+            margin: 6px 0;
+            font-size: 11px;
+        }
+        
+        .result-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 4px 0;
+            font-size: 12px;
+        }
+        
+        .divider {
+            border-top: 1px dashed black;
+            margin: 8px 0;
+        }
+        
+        .receipt-footer {
+            text-align: center;
+            font-size: 10px;
+            margin-top: 8px;
+        }
+        
+        .receipt-footer p {
+            margin: 2px 0;
+        }
+
+        .loading-indicator {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 3px solid rgba(255, 140, 0, 0.3);
+            border-radius: 50%;
+            border-top-color: var(--primary-color);
+            animation: spin 1s linear infinite;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .athlete-list {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            margin-top: 8px;
+        }
+        
+        .athlete-item {
+            padding: 6px 8px;
+            border-bottom: 1px solid var(--border-color);
+            cursor: pointer;
+            transition: background-color 0.2s;
+            font-size: 13px;
+        }
+        
+        .athlete-item:last-child {
+            border-bottom: none;
+        }
+        
+        .athlete-item:hover {
+            background-color: #f0f0f0;
+        }
+        
+        .athlete-item.selected {
+            background-color: #fff8ee;
+            border-left: 3px solid var(--primary-color);
+        }
+        
+        .athlete-item-bib {
+            font-weight: bold;
+            color: var(--primary-color);
+            margin-right: 8px;
+        }
+        
+        .athlete-item-category {
+            font-size: 11px;
+            color: #666;
+            margin-left: 8px;
+        }
+        
+        .print-actions {
+            margin-top: 15px;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        
+        .cache-info {
+            font-size: 11px;
+            color: #666;
+            margin-top: 10px;
+            background-color: var(--light-bg);
+            padding: 8px;
+            border-radius: 4px;
+        }
+        
+        .cache-info-item {
+            margin-bottom: 4px;
+        }
+        
+        .cache-info strong {
+            min-width: 130px;
+            display: inline-block;
+        }
+        
+        .admin-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            color: white;
+            padding: 4px 8px;
+            font-size: 12px;
+        }
+        
+        .admin-btn:hover {
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .modal.active {
+            display: flex;
+        }
+        
+        .modal-content {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            width: 300px;
+        }
+        
+        .modal-title {
+            margin-top: 0;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+        
+        .modal-buttons {
+            margin-top: 15px;
+            text-align: right;
+        }
+        
+        .printer-section {
+            margin-top: 15px;
+            padding-top: 10px;
+            border-top: 1px solid var(--border-color);
+        }
+        
+        .printer-status {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .printer-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background-color: #dc3545;
+            margin-right: 8px;
+        }
+        
+        .printer-indicator.connected {
+            background-color: #28a745;
+        }
+        
+        .compact-form .form-group {
+            margin-bottom: 10px;
+        }
+        
+        .compact-form label {
+            margin-bottom: 3px;
+            font-size: 13px;
+        }
+        
+        .compact-form input {
+            padding: 6px;
+        }
+        
+        .settings-section {
+            margin-bottom: 20px;
+        }
+        
+        /* Compact view for admin panel */
+        .compact-panel {
+            padding: 10px;
+        }
+        
+        .compact-panel h2 {
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+        
+        /* Search screen adjustments */
+        .search-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .search-title {
+            margin: 0;
+            font-size: 18px;
+        }
+
+        /* Print styles */
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            
+            #print-container, #print-container * {
+                visibility: visible;
+            }
+            
+            #print-container {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: var(--receipt-width);
+            }
+            
+            .receipt {
+                border: none;
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>YO&GO Events Results Printer</h1>
+            <div class="app-version">v1.6.0</div>
+        </header>
+
+        <!-- Admin/Settings Screen -->
+        <div id="admin-screen" class="screen active">
+            <div class="flex-container">
+                <!-- Left column - API Configuration -->
+                <div class="flex-column">
+                    <div class="panel compact-panel">
+                        <h2>Konfiguracja API ChronoTrack</h2>
+                        <form class="compact-form">
+                            <div class="form-group">
+                                <label for="client-id">ID klienta:</label>
+                                <input type="text" id="client-id" value="727dae7f" readonly>
+                            </div>
+                            <div class="form-group">
+                                <label for="user-id">ID użytkownika:</label>
+                                <input type="text" id="user-id" value="lukasz@yogoevents.pl" readonly>
+                            </div>
+                            <div class="form-group">
+                                <label for="user-pass">Hasło użytkownika:</label>
+                                <input type="password" id="user-pass" value="f2b2f3082a9d2ae5091eb5920bee538dc01bb413" readonly>
+                            </div>
+                            <div class="form-group">
+                                <label for="event-id">ID wydarzenia:</label>
+                                <input type="text" id="event-id" placeholder="Podaj ID wydarzenia" required>
+                            </div>
+                            <div id="api-connection-status" class="status loading">
+                                Oczekiwanie na konfigurację...
+                            </div>
+                        </form>
+                    </div>
+                    
+                    <div class="panel compact-panel">
+                        <h2>Zarządzanie danymi</h2>
+                        <div class="cache-info">
+                            <div class="cache-info-item">
+                                <strong>Zawodnicy w pamięci:</strong>
+                                <span id="admin-athletes-count">0</span>
+                            </div>
+                            <div class="cache-info-item">
+                                <strong>Wyniki OPEN:</strong>
+                                <span id="admin-open-count">0</span>
+                            </div>
+                            <div class="cache-info-item">
+                                <strong>Wyniki wg płci:</strong>
+                                <span id="admin-sex-count">0</span>
+                            </div>
+                            <div class="cache-info-item">
+                                <strong>Wyniki wg kategorii:</strong>
+                                <span id="admin-age-count">0</span>
+                            </div>
+                            <div class="cache-info-item">
+                                <strong>Ostatnia aktualizacja:</strong>
+                                <span id="admin-last-update">-</span>
+                            </div>
+                        </div>
+                        <div style="margin-top: 10px;">
+                            <button id="test-connection" class="secondary">Testuj połączenie</button>
+                            <button id="refresh-all-data" class="secondary">Odśwież dane</button>
+                            <button id="clear-cache" class="secondary">Wyczyść cache</button>
+                        </div>
+                        <div id="cache-status" class="status hidden"></div>
+                    </div>
+                </div>
+                
+                <!-- Right column - Printer Setup and Settings -->
+                <div class="flex-column">
+                    <div class="panel compact-panel">
+                        <h2>Konfiguracja drukarki</h2>
+                        <div class="printer-status">
+                            <div id="printer-indicator" class="printer-indicator"></div>
+                            <span id="printer-status-text">Drukarka nie podłączona</span>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="printer-type">Rodzaj drukarki:</label>
+                            <select id="printer-type">
+                                <option value="usb">Drukarka USB (Epson TM-T20)</option>
+                                <option value="system">Drukarka systemowa</option>
+                            </select>
+                        </div>
+                        
+                        <button id="connect-printer">Połącz z drukarką</button>
+                        <button id="test-print" class="secondary" disabled>Drukuj test</button>
+                        
+                        <div id="printer-connection-status" class="status hidden"></div>
+                        
+                        <div class="printer-section">
+                            <h3>Ustawienia wydruku</h3>
+                            <div class="form-group">
+                                <label for="custom-message">Wiadomość na paragonie:</label>
+                                <input type="text" id="custom-message" value="Szczegółowe wyniki: www.yogoevents.pl">
+                            </div>
+                            <div class="form-group">
+                                <label for="footer-message">Stopka:</label>
+                                <input type="text" id="footer-message" value="YO&GO Events - Twój Pomiar Czasu">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <button id="continue-to-search" class="btn-lg">Przejdź do wyszukiwania zawodników</button>
+        </div>
+
+        <!-- Search Screen -->
+        <div id="search-screen" class="screen">
+            <div class="search-header">
+                <h2 class="search-title">Wyszukiwanie zawodników</h2>
+                <button id="admin-button" class="admin-btn">Admin</button>
+            </div>
+            
+            <div class="flex-container">
+                <div class="flex-column">
+                    <div class="panel">
+                        <div class="form-group">
+                            <label for="search-query">Podaj numer startowy:</label>
+                            <input type="text" id="search-query" placeholder="Numer startowy" autocomplete="off">
+                        </div>
+                        <button id="search-button">
+                            <span id="search-button-text">Szukaj</span>
+                            <span id="search-loading" class="loading-indicator hidden"></span>
+                        </button>
+                        <div id="search-status" class="status hidden"></div>
+                        
+                        <div id="results-container" class="hidden">
+                            <h3>Znaleziony zawodnik:</h3>
+                            <div id="athlete-list" class="athlete-list"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="panel">
+                        <h2>Status systemu</h2>
+                        <div class="printer-status">
+                            <div id="search-printer-indicator" class="printer-indicator"></div>
+                            <span id="search-printer-status">Drukarka nie podłączona</span>
+                        </div>
+                        <div class="cache-info">
+                            <div class="cache-info-item">
+                                <strong>Wydarzenie:</strong>
+                                <span id="event-name-info">-</span>
+                            </div>
+                            <div class="cache-info-item">
+                                <strong>Data:</strong>
+                                <span id="event-date-info">-</span>
+                            </div>
+							<div class="cache-info-item">
+								<strong></strong>
+								<span id="event-location-info">-</span>
+							</div>
+                            <div class="cache-info-item">
+                                <strong>Zawodnicy w pamięci:</strong>
+                                <span id="athletes-count">0</span>
+                            </div>
+                            <div class="cache-info-item">
+                                <strong>Ostatnia aktualizacja:</strong>
+                                <span id="last-update">-</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="flex-column">
+                    <div class="panel">
+                        <div class="print-actions">
+                            <button id="print-button" disabled>Drukuj wynik</button>
+                        </div>
+                        
+                        <div class="receipt-container">
+                            <div class="receipt" id="receipt-preview">
+                                <div class="receipt-header">
+                                    <h2 id="preview-event-name">Nazwa wydarzenia</h2>
+									<p id="preview-event-location">Lokalizacja - Data</p>
+                                    <p id="preview-event-date">Data wydarzenia</p>
+                                </div>
+                                
+                                <div class="athlete-info">
+                                    <div id="preview-athlete-name">Imię i Nazwisko</div>
+                                    <div id="preview-bib-number">Numer: -</div>
+                                </div>
+                                
+                                <div class="category-info">
+                                    <span id="preview-athlete-distance">Dystans: -</span>
+                                </div>
+                                
+                                <div class="category-info">
+                                    <span id="preview-athlete-division">Kategoria: -</span>
+                                    <span id="preview-athlete-age">Wiek: -</span>
+                                </div>
+                                
+                                <div class="divider"></div>
+                                
+                                <div class="result-row">
+                                    <strong>Czas netto</strong>
+                                    <span id="preview-net-time">00:00:00</span>
+                                </div>
+                                
+                                <div class="result-row">
+                                    <strong>Czas brutto</strong>
+                                    <span id="preview-gun-time">00:00:00</span>
+                                </div>
+                                
+                                <div class="result-row">
+                                    <strong>Miejsce OPEN</strong>
+                                    <span id="preview-overall-place">-</span>
+                                </div>
+                                
+                                <div class="result-row">
+                                    <strong>Miejsce w kategorii</strong>
+                                    <span id="preview-division-place">-</span>
+                                </div>
+                                
+                                <div class="result-row">
+                                    <strong>Miejsce w K/M</strong>
+                                    <span id="preview-gender-place">-</span>
+                                </div>
+                                
+                                <div class="divider"></div>
+                                
+                                <div class="receipt-footer">
+                                    <p>Wyniki nieoficjalne</p>
+                                    <p>Gratulacje!</p>
+                                    <p id="preview-custom-message">Szczegółowe wyniki: www.yogoevents.pl</p>
+                                    <p id="preview-yogo-message">YO&GO Events - Twój Pomiar Czasu</p>
+                                    <p id="preview-timestamp"></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Password Modal -->
+    <div id="password-modal" class="modal">
+        <div class="modal-content">
+            <h3 class="modal-title">Podaj hasło administratora</h3>
+            <div class="form-group">
+                <input type="password" id="admin-password" placeholder="Hasło">
+            </div>
+            <div id="password-status" class="status hidden"></div>
+            <div class="modal-buttons">
+                <button id="cancel-password" class="secondary">Anuluj</button>
+                <button id="submit-password">Potwierdź</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Hidden print container -->
+    <div id="print-container" class="hidden">
+        <div class="receipt">
+            <div class="receipt-header">
+                <h2 id="print-event-name">Nazwa wydarzenia</h2>
+				<p id="print-event-location">Lokalizacja - Data</p>
+                <p id="print-event-date">Data wydarzenia</p>
+            </div>
+            
+            <div class="athlete-info">
+                <div id="print-athlete-name">Imię i Nazwisko</div>
+                <div id="print-bib-number">Numer: -</div>
+            </div>
+            
+            <div class="category-info">
+                <span id="print-athlete-distance">Dystans: -</span>
+            </div>
+            
+            <div class="category-info">
+                <span id="print-athlete-division">Kategoria: -</span>
+                <span id="print-athlete-age">Wiek: -</span>
+            </div>
+            
+            <div class="divider"></div>
+            
+            <div class="result-row">
+                <strong>Czas netto</strong>
+                <span id="print-net-time">00:00:00</span>
+            </div>
+            
+            <div class="result-row">
+                <strong>Czas brutto</strong>
+                <span id="print-gun-time">00:00:00</span>
+            </div>
+            
+            <div class="result-row">
+                <strong>Miejsce OPEN</strong>
+                <span id="print-overall-place">-</span>
+            </div>
+            
+            <div class="result-row">
+                <strong>Miejsce w kategorii</strong>
+                <span id="print-division-place">-</span>
+            </div>
+            
+            <div class="result-row">
+                <strong>Miejsce w K/M</strong>
+                <span id="print-gender-place">-</span>
+            </div>
+            
+            <div class="divider"></div>
+            
+            <div class="receipt-footer">
+                <p>Wyniki nieoficjalne</p>
+                <p>Gratulacje!</p>
+                <p id="print-custom-message">Szczegółowe wyniki: www.yogoevents.pl</p>
+                <p id="print-yogo-message">YO&GO Events - Twój Pomiar Czasu</p>
+                <p id="print-timestamp"></p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    /**
+     * YO&GO Events Results Printer
+     * Zintegrowane narzędzie do drukowania wyników zawodników
+     * Wersja 1.6.0
+     */
+    document.addEventListener('DOMContentLoaded', function() {
+        // =====================================
+        // Konfiguracja
+        // =====================================
+        const config = {
+            api: {
+                clientId: '727dae7f',
+                userId: 'lukasz@yogoevents.pl',
+                userPass: 'f2b2f3082a9d2ae5091eb5920bee538dc01bb413',
+                baseUrl: 'https://api.chronotrack.com',
+                eventId: localStorage.getItem('chronotrack-event-id') || ''
+            },
+            refreshIntervals: {
+                open: 90000,  // 90 sekund dla wszystkich typów danych
+                sex: 90000,   // 90 sekund
+                age: 90000    // 90 sekund
+            },
+            customMessages: {
+                custom: localStorage.getItem('custom-message') || 'Szczegółowe wyniki: www.yogoevents.pl',
+                footer: localStorage.getItem('footer-message') || 'YO&GO Events - Twój Pomiar Czasu'
+            },
+            printer: {
+				type: localStorage.getItem('printer-type') || 'usb',
+				connected: false,
+				device: null,
+				// Rozszerzona obsługa drukarek Epson TM-T20/T20II
+				supportedModels: [
+					{ vendorId: 0x04b8, productId: 0x0202 }, // TM-T20
+					{ vendorId: 0x04b8, productId: 0x0216 }, // TM-T20II
+					{ vendorId: 0x04b8, productId: 0x0217 }, // TM-T20III
+					{ vendorId: 0x04b8 } // Ogólny Epson vendor ID jako fallback
+				]
+			},
+            adminPassword: '72'
+        };
+
+        // =====================================
+        // Cache dla danych API
+        // =====================================
+        const cache = {
+            athletes: {},          // Zawodnicy po BIB
+            openResults: [],       // Wyniki OPEN
+            sexResults: { M: [], F: [] },  // Wyniki wg płci
+            ageResults: {},        // Wyniki wg kategorii wiekowej
+            eventInfo: null,       // Informacje o wydarzeniu
+            lastUpdate: {          // Czas ostatniej aktualizacji
+                open: null,
+                sex: null,
+                age: null
+            },
+            // Przechowuje wyniki kategorii i płci, które zostały już pobrane
+            // To zapobiegnie ich utracie podczas odświeżania
+            persistentData: {
+                divisionPlaces: {},  // Miejsca w kategoriach zapisane po BIB
+                genderPlaces: {}     // Miejsca według płci zapisane po BIB
+            }
+        };
+
+        // =====================================
+        // Timery odświeżania
+        // =====================================
+        const refreshTimers = {
+            open: null,
+            sex: null,
+            age: null
+        };
+
+        // =====================================
+        // Elementy UI
+        // =====================================
+        const ui = {
+            // Ekrany
+            adminScreen: document.getElementById('admin-screen'),
+            searchScreen: document.getElementById('search-screen'),
+            passwordModal: document.getElementById('password-modal'),
+            
+            // Elementy ekranu admin
+            eventIdInput: document.getElementById('event-id'),
+            apiConnectionStatus: document.getElementById('api-connection-status'),
+            adminAthletesCount: document.getElementById('admin-athletes-count'),
+            adminOpenCount: document.getElementById('admin-open-count'),
+            adminSexCount: document.getElementById('admin-sex-count'),
+            adminAgeCount: document.getElementById('admin-age-count'),
+            adminLastUpdate: document.getElementById('admin-last-update'),
+            printerType: document.getElementById('printer-type'),
+            printerIndicator: document.getElementById('printer-indicator'),
+            printerStatusText: document.getElementById('printer-status-text'),
+            connectPrinter: document.getElementById('connect-printer'),
+            testPrint: document.getElementById('test-print'),
+            printerConnectionStatus: document.getElementById('printer-connection-status'),
+            customMessageInput: document.getElementById('custom-message'),
+            footerMessageInput: document.getElementById('footer-message'),
+            continueToSearch: document.getElementById('continue-to-search'),
+            testConnection: document.getElementById('test-connection'),
+            refreshAllData: document.getElementById('refresh-all-data'),
+            clearCache: document.getElementById('clear-cache'),
+            cacheStatus: document.getElementById('cache-status'),
+            
+            // Elementy ekranu wyszukiwania
+            adminButton: document.getElementById('admin-button'),
+            searchQuery: document.getElementById('search-query'),
+            searchButton: document.getElementById('search-button'),
+            searchButtonText: document.getElementById('search-button-text'),
+            searchLoading: document.getElementById('search-loading'),
+            searchStatus: document.getElementById('search-status'),
+            resultsContainer: document.getElementById('results-container'),
+            athleteList: document.getElementById('athlete-list'),
+            printButton: document.getElementById('print-button'),
+            searchPrinterIndicator: document.getElementById('search-printer-indicator'),
+            searchPrinterStatus: document.getElementById('search-printer-status'),
+            eventNameInfo: document.getElementById('event-name-info'),
+            eventDateInfo: document.getElementById('event-date-info'),
+			eventLocationInfo: document.getElementById('event-location-info'),
+			athletesCount: document.getElementById('athletes-count'),
+            lastUpdate: document.getElementById('last-update'),
+            
+            // Elementy modalu hasła
+            adminPassword: document.getElementById('admin-password'),
+            passwordStatus: document.getElementById('password-status'),
+            submitPassword: document.getElementById('submit-password'),
+            cancelPassword: document.getElementById('cancel-password'),
+            
+            // Elementy podglądu
+            previewEventName: document.getElementById('preview-event-name'),
+            previewEventDate: document.getElementById('preview-event-date'),
+			previewEventLocation: document.getElementById('preview-event-location'),
+			previewAthleteName: document.getElementById('preview-athlete-name'),
+            previewBibNumber: document.getElementById('preview-bib-number'),
+            previewAthleteDistance: document.getElementById('preview-athlete-distance'),
+            previewAthleteDivision: document.getElementById('preview-athlete-division'),
+            previewAthleteAge: document.getElementById('preview-athlete-age'),
+            previewNetTime: document.getElementById('preview-net-time'),
+            previewGunTime: document.getElementById('preview-gun-time'),
+            previewOverallPlace: document.getElementById('preview-overall-place'),
+            previewDivisionPlace: document.getElementById('preview-division-place'),
+            previewGenderPlace: document.getElementById('preview-gender-place'),
+            previewCustomMessage: document.getElementById('preview-custom-message'),
+            previewYogoMessage: document.getElementById('preview-yogo-message'),
+            previewTimestamp: document.getElementById('preview-timestamp'),
+            
+            // Elementy wydruku
+            printEventName: document.getElementById('print-event-name'),
+            printEventDate: document.getElementById('print-event-date'),
+			printEventLocation: document.getElementById('print-event-location'),
+			printAthleteName: document.getElementById('print-athlete-name'),
+            printBibNumber: document.getElementById('print-bib-number'),
+            printAthleteDistance: document.getElementById('print-athlete-distance'),
+            printAthleteDivision: document.getElementById('print-athlete-division'),
+            printAthleteAge: document.getElementById('print-athlete-age'),
+            printNetTime: document.getElementById('print-net-time'),
+            printGunTime: document.getElementById('print-gun-time'),
+            printOverallPlace: document.getElementById('print-overall-place'),
+            printDivisionPlace: document.getElementById('print-division-place'),
+            printGenderPlace: document.getElementById('print-gender-place'),
+            printCustomMessage: document.getElementById('print-custom-message'),
+            printYogoMessage: document.getElementById('print-yogo-message'),
+            printTimestamp: document.getElementById('print-timestamp')
+        };
+
+        // Aktualnie wybrany zawodnik
+        let selectedAthlete = null;
+
+        // =====================================
+        // Funkcje API ChronoTrack
+        // =====================================
+        
+        /**
+         * Buduje URL API z parametrami uwierzytelniania
+         */
+        function buildApiUrl(endpoint, params = {}) {
+            // Dodaj parametry uwierzytelniania
+            const authParams = {
+                format: 'json',
+                client_id: config.api.clientId,
+                user_id: config.api.userId,
+                user_pass: config.api.userPass,
+                ...params
+            };
+            
+            // Zbuduj query string
+            const queryString = Object.entries(authParams)
+                .map(([key, value]) => `${key}=${encodeURIComponent(value)}`)
+                .join('&');
+            
+            return `${config.api.baseUrl}${endpoint}?${queryString}`;
+        }
+        
+        /**
+         * Wykonuje zapytanie do API ChronoTrack
+         */
+        async function makeApiRequest(endpoint, params = {}) {
+            try {
+                const url = buildApiUrl(endpoint, params);
+                console.log(`Zapytanie do API: ${url}`);
+                
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Błąd HTTP: ${response.status} ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                return data;
+            } catch (error) {
+                console.error(`Błąd zapytania API: ${error.message}`);
+                throw error;
+            }
+        }
+        
+        /**
+         * Pobiera informacje o wydarzeniu
+         */
+        async function fetchEventInfo() {
+            try {
+                const response = await makeApiRequest(`/api/event/${config.api.eventId}`);
+                if (response && response.event) {
+                    const eventData = response.event;
+                    cache.eventInfo = {
+					event_id: eventData.event_id,
+					event_name: eventData.event_name,
+					event_date: formatEventDate(eventData.event_start_time),
+					status: eventData.event_is_published === "1" ? "active" : "inactive",
+					location_city: eventData.location_city || '',
+					location_country: eventData.location_country || '',
+					location: formatLocation(eventData.location_city, eventData.location_country)
+				};
+                    
+                    // Aktualizuj UI z informacjami o wydarzeniu
+                    updateEventInfo();
+                    
+                    return cache.eventInfo;
+                }
+                throw new Error('Otrzymano nieprawidłowe dane wydarzenia');
+            } catch (error) {
+                console.error(`Błąd pobierania informacji o wydarzeniu: ${error.message}`);
+                throw error;
+            }
+        }
+      
+		function formatLocation(city, country) {
+			// Pokazuj tylko miasto, bez kraju
+			if (city) {
+				return city;
+			} else if (country) {
+				return country;
+			}
+			return '-';
+		}
+
+        function formatEventDate(timestamp) {
+            if (!timestamp) return '-';
+            
+            try {
+                const date = new Date(parseInt(timestamp) * 1000);
+                return `${String(date.getDate()).padStart(2, '0')}.${String(date.getMonth() + 1).padStart(2, '0')}.${date.getFullYear()}`;
+            } catch (error) {
+                console.error(`Błąd formatowania daty: ${error.message}`);
+                return timestamp;
+            }
+        }
+        
+        /**
+         * Formatuje czas w formacie HH:MM:SS
+         */
+        function formatTime(timeString) {
+            if (!timeString) return '-';
+            
+            // Sprawdź format czasu
+            if (timeString.includes(':')) {
+                // Format HH:MM:SS.MS
+                const timeParts = timeString.split(':');
+                let hours = parseInt(timeParts[0]);
+                let minutes = parseInt(timeParts[1]);
+                
+                // Sekundy mogą zawierać milisekundy
+                let secondsPart = timeParts[2] ? timeParts[2].split('.') : ['0'];
+                let seconds = parseInt(secondsPart[0]);
+                let milliseconds = secondsPart[1] ? parseInt(secondsPart[1]) : 0;
+                
+                // Zaokrąglij w górę, jeśli są milisekundy
+                if (milliseconds > 0) {
+                    seconds++;
+                }
+                
+                // Popraw przepełnienia
+                if (seconds >= 60) {
+                    minutes++;
+                    seconds -= 60;
+                }
+                
+                if (minutes >= 60) {
+                    hours++;
+                    minutes -= 60;
+                }
+                
+                // Formatuj wynik
+                return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            } else if (!isNaN(timeString)) {
+                // Format sekundowy
+                let totalSeconds = parseInt(timeString);
+                let hours = Math.floor(totalSeconds / 3600);
+                let minutes = Math.floor((totalSeconds % 3600) / 60);
+                let seconds = totalSeconds % 60;
+                
+                return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            }
+            
+            // Jeśli format nie został rozpoznany, zwróć oryginalny string
+            return timeString;
+        }
+        
+        /**
+         * Wyszukuje zawodnika po numerze BIB
+         */
+        async function findAthleteByBib(bib) {
+            try {
+                // Najpierw sprawdź w cache
+                if (cache.athletes[bib]) {
+                    console.log(`Znaleziono zawodnika w cache: ${bib}`);
+                    return cache.athletes[bib];
+                }
+                
+                // Pobierz z API
+                const response = await makeApiRequest(`/api/event/${config.api.eventId}/results`, { bib });
+                
+                if (response && response.event_results && response.event_results.length > 0) {
+                    // Znajdź zawodnika z dokładnym BIB
+                    const athlete = response.event_results.find(result => 
+                        result.results_bib === bib || 
+                        String(result.results_bib) === String(bib)
+                    );
+                    
+                    if (athlete) {
+                        console.log("Dane zawodnika z API:", athlete);
+                        // Zmapuj pola API na nasz standardowy format
+                        const mappedAthlete = {
+                            entry_bib: athlete.results_bib,
+                            athlete_first_name: athlete.results_first_name,
+                            athlete_last_name: athlete.results_last_name,
+                            athlete_sex: athlete.results_sex,
+                            entry_race_age: athlete.results_age,
+                            bracket_name: athlete.results_primary_bracket_name,
+                            race_distance: athlete.results_race_name,
+                            net_time: athlete.results_time,
+                            gun_time: athlete.results_gun_time,
+                            overall_place: athlete.results_rank,
+                            gender_place: athlete.results_gender_rank || athlete.results_sex_rank || '',
+                            division_place: athlete.results_bracket_rank || athlete.results_division_rank || athlete.results_rank_in_bracket || '',
+                            pace: athlete.results_pace,
+                            // Sformatowane czasy
+                            formatted_net_time: formatTime(athlete.results_time),
+                            formatted_gun_time: formatTime(athlete.results_gun_time),
+                            formatted_pace: athlete.results_pace
+                        };
+                        
+                        // Sprawdź czy mamy zapisane dane o kategorii i płci
+                        const savedDivisionPlace = cache.persistentData.divisionPlaces[mappedAthlete.entry_bib];
+                        const savedGenderPlace = cache.persistentData.genderPlaces[mappedAthlete.entry_bib];
+                        
+                        // Przywróć dane o kategorii i płci, jeśli zostały zapisane
+                        if (savedDivisionPlace && !mappedAthlete.division_place) {
+                            mappedAthlete.division_place = savedDivisionPlace;
+                        }
+                        
+                        if (savedGenderPlace && !mappedAthlete.gender_place) {
+                            mappedAthlete.gender_place = savedGenderPlace;
+                        }
+                        
+                        // Sprawdź czy mamy miejsce w kategorii
+                        if (!mappedAthlete.division_place && athlete.bracket_name) {
+                            // Próbuj pobrać dane o kategorii
+                            await getAthleteAgeGroupResult(mappedAthlete);
+                        }
+                        
+                        // Dodaj do cache
+                        cache.athletes[mappedAthlete.entry_bib] = mappedAthlete;
+                        
+                        return mappedAthlete;
+                    }
+                }
+                
+                return null;
+            } catch (error) {
+                console.error(`Błąd wyszukiwania zawodnika po numerze BIB: ${error.message}`);
+                throw error;
+            }
+        }
+        
+        /**
+         * Próbuje pobrać dane o miejscu zawodnika w kategorii wiekowej
+         */
+        async function getAthleteAgeGroupResult(athlete) {
+            if (!athlete || !athlete.bracket_name || !athlete.entry_bib) return;
+            
+            try {
+                // Sprawdź najpierw w cache
+                if (cache.ageResults && cache.ageResults[athlete.bracket_name]) {
+                    const matchingAthlete = cache.ageResults[athlete.bracket_name].find(
+                        a => a.entry_bib === athlete.entry_bib
+                    );
+                    
+                    if (matchingAthlete && matchingAthlete.division_place) {
+                        athlete.division_place = matchingAthlete.division_place;
+                        console.log(`Znaleziono miejsce w kategorii w cache: ${athlete.entry_bib}, miejsce: ${athlete.division_place}`);
+                        return;
+                    }
+                }
+                
+                // Jeśli nie ma w cache, spróbuj pobrać bezpośrednio z API
+                const params = {
+                    bracket: 'age',
+                    bracket_name: athlete.bracket_name,
+                    bib: athlete.entry_bib
+                };
+                
+                console.log(`Pobieranie miejsca w kategorii dla zawodnika ${athlete.entry_bib} z kategorii ${athlete.bracket_name}`);
+                const response = await makeApiRequest(`/api/event/${config.api.eventId}/results`, params);
+                
+                if (response && response.event_results && response.event_results.length > 0) {
+                    const result = response.event_results[0];
+                    console.log("Otrzymane dane kategorii z API:", result);
+                    
+                    if (result.results_rank_in_bracket) {
+                        athlete.division_place = result.results_rank_in_bracket;
+                        console.log(`Zaktualizowano miejsce w kategorii: ${athlete.division_place}`);
+                    } else if (result.results_bracket_rank) {
+                        athlete.division_place = result.results_bracket_rank;
+                        console.log(`Zaktualizowano miejsce w kategorii (bracket_rank): ${athlete.division_place}`);
+                    } else if (result.results_division_rank) {
+                        athlete.division_place = result.results_division_rank;
+                        console.log(`Zaktualizowano miejsce w kategorii (division_rank): ${athlete.division_place}`);
+                    }
+                    
+                    // Aktualizuj również cache
+                    if (athlete.division_place && cache.athletes[athlete.entry_bib]) {
+                        cache.athletes[athlete.entry_bib].division_place = athlete.division_place;
+                    }
+                } else {
+                    console.log(`Brak wyników kategorii dla zawodnika ${athlete.entry_bib}`);
+                }
+            } catch (error) {
+                console.error(`Błąd pobierania miejsca w kategorii: ${error.message}`);
+            }
+        }
+        
+        /**
+         * Wyszukuje zawodników po nazwisku
+         */
+        async function findAthletesByName(name) {
+            try {
+                // Trim i przygotuj zapytanie
+                const searchQuery = name.trim();
+                
+                // Użyj parametru "search" zamiast oddzielnie first_name i last_name
+                // To daje najlepsze wyniki dla ChronoTrack API
+                const params = {
+                    search: searchQuery,
+                    size: 30  // Ograniczamy liczbę wyników
+                };
+                
+                console.log("Szukam zawodników z parametrami:", params);
+                
+                const response = await makeApiRequest(`/api/event/${config.api.eventId}/results`, params);
+                
+                if (response && response.event_results && response.event_results.length > 0) {
+                    console.log(`Surowe wyniki API (${response.event_results.length}):`, response.event_results.slice(0, 2));
+                    
+                    // Filtruj wyniki, aby upewnić się, że wyświetlane są tylko dopasowane nazwiska
+                    const filteredResults = response.event_results.filter(result => {
+                        const fullName = `${result.results_first_name} ${result.results_last_name}`.toLowerCase();
+                        return fullName.includes(searchQuery.toLowerCase());
+                    });
+                    
+                    console.log(`Po filtrowaniu pozostało ${filteredResults.length} wyników`);
+                    
+                    // Zmapuj pola API na nasz standardowy format
+                    const athletes = filteredResults.map(athlete => {
+                        const mappedAthlete = {
+                            entry_bib: athlete.results_bib,
+                            athlete_first_name: athlete.results_first_name,
+                            athlete_last_name: athlete.results_last_name,
+                            athlete_sex: athlete.results_sex,
+                            entry_race_age: athlete.results_age,
+                            bracket_name: athlete.results_primary_bracket_name,
+                            race_distance: athlete.results_race_name,
+                            net_time: athlete.results_time,
+                            gun_time: athlete.results_gun_time,
+                            overall_place: athlete.results_rank,
+                            gender_place: athlete.results_gender_rank || athlete.results_sex_rank || '',
+                            division_place: athlete.results_bracket_rank || athlete.results_division_rank || athlete.results_rank_in_bracket || '',
+                            pace: athlete.results_pace,
+                            // Sformatowane czasy
+                            formatted_net_time: formatTime(athlete.results_time),
+                            formatted_gun_time: formatTime(athlete.results_gun_time),
+                            formatted_pace: athlete.results_pace
+                        };
+                        
+                        // Dodaj do cache
+                        cache.athletes[mappedAthlete.entry_bib] = mappedAthlete;
+                        
+                        return mappedAthlete;
+                    });
+
+                    // Sortuj po nazwisku, aby najpierw pokazywać najlepsze dopasowania
+                    athletes.sort((a, b) => {
+                        const nameA = `${a.athlete_last_name} ${a.athlete_first_name}`.toLowerCase();
+                        const nameB = `${b.athlete_last_name} ${b.athlete_first_name}`.toLowerCase();
+                        
+                        // Najpierw sortuj według dokładności dopasowania
+                        const exactMatchA = nameA.startsWith(searchQuery.toLowerCase());
+                        const exactMatchB = nameB.startsWith(searchQuery.toLowerCase());
+                        
+                        if (exactMatchA && !exactMatchB) return -1;
+                        if (!exactMatchA && exactMatchB) return 1;
+                        
+                        // Następnie sortuj alfabetycznie
+                        return nameA.localeCompare(nameB);
+                    });
+
+                    // Dla każdego zawodnika z brakującą kategorią, pobierz dane
+                    const updatePromises = athletes
+                        .filter(athlete => !athlete.division_place && athlete.bracket_name)
+                        .map(athlete => getAthleteAgeGroupResult(athlete));
+                    
+                    // Poczekaj na zakończenie wszystkich wywołań
+                    if (updatePromises.length > 0) {
+                        await Promise.all(updatePromises);
+                    }
+                    
+                    return athletes;
+                }
+                
+                return [];
+            } catch (error) {
+                console.error(`Błąd wyszukiwania zawodników po nazwisku: ${error.message}`);
+                throw error;
+            }
+        }
+        
+        /**
+         * Rekurencyjna funkcja do pobierania wszystkich stron wyników
+         */
+        async function fetchAllResultPages(endpoint, params, maxPages = 10) {
+            let page = 1;
+            let allResults = [];
+            let hasMorePages = true;
+            
+            while (hasMorePages && page <= maxPages) {
+                try {
+                    // Aktualizuj parametr strony
+                    const pageParams = { ...params, page };
+                    
+                    // Pobierz bieżącą stronę
+                    const response = await makeApiRequest(endpoint, pageParams);
+                    
+                    if (response && response.event_results && response.event_results.length > 0) {
+                        // Dodaj wyniki z tej strony
+                        allResults = allResults.concat(response.event_results);
+                        
+                        // Sprawdź czy są kolejne strony
+                        if (response.page_count && response.page) {
+                            hasMorePages = parseInt(response.page) < parseInt(response.page_count);
+                        } else if (response.event_results.length < params.size) {
+                            // Jeśli otrzymaliśmy mniej wyników niż żądany rozmiar strony, zakładamy, że nie ma więcej stron
+                            hasMorePages = false;
+                        } else {
+                            // W przeciwnym razie zakładamy, że mogą być kolejne strony
+                            hasMorePages = true;
+                        }
+                        
+                        // Zwiększ numer strony dla kolejnego zapytania
+                        page++;
+                    } else {
+                        // Brak wyników na tej stronie, kończymy
+                        hasMorePages = false;
+                    }
+                } catch (error) {
+                    console.error(`Błąd pobierania strony ${page}: ${error.message}`);
+                    hasMorePages = false;
+                }
+            }
+            
+            return allResults;
+        }
+        
+        /**
+         * Odświeża wyniki OPEN - pobiera WSZYSTKIE wyniki
+         */
+        async function refreshOpenResults() {
+            try {
+                // Zacznij od strony 1 i rozmiaru strony 100
+                const params = {
+                    size: 100
+                };
+                
+                console.log("Pobieranie wyników OPEN");
+                
+                // Pobierz wszystkie strony
+                const allResults = await fetchAllResultPages(`/api/event/${config.api.eventId}/results`, params);
+                
+                if (allResults.length > 0) {
+                    // Zmapuj do naszego standardowego formatu
+                    const mappedResults = allResults.map(result => ({
+                        entry_bib: result.results_bib,
+                        athlete_first_name: result.results_first_name,
+                        athlete_last_name: result.results_last_name,
+                        athlete_sex: result.results_sex,
+                        entry_race_age: result.results_age,
+                        bracket_name: result.results_primary_bracket_name,
+                        race_distance: result.results_race_name,
+                        net_time: result.results_time,
+                        gun_time: result.results_gun_time,
+                        overall_place: result.results_rank,
+                        gender_place: result.results_gender_rank || result.results_sex_rank || '',
+                        division_place: result.results_bracket_rank || result.results_division_rank || '',
+                        pace: result.results_pace,
+                        // Sformatowane czasy
+                        formatted_net_time: formatTime(result.results_time),
+                        formatted_gun_time: formatTime(result.results_gun_time),
+                        formatted_pace: result.results_pace
+                    }));
+                    
+                    // Dodaj do cache
+                    cache.openResults = mappedResults;
+                    cache.lastUpdate.open = new Date();
+                    
+                    // Aktualizuj cache zawodników
+                    mappedResults.forEach(athlete => {
+                        if (athlete.entry_bib) {
+                            // Sprawdź czy mamy zapisane dane o kategorii i płci
+                            const savedDivisionPlace = cache.persistentData.divisionPlaces[athlete.entry_bib];
+                            const savedGenderPlace = cache.persistentData.genderPlaces[athlete.entry_bib];
+                            
+                            const athleteData = {
+                                ...cache.athletes[athlete.entry_bib],
+                                ...athlete
+                            };
+                            
+                            // Przywróć dane o kategorii i płci, jeśli zostały zapisane
+                            if (savedDivisionPlace) {
+                                athleteData.division_place = savedDivisionPlace;
+                            }
+                            
+                            if (savedGenderPlace) {
+                                athleteData.gender_place = savedGenderPlace;
+                            }
+                            
+                            cache.athletes[athlete.entry_bib] = athleteData;
+                        }
+                    });
+                    
+                    console.log(`Zaktualizowano wyniki OPEN: ${mappedResults.length} zawodników`);
+                    updateCacheInfo();
+                    
+                    return mappedResults;
+                }
+                
+                return [];
+            } catch (error) {
+                console.error(`Błąd odświeżania wyników OPEN: ${error.message}`);
+                return [];
+            }
+        }
+        
+        /**
+         * Odświeża wyniki według płci - pobiera WSZYSTKIE wyniki
+         */
+        async function refreshSexResults() {
+            try {
+                const sexTypes = ['M', 'F'];
+                const results = { M: [], F: [] };
+                
+                for (const sexType of sexTypes) {
+                    // Parametry dla wyników według płci
+                    const params = {
+                        size: 100,
+                        bracket: 'sex',
+                        sex: sexType
+                    };
+                    
+                    console.log(`Pobieranie wyników dla płci: ${sexType}`);
+                    
+                    // Pobierz wszystkie strony dla tej płci
+                    const genderResults = await fetchAllResultPages(`/api/event/${config.api.eventId}/results`, params);
+                    
+                    if (genderResults.length > 0) {
+                        // Zmapuj do naszego standardowego formatu
+                        const mappedResults = genderResults.map(result => ({
+                            entry_bib: result.results_bib,
+                            athlete_first_name: result.results_first_name,
+                            athlete_last_name: result.results_last_name,
+                            athlete_sex: result.results_sex,
+                            entry_race_age: result.results_age,
+                            bracket_name: result.results_primary_bracket_name,
+                            race_distance: result.results_race_name,
+                            net_time: result.results_time,
+                            gun_time: result.results_gun_time,
+                            overall_place: result.results_rank, // To jest miejsce ogólne
+                            gender_place: result.results_rank_in_bracket || result.results_rank, // W wynikach płci, rank_in_bracket to miejsce w płci
+                            pace: result.results_pace,
+                            // Sformatowane czasy
+                            formatted_net_time: formatTime(result.results_time),
+                            formatted_gun_time: formatTime(result.results_gun_time),
+                            formatted_pace: result.results_pace
+                        }));
+                        
+                        results[sexType] = mappedResults;
+                        
+                        // Aktualizuj cache zawodników z poprawionym miejscem w płci
+                        mappedResults.forEach(athlete => {
+                            if (athlete.entry_bib) {
+                                // Zapisz miejsce w płci do trwałego cache
+                                cache.persistentData.genderPlaces[athlete.entry_bib] = athlete.gender_place;
+                                
+                                if (cache.athletes[athlete.entry_bib]) {
+                                    // Zachowaj istniejące dane, ale zaktualizuj miejsce w płci
+                                    cache.athletes[athlete.entry_bib].gender_place = athlete.gender_place;
+                                } else {
+                                    // Dodaj nowego zawodnika do cache
+                                    cache.athletes[athlete.entry_bib] = athlete;
+                                }
+                            }
+                        });
+                    }
+                }
+                
+                cache.sexResults = results;
+                cache.lastUpdate.sex = new Date();
+                
+                console.log(`Zaktualizowano wyniki wg płci: M=${results.M.length}, F=${results.F.length}`);
+                updateCacheInfo();
+                
+                return results;
+            } catch (error) {
+                console.error(`Błąd odświeżania wyników według płci: ${error.message}`);
+                return { M: [], F: [] };
+            }
+        }
+        
+        /**
+         * Odświeża wyniki kategorii wiekowych - pobiera WSZYSTKIE wyniki
+         */
+        async function refreshAgeResults() {
+            try {
+                // Parametry dla wyników kategorii wiekowych
+                const params = {
+                    size: 100,
+                    bracket: 'age'
+                };
+                
+                console.log("Pobieranie wyników kategorii wiekowych");
+                
+                // Pobierz wszystkie strony
+                const allResults = await fetchAllResultPages(`/api/event/${config.api.eventId}/results`, params);
+                
+                if (allResults.length > 0) {
+                    const ageCategories = {};
+                    
+                    // Zmapuj do naszego standardowego formatu
+                    const mappedResults = allResults.map(result => ({
+                        entry_bib: result.results_bib,
+                        athlete_first_name: result.results_first_name,
+                        athlete_last_name: result.results_last_name,
+                        athlete_sex: result.results_sex,
+                        entry_race_age: result.results_age,
+                        bracket_name: result.results_primary_bracket_name,
+                        race_distance: result.results_race_name,
+                        net_time: result.results_time,
+                        gun_time: result.results_gun_time,
+                        overall_place: result.results_rank,
+                        division_place: result.results_rank_in_bracket || result.results_bracket_rank || result.results_rank, // Uwzględniamy wszystkie możliwe pola
+                        pace: result.results_pace,
+                        // Sformatowane czasy
+                        formatted_net_time: formatTime(result.results_time),
+                        formatted_gun_time: formatTime(result.results_gun_time),
+                        formatted_pace: result.results_pace
+                    }));
+                    
+                    // Grupuj według kategorii wiekowej
+                    mappedResults.forEach(athlete => {
+                        if (athlete.entry_bib) {
+                            // Zapisz miejsce w kategorii do trwałego cache
+                            if (athlete.division_place) {
+                                cache.persistentData.divisionPlaces[athlete.entry_bib] = athlete.division_place;
+                            }
+                            
+                            if (cache.athletes[athlete.entry_bib]) {
+                                // Zachowaj istniejące dane, ale zaktualizuj miejsce w kategorii
+                                cache.athletes[athlete.entry_bib].division_place = athlete.division_place;
+                            } else {
+                                // Dodaj nowego zawodnika do cache
+                                cache.athletes[athlete.entry_bib] = athlete;
+                            }
+                        }
+                        
+                        if (athlete.bracket_name) {
+                            if (!ageCategories[athlete.bracket_name]) {
+                                ageCategories[athlete.bracket_name] = [];
+                            }
+                            ageCategories[athlete.bracket_name].push(athlete);
+                        }
+                    });
+                    
+                    cache.ageResults = ageCategories;
+                    cache.lastUpdate.age = new Date();
+                    
+                    // Log dla diagnostyki
+                    console.log("Odświeżono kategorie wiekowe, liczba zawodników:", mappedResults.length);
+                    console.log("Liczba kategorii:", Object.keys(ageCategories).length);
+                    
+                    updateCacheInfo();
+                    
+                    return ageCategories;
+                }
+                
+                return {};
+            } catch (error) {
+                console.error(`Błąd odświeżania wyników kategorii wiekowych: ${error.message}`);
+                return {};
+            }
+        }
+        
+        /**
+         * Odświeża wszystkie dane
+         */
+        async function refreshAllData() {
+            try {
+                // Pokaż status ładowania
+                setStatus('cache-status', 'Odświeżanie danych...', 'loading');
+                
+                // Najpierw pobierz informacje o wydarzeniu
+                await fetchEventInfo();
+                
+                // Pobierz wszystkie typy wyników równolegle
+                await Promise.all([
+                    refreshOpenResults(),
+                    refreshSexResults(),
+                    refreshAgeResults()
+                ]);
+                
+                updateCacheInfo();
+                
+                setStatus('cache-status', 'Dane odświeżone pomyślnie', 'success');
+                
+                // Ukryj status po 3 sekundach
+                setTimeout(() => {
+                    setStatus('cache-status', '', '');
+                }, 3000);
+                
+                return true;
+            } catch (error) {
+                console.error(`Błąd odświeżania wszystkich danych: ${error.message}`);
+                setStatus('cache-status', `Błąd odświeżania: ${error.message}`, 'error');
+                return false;
+            }
+        }
+        
+        /**
+         * Ustawia timery odświeżania
+         */
+        function setupRefreshTimers() {
+            // Wyczyść istniejące timery
+            clearRefreshTimers();
+            
+            // Ustaw nowe timery
+            refreshTimers.open = setInterval(refreshOpenResults, config.refreshIntervals.open);
+            refreshTimers.sex = setInterval(refreshSexResults, config.refreshIntervals.sex);
+            refreshTimers.age = setInterval(refreshAgeResults, config.refreshIntervals.age);
+        }
+        
+        /**
+         * Czyści wszystkie timery odświeżania
+         */
+        function clearRefreshTimers() {
+            if (refreshTimers.open) clearInterval(refreshTimers.open);
+            if (refreshTimers.sex) clearInterval(refreshTimers.sex);
+            if (refreshTimers.age) clearInterval(refreshTimers.age);
+            
+            refreshTimers.open = null;
+            refreshTimers.sex = null;
+            refreshTimers.age = null;
+        }
+        
+        /**
+         * Czyści cache
+         */
+        function clearCache() {
+            cache.athletes = {};
+            cache.openResults = [];
+            cache.sexResults = { M: [], F: [] };
+            cache.ageResults = {};
+            cache.lastUpdate = {
+                open: null,
+                sex: null,
+                age: null
+            };
+            
+            updateCacheInfo();
+            setStatus('cache-status', 'Pamięć podręczna wyczyszczona', 'success');
+            
+            // Ukryj status po 3 sekundach
+            setTimeout(() => {
+                setStatus('cache-status', '', '');
+            }, 3000);
+        }
+        
+        /**
+         * Inicjalizuje API
+         */
+        async function initializeApi() {
+            try {
+                setStatus('api-connection-status', 'Łączenie z API...', 'loading');
+                
+                // Wczytaj zapisane ID wydarzenia
+                if (config.api.eventId) {
+                    ui.eventIdInput.value = config.api.eventId;
+                    
+                    // Pobierz informacje o wydarzeniu
+                    await fetchEventInfo();
+                    
+                    // Uruchom odświeżanie danych w tle
+                    refreshAllData();
+                    setupRefreshTimers();
+                    
+                    setStatus('api-connection-status', 'Połączono z API ChronoTrack', 'success');
+                    
+                    // Aktualizuj wskaźniki statusu drukarki
+                    updatePrinterStatus();
+                    
+                    return true;
+                } else {
+                    setStatus('api-connection-status', 'Brak skonfigurowanego ID wydarzenia', 'error');
+                    return false;
+                }
+            } catch (error) {
+                setStatus('api-connection-status', `Błąd połączenia: ${error.message}`, 'error');
+                return false;
+            }
+        }
+
+        // =====================================
+        // Funkcje drukarki USB
+        // =====================================
+        
+        /**
+         * Łączy z drukarką USB
+         */
+        async function connectUsbPrinter() {
+            try {
+                // Sprawdź, czy Web USB API jest dostępne
+                if (!navigator.usb) {
+                    throw new Error('Web USB API nie jest obsługiwane w tej przeglądarce.');
+                }
+                
+                const device = await navigator.usb.requestDevice({
+					filters: config.printer.supportedModels
+				});
+
+				console.log("Wykryto urządzenie USB:", device);
+				console.log(`Model: Vendor ID: 0x${device.vendorId.toString(16).padStart(4, '0')}, Product ID: 0x${device.productId.toString(16).padStart(4, '0')}`);
+
+				// Sprawdź czy to obsługiwany model
+				const isSupported = config.printer.supportedModels.some(model => {
+					return device.vendorId === model.vendorId && 
+						   (!model.productId || device.productId === model.productId);
+				});
+
+				if (!isSupported) {
+					console.warn("Nieobsługiwany model drukarki, ale próbuję połączyć...");
+				}
+                
+                console.log("Wykryto urządzenie USB:", device);
+                
+                // Otwórz urządzenie
+                await device.open();
+                console.log("Otwarto połączenie USB");
+                
+                // Wybierz konfigurację
+                if (device.configuration === null) {
+                    await device.selectConfiguration(1);
+                    console.log("Wybrano konfigurację");
+                }
+                
+                // Przejmij interfejs
+                await device.claimInterface(0);
+                console.log("Przejęto interfejs");
+                
+                // Inicjalizacja drukarki
+                const initCommand = new Uint8Array([0x1B, 0x40]); // ESC @
+                await device.transferOut(1, initCommand);
+                console.log("Zainicjalizowano drukarkę");
+                
+                // Zapisz urządzenie w konfiguracji
+                config.printer.device = device;
+                config.printer.connected = true;
+                
+                // Aktualizuj status
+                updatePrinterStatus();
+                
+                return true;
+            } catch (error) {
+                console.error(`Błąd połączenia z drukarką USB: ${error.message}`);
+                setStatus('printer-connection-status', `Błąd połączenia: ${error.message}`, 'error');
+                config.printer.connected = false;
+                updatePrinterStatus();
+                return false;
+            }
+        }
+        
+        /**
+         * Wysyła dane do drukarki USB
+         */
+        async function sendToPrinter(data) {
+            try {
+                if (!config.printer.connected || !config.printer.device) {
+                    throw new Error('Drukarka nie jest podłączona.');
+                }
+                
+                // Konwertuj tekst na Uint8Array
+                const encoder = new TextEncoder();
+                const dataArray = encoder.encode(data);
+                
+                console.log(`Wysyłanie ${dataArray.length} bajtów do drukarki...`);
+                
+                try {
+                    // Wyślij dane do drukarki
+                    await config.printer.device.transferOut(1, dataArray);
+                    console.log("Dane wysłane pomyślnie");
+                    return true;
+                } catch (transferError) {
+                    console.error("Błąd transferu danych:", transferError);
+                    
+                    // Spróbuj ponownie otworzyć połączenie, jeśli zostało zamknięte
+                    try {
+                        console.log("Próba ponownego otwarcia połączenia...");
+                        if (config.printer.device.opened === false) {
+                            await config.printer.device.open();
+                            console.log("Ponownie otwarto połączenie");
+                        }
+                        
+                        if (config.printer.device.configuration === null) {
+                            await config.printer.device.selectConfiguration(1);
+                            console.log("Ponownie wybrano konfigurację");
+                        }
+                        
+                        await config.printer.device.claimInterface(0);
+                        console.log("Ponownie przejęto interfejs");
+                        
+                        // Spróbuj wysłać dane ponownie
+                        await config.printer.device.transferOut(1, dataArray);
+                        console.log("Dane wysłane pomyślnie po ponowieniu połączenia");
+                        return true;
+                    } catch (reopenError) {
+                        console.error("Nie udało się ponownie otworzyć połączenia:", reopenError);
+                        throw reopenError;
+                    }
+                }
+            } catch (error) {
+                console.error(`Błąd drukowania: ${error.message}`);
+                setStatus('printer-connection-status', `Błąd drukowania: ${error.message}`, 'error');
+                return false;
+            }
+        }
+        
+   
+	function createPrintData() {
+		// Definiujemy kody sterujące drukarki Epson
+		const ESC = '\x1B';
+		const GS = '\x1D';
+		
+		// Inicjalizacja drukarki
+		let printData = ESC + '@';
+		
+		// Różne szerokości dla różnych typów czcionek
+		const FULL_WIDTH = 47;        // Pełna szerokość dla normalnych czcionek (8cm)
+		const DOUBLE_WIDTH = 23;      // Szerokość dla podwójnie szerokich czcionek
+		const DOUBLE_HEIGHT_WIDTH = 47; // Pełna szerokość dla podwójnie wysokich czcionek
+		
+		// Funkcja do bezpiecznego dzielenia nazwy biegu na całe słowa
+		function wrapText(text, maxWidth) {
+			if (!text || text.length <= maxWidth) return text;
+			
+			const words = text.split(' ');
+			let lines = [];
+			let currentLine = '';
+			
+			for (let i = 0; i < words.length; i++) {
+				const word = words[i];
+				
+				if (currentLine.length + word.length + 1 <= maxWidth) {
+					currentLine = currentLine ? currentLine + ' ' + word : word;
+				} else {
+					if (currentLine) {
+						lines.push(currentLine);
+						currentLine = word;
+					} else {
+						if (word.length > maxWidth) {
+							let i = 0;
+							while (i < word.length) {
+								let chunk = word.substring(i, Math.min(i + maxWidth, word.length));
+								lines.push(chunk);
+								i += maxWidth;
+							}
+						} else {
+							currentLine = word;
+						}
+					}
+				}
+			}
+			
+			if (currentLine) {
+				lines.push(currentLine);
+			}
+			
+			return lines.join('\n');
+		}
+		
+		// Konwersja polskich znaków na ASCII
+		function transliteratePolishChars(text) {
+			return text
+				.replace(/ą/g, 'a').replace(/ć/g, 'c').replace(/ę/g, 'e').replace(/ł/g, 'l')
+				.replace(/ń/g, 'n').replace(/ó/g, 'o').replace(/ś/g, 's').replace(/ź/g, 'z')
+				.replace(/ż/g, 'z').replace(/Ą/g, 'A').replace(/Ć/g, 'C').replace(/Ę/g, 'E')
+				.replace(/Ł/g, 'L').replace(/Ń/g, 'N').replace(/Ó/g, 'O').replace(/Ś/g, 'S')
+				.replace(/Ź/g, 'Z').replace(/Ż/g, 'Z');
+		}
+		
+		// Pobierz wartości z paragonu
+		const rawEventName = ui.printEventName.textContent;
+		const eventDate = ui.printEventDate.textContent;
+		const eventLocation = ui.printEventLocation.textContent;
+		const athleteName = ui.printAthleteName.textContent;
+		const bibNumber = ui.printBibNumber.textContent;
+		const athleteDistance = ui.printAthleteDistance.textContent;
+		const athleteDivision = ui.printAthleteDivision.textContent;
+		const athleteAge = ui.printAthleteAge.textContent;
+		const netTime = ui.printNetTime.textContent;
+		const gunTime = ui.printGunTime.textContent;
+		const overallPlace = ui.printOverallPlace.textContent;
+		const divisionPlace = ui.printDivisionPlace.textContent;
+		const genderPlace = ui.printGenderPlace.textContent;
+		const customMessage = ui.printCustomMessage.textContent;
+		const yogoMessage = ui.printYogoMessage.textContent;
+		
+		// Format daty do wydruku znacznika czasu
+		const now = new Date();
+		const timestamp = `${now.toLocaleDateString('pl-PL')} ${now.toLocaleTimeString('pl-PL', {hour: '2-digit', minute:'2-digit'})}`;
+		
+		// Podziel nazwę wydarzenia na wiersze i zamień polskie znaki
+		const eventNameProcessed = transliteratePolishChars(rawEventName);
+		const eventName = wrapText(eventNameProcessed, DOUBLE_WIDTH - 2); // Użyj szerokości dla podwójnie szerokich czcionek
+		
+		// Centrowanie tekstu
+		printData += ESC + 'a' + '\x01'; // Wyśrodkuj
+		
+		// === NAGŁÓWEK - WIĘKSZE I POGRUBIONE CZCIONKI ===
+		
+		// Nazwa wydarzenia - duża, pogrubiona czcionka
+		printData += ESC + '!' + '\x38'; // Bold + Double height + Double width
+		const eventNameLines = eventName.split('\n');
+		for (const line of eventNameLines) {
+			printData += line + '\n';
+		}
+		
+		// Lokalizacja i data - średnia czcionka, pogrubiona, używaj pełnej szerokości
+		printData += ESC + '!' + '\x18'; // Bold + Double height (ale nie double width)
+		printData += transliteratePolishChars(eventLocation) + '\n';
+		printData += transliteratePolishChars(eventDate) + '\n\n';
+		
+		// Imię i nazwisko - duże, pogrubione
+		printData += ESC + '!' + '\x38'; // Bold + Double height + Double width
+		printData += transliteratePolishChars(athleteName) + '\n';
+
+		// Numer startowy - średnie, pogrubione
+		printData += ESC + '!' + '\x18'; // Bold + Double height
+		printData += transliteratePolishChars(bibNumber) + '\n';
+
+		// Dystans - wyrównany do lewej, pogrubiony, PEŁNA SZEROKOŚĆ
+		printData += ESC + 'a' + '\x00'; // Wyrównaj do lewej  
+		printData += ESC + '!' + '\x18'; // Bold + Double height (ale nie double width - używa pełnej szerokości)
+		const wrappedDistance = wrapText(transliteratePolishChars(athleteDistance), DOUBLE_HEIGHT_WIDTH);
+		printData += wrappedDistance + '\n';
+
+		// Kategoria i wiek - PEŁNA SZEROKOŚĆ
+		printData += ESC + '!' + '\x18'; // Bold + Double height (ale nie double width)
+		const categoryText = transliteratePolishChars(athleteDivision);
+		const ageText = transliteratePolishChars(athleteAge);
+		const categoryPadding = DOUBLE_HEIGHT_WIDTH - categoryText.length - ageText.length;
+		const categorySpaces = ' '.repeat(Math.max(0, categoryPadding));
+		printData += categoryText + categorySpaces + ageText + '\n\n';
+
+		// === LINIA POZIOMA - PEŁNA SZEROKOŚĆ ===
+		printData += ESC + '!' + '\x00'; // Normalna czcionka
+		printData += '='.repeat(FULL_WIDTH) + '\n';
+
+		// === WYNIKI - WIĘKSZE, POGRUBIONE I PEŁNA SZEROKOŚĆ ===
+
+		// Funkcja do formatowania linii wyników z pełną szerokością - większe czcionki
+		function formatResultLineFullWidth(label, value) {
+			printData += ESC + '!' + '\x18'; // Bold + Double height (ale nie double width)
+			const padding = DOUBLE_HEIGHT_WIDTH - label.length - value.length;
+			const spaces = ' '.repeat(Math.max(0, padding));
+			printData += label + spaces + value + '\n';
+		}
+
+		// Wyniki czasowe i miejsca - większe, pogrubione, pełna szerokość
+		formatResultLineFullWidth("Czas brutto:", gunTime);
+		formatResultLineFullWidth("Czas netto:", netTime);
+		formatResultLineFullWidth("Msc Open:", overallPlace);
+		formatResultLineFullWidth("Msc K/M:", genderPlace);
+		formatResultLineFullWidth("Kategoria:", divisionPlace);
+
+		// === LINIA POZIOMA - PEŁNA SZEROKOŚĆ ===
+		printData += ESC + '!' + '\x00'; // Normalna czcionka
+		printData += '='.repeat(FULL_WIDTH) + '\n';
+		
+		// === STOPKA - WYŚRODKOWANA ===
+		printData += ESC + 'a' + '\x01'; // Wyśrodkuj
+		
+		// "wyniki nieoficjalne" - mała czcionka
+		printData += ESC + '!' + '\x00'; 
+		printData += "wyniki nieoficjalne" + '\n\n';
+		
+		// Wiadomość custom - normalna czcionka, pogrubiona, wykorzystaj pełną szerokość
+		printData += ESC + '!' + '\x08'; // Bold
+		const wrappedCustomMessage = wrapText(transliteratePolishChars(customMessage), FULL_WIDTH);
+		printData += wrappedCustomMessage + '\n';
+		
+		// Stopka YO&GO - normalna czcionka, pogrubiona, wykorzystaj pełną szerokość
+		const wrappedYogoMessage = wrapText(transliteratePolishChars(yogoMessage), FULL_WIDTH);
+		printData += wrappedYogoMessage + '\n\n';
+		
+		// Timestamp - mała czcionka
+		printData += ESC + '!' + '\x00';
+		printData += transliteratePolishChars(timestamp) + '\n';
+		
+		// === ZAKOŃCZENIE ===
+		// Więcej miejsca na końcu + obcięcie
+		printData += '\n\n\n'; // Dodatkowe linie
+		printData += GS + 'V' + '\x01'; // Obetnij papier
+		
+		console.log("Ulepszone dane wydruku przygotowane z pełną szerokością, długość: " + printData.length + " bajtów");
+		
+		return printData;
+	}
+        
+        /**
+         * Aktualizuje wskaźniki statusu drukarki
+         */
+        function updatePrinterStatus() {
+            // Aktualizuj wskaźniki drukarki
+            if (config.printer.connected) {
+                if (ui.printerIndicator) ui.printerIndicator.classList.add('connected');
+                if (ui.printerStatusText) ui.printerStatusText.textContent = 'Drukarka podłączona';
+                if (ui.testPrint) ui.testPrint.disabled = false;
+                
+                if (ui.searchPrinterIndicator) ui.searchPrinterIndicator.classList.add('connected');
+                if (ui.searchPrinterStatus) ui.searchPrinterStatus.textContent = 'Drukarka podłączona';
+            } else {
+                if (ui.printerIndicator) ui.printerIndicator.classList.remove('connected');
+                if (ui.printerStatusText) ui.printerStatusText.textContent = 'Drukarka nie podłączona';
+                if (ui.testPrint) ui.testPrint.disabled = true;
+                
+                if (ui.searchPrinterIndicator) ui.searchPrinterIndicator.classList.remove('connected');
+                if (ui.searchPrinterStatus) ui.searchPrinterStatus.textContent = 'Drukarka nie podłączona';
+            }
+        }
+        
+        /**
+         * Drukuj używając drukarki systemowej
+         */
+        function systemPrint() {
+            window.print();
+            return true;
+        }
+        
+        /**
+         * Drukuj paragon w oparciu o aktualną konfigurację drukarki
+         */
+        async function printReceipt() {
+            try {
+                // Skopiuj dane do kontenera wydruku
+                copyPreviewToPrint();
+                
+                // Drukuj w zależności od typu drukarki
+                if (config.printer.type === 'usb' && config.printer.connected) {
+                    // Drukarka USB
+                    const printData = createPrintData();
+                    console.log("Wysyłanie danych do drukarki...");
+                    return await sendToPrinter(printData);
+                } else {
+                    // Drukarka systemowa - przygotuj wydruk do stylu paragonowego
+                    const printStyle = document.createElement('style');
+                    printStyle.textContent = `
+                        @media print {
+                            @page { 
+                                size: 80mm auto;
+                                margin: 0; 
+                            }
+                            body * {
+                                visibility: hidden;
+                                overflow: visible !important;
+                            }
+                            #print-container, #print-container * {
+                                visibility: visible;
+                            }
+                            #print-container {
+                                position: absolute;
+                                left: 0;
+                                top: 0;
+                                width: 80mm; /* Szerokość paragonu */
+                                font-family: 'Courier New', monospace;
+                                padding: 5mm;
+                            }
+                            .receipt {
+                                border: none;
+                                width: 100%;
+                            }
+                        }
+                    `;
+                    document.head.appendChild(printStyle);
+                    
+                    const result = systemPrint();
+                    
+                    // Usuń dodany styl po wydrukowaniu
+                    setTimeout(() => {
+                        document.head.removeChild(printStyle);
+                    }, 1000);
+                    
+                    return result;
+                }
+            } catch (error) {
+                console.error(`Błąd drukowania: ${error.message}`);
+                setStatus('search-status', `Błąd drukowania: ${error.message}`, 'error');
+                return false;
+            }
+        }
+
+        // =====================================
+        // Funkcje UI
+        // =====================================
+        
+        /**
+         * Ustawia wiadomość statusu
+         */
+        function setStatus(elementId, message, type = '') {
+            const statusElement = document.getElementById(elementId);
+            if (!statusElement) return;
+            
+            statusElement.textContent = message;
+            statusElement.className = `status ${type}`;
+            
+            if (type) {
+                statusElement.classList.remove('hidden');
+            } else {
+                statusElement.classList.add('hidden');
+            }
+        }
+        
+        /**
+         * Aktualizuje informacje o wydarzeniu w UI
+         */
+        function updateEventInfo() {
+            if (!cache.eventInfo) return;
+            
+            const eventInfo = cache.eventInfo;
+            
+            // Aktualizuj informacje o wydarzeniu w UI
+            // Aktualizuj informacje o wydarzeniu w UI
+			if (ui.eventNameInfo) ui.eventNameInfo.textContent = eventInfo.event_name || 'Nie ustawiono';
+			if (ui.eventDateInfo) ui.eventDateInfo.textContent = eventInfo.event_date || 'Nie ustawiono';
+			if (ui.eventLocationInfo) ui.eventLocationInfo.textContent = eventInfo.location || 'Nie ustawiono';
+            
+            // Aktualizuj podgląd paragonu
+			if (ui.previewEventName) ui.previewEventName.textContent = eventInfo.event_name || 'Nazwa wydarzenia';
+			if (ui.previewEventDate) ui.previewEventDate.textContent = eventInfo.event_date || 'Data wydarzenia';
+			if (ui.previewEventLocation) ui.previewEventLocation.textContent = eventInfo.location || 'Lokalizacja';
+			
+            // Aktualizuj również wersję do druku
+            // Aktualizuj również wersję do druku
+			if (ui.printEventName) ui.printEventName.textContent = eventInfo.event_name || 'Nazwa wydarzenia';
+			if (ui.printEventDate) ui.printEventDate.textContent = eventInfo.event_date || 'Data wydarzenia';
+			if (ui.printEventLocation) ui.printEventLocation.textContent = eventInfo.location || 'Lokalizacja';
+        }
+        
+        /**
+         * Aktualizuje informacje o cache w UI
+         */
+        function updateCacheInfo() {
+            // Aktualizuj informacje o cache w UI
+            const athletesCount = Object.keys(cache.athletes).length;
+            const openCount = cache.openResults.length;
+            
+            // Poprawnie liczymy wyniki według płci
+            const maleCount = cache.sexResults.M.length;
+            const femaleCount = cache.sexResults.F.length;
+            // Zamiast sumować (co powodowało podwójne liczenie), używamy rzeczywistej liczby zawodników
+            const sexCount = Math.min(maleCount + femaleCount, openCount);
+            
+            // Zliczamy zawodników w kategoriach wiekowych
+            let ageCount = 0;
+            Object.values(cache.ageResults).forEach(category => {
+                ageCount += category.length;
+            });
+            
+            if (ui.athletesCount) ui.athletesCount.textContent = athletesCount;
+            if (ui.adminAthletesCount) ui.adminAthletesCount.textContent = athletesCount;
+            if (ui.adminOpenCount) ui.adminOpenCount.textContent = openCount;
+            if (ui.adminSexCount) ui.adminSexCount.textContent = sexCount;
+            if (ui.adminAgeCount) ui.adminAgeCount.textContent = ageCount;
+            
+            // Aktualizuj czas ostatniej aktualizacji
+            const lastUpdateTime = cache.lastUpdate.open || new Date();
+            const formattedTime = lastUpdateTime.toLocaleTimeString();
+            
+            if (ui.lastUpdate) ui.lastUpdate.textContent = formattedTime;
+            if (ui.adminLastUpdate) ui.adminLastUpdate.textContent = formattedTime;
+            
+            // Log dla celów diagnostycznych
+            console.log("Cache zaktualizowany:", {
+                atletów: athletesCount,
+                openResults: openCount,
+                maleResults: maleCount,
+                femaleResults: femaleCount,
+                ageResults: ageCount
+            });
+        }
+        
+        /**
+         * Pokazuje stan ładowania
+         */
+        function showLoading(show = true) {
+            if (show) {
+                ui.searchButtonText.textContent = 'Wyszukiwanie...';
+                ui.searchLoading.classList.remove('hidden');
+                ui.searchButton.disabled = true;
+            } else {
+                ui.searchButtonText.textContent = 'Szukaj';
+                ui.searchLoading.classList.add('hidden');
+                ui.searchButton.disabled = false;
+            }
+        }
+        
+        /**
+         * Wyświetla dane zawodnika w podglądzie
+         */
+        function displayAthletePreview(athlete) {
+            if (!athlete) return;
+            
+            console.log("Wyświetlam podgląd zawodnika:", athlete);
+            
+            // Aktualizuj podgląd danymi zawodnika
+            if (ui.previewAthleteName) {
+                ui.previewAthleteName.textContent = `${athlete.athlete_first_name || ''} ${athlete.athlete_last_name || ''}`;
+            }
+            
+            if (ui.previewBibNumber) ui.previewBibNumber.textContent = `Numer: ${athlete.entry_bib || '-'}`;
+            if (ui.previewAthleteDistance) ui.previewAthleteDistance.textContent = `Dystans: ${athlete.race_distance || '-'}`;
+            if (ui.previewAthleteDivision) ui.previewAthleteDivision.textContent = `Kategoria: ${athlete.bracket_name || '-'}`;
+            if (ui.previewAthleteAge) ui.previewAthleteAge.textContent = `Wiek: ${athlete.entry_race_age || '-'}`;
+            
+            if (ui.previewNetTime) ui.previewNetTime.textContent = athlete.formatted_net_time || '-';
+            if (ui.previewGunTime) ui.previewGunTime.textContent = athlete.formatted_gun_time || '-';
+            if (ui.previewOverallPlace) ui.previewOverallPlace.textContent = athlete.overall_place || '-';
+            if (ui.previewDivisionPlace) ui.previewDivisionPlace.textContent = athlete.division_place || '-';
+            if (ui.previewGenderPlace) ui.previewGenderPlace.textContent = athlete.gender_place || '-';
+            
+            // Log dla debugowania
+            console.log("Dane wyświetlane w podglądzie:", {
+                divisionPlace: athlete.division_place,
+                genderPlace: athlete.gender_place,
+                overallPlace: athlete.overall_place
+            });
+            
+            // Aktualizuj własne wiadomości
+            if (ui.previewCustomMessage) ui.previewCustomMessage.textContent = config.customMessages.custom;
+            if (ui.previewYogoMessage) ui.previewYogoMessage.textContent = config.customMessages.footer;
+            
+            // Aktualizuj timestamp
+            if (ui.previewTimestamp) {
+                const now = new Date();
+                ui.previewTimestamp.textContent = `Wydrukowano: ${now.toLocaleDateString('pl-PL')} ${now.toLocaleTimeString('pl-PL')}`;
+            }
+            
+            // Zapisz wybranego zawodnika
+            selectedAthlete = athlete;
+            
+            // Włącz przycisk drukowania
+            ui.printButton.disabled = false;
+        }
+        
+        /**
+         * Kopiuje dane z podglądu do kontenera wydruku
+         */
+        function copyPreviewToPrint() {
+            if (!selectedAthlete) return;
+            
+            // Kopiuj dane z podglądu do kontenera wydruku
+            if (ui.printAthleteName) {
+                ui.printAthleteName.textContent = ui.previewAthleteName.textContent;
+            }
+            
+            if (ui.printBibNumber) ui.printBibNumber.textContent = ui.previewBibNumber.textContent;
+            if (ui.printAthleteDistance) ui.printAthleteDistance.textContent = ui.previewAthleteDistance.textContent;
+            if (ui.printAthleteDivision) ui.printAthleteDivision.textContent = ui.previewAthleteDivision.textContent;
+            if (ui.printAthleteAge) ui.printAthleteAge.textContent = ui.previewAthleteAge.textContent;
+            
+            if (ui.printNetTime) ui.printNetTime.textContent = ui.previewNetTime.textContent;
+            if (ui.printGunTime) ui.printGunTime.textContent = ui.previewGunTime.textContent;
+            if (ui.printOverallPlace) ui.printOverallPlace.textContent = ui.previewOverallPlace.textContent;
+            if (ui.printDivisionPlace) ui.printDivisionPlace.textContent = ui.previewDivisionPlace.textContent;
+            if (ui.printGenderPlace) ui.printGenderPlace.textContent = ui.previewGenderPlace.textContent;
+            
+            // Kopiuj własne wiadomości
+            if (ui.printCustomMessage) ui.printCustomMessage.textContent = config.customMessages.custom;
+            if (ui.printYogoMessage) ui.printYogoMessage.textContent = config.customMessages.footer;
+            
+            // Aktualizuj timestamp
+            if (ui.printTimestamp) {
+                const now = new Date();
+                ui.printTimestamp.textContent = `Wydrukowano: ${now.toLocaleDateString('pl-PL')} ${now.toLocaleTimeString('pl-PL')}`;
+            }
+        }
+        
+        /**
+         * Wyświetla listę znalezionych zawodników
+         */
+        function displayAthletesList(athletes) {
+            if (!athletes || athletes.length === 0) {
+                return;
+            }
+            
+            // Wyczyść poprzednie wyniki
+            ui.athleteList.innerHTML = '';
+            
+            // Dodaj zawodników do listy
+            athletes.forEach(athlete => {
+                const athleteItem = document.createElement('div');
+                athleteItem.className = 'athlete-item';
+                athleteItem.dataset.bib = athlete.entry_bib;
+                
+                athleteItem.innerHTML = `
+                    <span class="athlete-item-bib">${athlete.entry_bib}</span>
+                    ${athlete.athlete_first_name} ${athlete.athlete_last_name}
+                    <span class="athlete-item-category">${athlete.bracket_name || '-'}</span>
+                `;
+                
+                athleteItem.addEventListener('click', () => {
+                    // Usuń klasę selected ze wszystkich elementów
+                    document.querySelectorAll('.athlete-item').forEach(item => {
+                        item.classList.remove('selected');
+                    });
+                    
+                    // Dodaj klasę selected do tego elementu
+                    athleteItem.classList.add('selected');
+                    
+                    // Wyświetl podgląd zawodnika
+                    displayAthletePreview(athlete);
+                });
+                
+                ui.athleteList.appendChild(athleteItem);
+            });
+            
+            // Pokaż kontener wyników
+            ui.resultsContainer.classList.remove('hidden');
+            
+            // Jeśli tylko jeden zawodnik, wybierz go automatycznie
+            if (athletes.length === 1) {
+                ui.athleteList.firstChild.classList.add('selected');
+                displayAthletePreview(athletes[0]);
+            } else {
+                // Wyłącz przycisk drukowania, dopóki zawodnik nie zostanie wybrany
+                ui.printButton.disabled = true;
+            }
+        }
+        
+        /**
+         * Przełącza między ekranami
+         */
+        function switchScreen(screenId) {
+            // Ukryj wszystkie ekrany
+            ui.adminScreen.classList.remove('active');
+            ui.searchScreen.classList.remove('active');
+            
+            // Pokaż żądany ekran
+            if (screenId === 'admin') {
+                ui.adminScreen.classList.add('active');
+            } else if (screenId === 'search') {
+                ui.searchScreen.classList.add('active');
+            }
+        }
+        
+        /**
+         * Pokazuje lub ukrywa modal hasła
+         */
+        function togglePasswordModal(show) {
+            if (show) {
+                ui.passwordModal.classList.add('active');
+                ui.adminPassword.value = '';
+                ui.adminPassword.focus();
+            } else {
+                ui.passwordModal.classList.remove('active');
+                setStatus('password-status', '', '');
+            }
+        }
+        
+        /**
+         * Weryfikuje hasło administratora
+         */
+        function validatePassword(password) {
+            return password === config.adminPassword;
+        }
+
+        // =====================================
+        // Obsługa zdarzeń
+        // =====================================
+        
+        /**
+         * Obsługa kliknięcia przycisku wyszukiwania
+         */
+        ui.searchButton.addEventListener('click', async () => {
+            const query = ui.searchQuery.value.trim();
+            
+            if (!query) {
+                setStatus('search-status', 'Wprowadź numer startowy', 'error');
+                return;
+            }
+            
+            // Sprawdź czy wprowadzono tylko cyfry
+            if (!/^\d+$/.test(query)) {
+                setStatus('search-status', 'Wprowadź poprawny numer startowy (tylko cyfry)', 'error');
+                return;
+            }
+            
+            setStatus('search-status', '', '');
+            showLoading(true);
+            
+            try {
+                // Wyszukaj po BIB
+                const athlete = await findAthleteByBib(query);
+                
+                if (athlete) {
+                    console.log("Wyświetlam zawodnika:", athlete);
+                    displayAthletesList([athlete]);
+                    setStatus('search-status', 'Znaleziono zawodnika', 'success');
+                } else {
+                    setStatus('search-status', 'Nie znaleziono zawodnika', 'error');
+                    ui.resultsContainer.classList.add('hidden');
+                }
+            } catch (error) {
+                console.error(`Błąd wyszukiwania: ${error.message}`);
+                setStatus('search-status', `Błąd wyszukiwania: ${error.message}`, 'error');
+                ui.resultsContainer.classList.add('hidden');
+            } finally {
+                showLoading(false);
+            }
+        });
+        
+        /**
+         * Obsługa kliknięcia przycisku drukowania
+         */
+        ui.printButton.addEventListener('click', async () => {
+            if (!selectedAthlete) {
+                setStatus('search-status', 'Najpierw wybierz zawodnika', 'error');
+                return;
+            }
+            
+            try {
+                const success = await printReceipt();
+                
+                if (success) {
+                    setStatus('search-status', 'Wydrukowano paragon', 'success');
+                } else {
+                    setStatus('search-status', 'Błąd drukowania', 'error');
+                }
+            } catch (error) {
+                console.error(`Błąd drukowania: ${error.message}`);
+                setStatus('search-status', `Błąd drukowania: ${error.message}`, 'error');
+            }
+        });
+        
+        /**
+         * Obsługa wyszukiwania przez naciśnięcie Enter
+         */
+        ui.searchQuery.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                ui.searchButton.click();
+            }
+        });
+        
+        /**
+         * Obsługa kliknięcia przycisku admin (otwórz modal hasła)
+         */
+        ui.adminButton.addEventListener('click', () => {
+            togglePasswordModal(true);
+        });
+        
+        /**
+         * Obsługa zatwierdzenia hasła
+         */
+        ui.submitPassword.addEventListener('click', () => {
+            const password = ui.adminPassword.value;
+            
+            if (validatePassword(password)) {
+                togglePasswordModal(false);
+                switchScreen('admin');
+            } else {
+                setStatus('password-status', 'Niepoprawne hasło', 'error');
+            }
+        });
+        
+        /**
+         * Obsługa anulowania hasła
+         */
+        ui.cancelPassword.addEventListener('click', () => {
+            togglePasswordModal(false);
+        });
+        
+        /**
+         * Obsługa naciśnięcia Enter w polu hasła
+         */
+        ui.adminPassword.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                ui.submitPassword.click();
+            }
+        });
+        
+        /**
+         * Obsługa przycisku przejścia do wyszukiwania
+         */
+        ui.continueToSearch.addEventListener('click', () => {
+            // Sprawdź, czy ID wydarzenia jest ustawione
+            if (!config.api.eventId) {
+                setStatus('api-connection-status', 'Najpierw ustaw ID wydarzenia', 'error');
+                return;
+            }
+            
+            // Sprawdź połączenie API
+            if (!cache.eventInfo) {
+                setStatus('api-connection-status', 'Brak połączenia z API', 'error');
+                return;
+            }
+            
+            // Zapisz ustawienia wiadomości
+            config.customMessages.custom = ui.customMessageInput.value.trim();
+            config.customMessages.footer = ui.footerMessageInput.value.trim();
+            
+            localStorage.setItem('custom-message', config.customMessages.custom);
+            localStorage.setItem('footer-message', config.customMessages.footer);
+            
+            // Aktualizuj wiadomości w podglądzie
+            if (ui.previewCustomMessage) ui.previewCustomMessage.textContent = config.customMessages.custom;
+            if (ui.previewYogoMessage) ui.previewYogoMessage.textContent = config.customMessages.footer;
+            
+            // Przełącz na ekran wyszukiwania
+            switchScreen('search');
+        });
+        
+        /**
+         * Obsługa przycisku testowania połączenia
+         */
+        ui.testConnection.addEventListener('click', async () => {
+            setStatus('cache-status', 'Testowanie połączenia...', 'loading');
+            
+            try {
+                const response = await makeApiRequest(`/api/event/${config.api.eventId}`);
+                
+                if (response && response.event) {
+                    setStatus('cache-status', 'Połączenie działa poprawnie', 'success');
+                } else {
+                    setStatus('cache-status', 'Nieprawidłowa odpowiedź API', 'error');
+                }
+            } catch (error) {
+                setStatus('cache-status', `Błąd połączenia: ${error.message}`, 'error');
+            }
+        });
+        
+        /**
+         * Obsługa przycisku odświeżania wszystkich danych
+         */
+        ui.refreshAllData.addEventListener('click', () => {
+            refreshAllData();
+        });
+        
+        /**
+         * Obsługa przycisku czyszczenia cache
+         */
+        ui.clearCache.addEventListener('click', () => {
+            clearCache();
+        });
+        
+        /**
+         * Obsługa zmiany typu drukarki
+         */
+        ui.printerType.addEventListener('change', () => {
+            config.printer.type = ui.printerType.value;
+            localStorage.setItem('printer-type', config.printer.type);
+            
+            // Aktualizuj UI
+            updatePrinterStatus();
+        });
+        
+        /**
+         * Obsługa przycisku łączenia z drukarką
+         */
+        ui.connectPrinter.addEventListener('click', async () => {
+            setStatus('printer-connection-status', 'Łączenie z drukarką...', 'loading');
+            
+            try {
+                if (config.printer.type === 'usb') {
+                    // Połącz z drukarką USB
+                    const success = await connectUsbPrinter();
+                    
+                    if (success) {
+                        setStatus('printer-connection-status', 'Drukarka podłączona pomyślnie', 'success');
+                    } else {
+                        setStatus('printer-connection-status', 'Nie udało się połączyć z drukarką', 'error');
+                    }
+                } else {
+                    // Drukarka systemowa - tylko aktualizuj status
+                    config.printer.connected = true;
+                    updatePrinterStatus();
+                    setStatus('printer-connection-status', 'Używanie drukarki systemowej', 'success');
+                }
+            } catch (error) {
+                console.error(`Błąd połączenia z drukarką: ${error.message}`);
+                setStatus('printer-connection-status', `Błąd połączenia: ${error.message}`, 'error');
+            }
+        });
+        
+        /**
+         * Obsługa przycisku drukowania testu
+         */
+        ui.testPrint.addEventListener('click', async () => {
+            setStatus('printer-connection-status', 'Drukowanie testu...', 'loading');
+            
+            try {
+                // Kody sterujące dla drukarki Epson
+                const ESC = '\x1B';
+                const GS = '\x1D';
+                
+                // Utwórz dane wydruku testowego
+                let printData = ESC + '@'; // Inicjalizacja
+                
+                // Ustaw kodowanie na Code Page 850
+                printData += ESC + 't' + '\x02';
+                
+                // Szerokość wydruku (8 cm / 47 znaków)
+                const PRINT_WIDTH = 47;
+                
+                // Centrowanie
+                printData += ESC + 'a' + '\x01';
+                
+                // Nagłówek
+                printData += ESC + '!' + '\x08'; // Bold
+                printData += 'TEST DRUKARKI - POLSKIE ZNAKI\n\n';
+                
+                // Przywróć normalny tekst i wyrównanie do lewej
+                printData += ESC + '!' + '\x00';
+                printData += ESC + 'a' + '\x00';
+                
+                // Test polskich znaków (kodowanie PC850 - DOS LATIN)
+                printData += 'POLSKIE ZNAKI - CP850:\n';
+                // Mapowanie dla PC850
+                printData += '\xA5 - a ogonek\n'; // ą
+                printData += '\x86 - c kreska\n';  // ć
+                printData += '\xA9 - e ogonek\n';  // ę
+                printData += '\x9D - l kreska\n';  // ł
+                printData += '\xE4 - n kreska\n';  // ń
+                printData += '\xA2 - o kreska\n';  // ó
+                printData += '\x8C - s kreska\n';  // ś
+                printData += '\x8F - z kreska\n';  // ź
+                printData += '\xAB - z kropka\n';  // ż
+                
+                // Test dzielenia długiej nazwy
+                printData += '\nTEST DZIELENIA DŁUGIEJ NAZWY:\n';
+                
+                // Funkcja do bezpiecznego dzielenia tekstu
+                function wrapText(text, maxWidth) {
+                    if (!text || text.length <= maxWidth) return text;
+                    
+                    const words = text.split(' ');
+                    let lines = [];
+                    let currentLine = '';
+                    
+                    for (let i = 0; i < words.length; i++) {
+                        const word = words[i];
+                        
+                        // Jeśli dodanie słowa nie przekroczy szerokości, dodaj je do linii
+                        if (currentLine.length + word.length + 1 <= maxWidth) {
+                            currentLine = currentLine ? currentLine + ' ' + word : word;
+                        } else {
+                            // Jeśli bieżąca linia nie jest pusta, zakończ ją
+                            if (currentLine) {
+                                lines.push(currentLine);
+                                currentLine = word;
+                            } else {
+                                // Obsługa przypadku gdy pojedyncze słowo jest dłuższe niż szerokość
+                                if (word.length > maxWidth) {
+                                    // Podziel długie słowo na kilka linii
+                                    let i = 0;
+                                    while (i < word.length) {
+                                        let chunk = word.substring(i, Math.min(i + maxWidth, word.length));
+                                        lines.push(chunk);
+                                        i += maxWidth;
+                                    }
+                                } else {
+                                    currentLine = word;
+                                }
+                            }
+                        }
+                    }
+                    
+                    // Nie zapomnij o ostatniej linii
+                    if (currentLine) {
+                        lines.push(currentLine);
+                    }
+                    
+                    return lines.join('\n');
+                }
+                
+                // Przykładowy długi tekst
+                const longText = "Ultramaraton Narwiański Trail Pogoń za Bobrem 2025 Edycja IV";
+                
+                // Zawijaj tekst na szerokość 30 znaków dla lepszej widoczności przykładu
+                const wrappedText = wrapText(longText, 30);
+                printData += wrappedText + '\n\n';
+                
+                // Test wyrównania do prawej krawędzi
+                printData += 'TEST WYRÓWNANIA DO PRAWEJ:\n';
+                
+                // Funkcja do formatowania z dosunięciem do prawej
+                function formatLineRightAlign(label, value) {
+                    const paddingWidth = PRINT_WIDTH - label.length - value.length;
+                    const padding = ' '.repeat(Math.max(0, paddingWidth));
+                    return label + padding + value + '\n';
+                }
+                
+                printData += formatLineRightAlign("Czas netto", "01:23:45");
+                printData += formatLineRightAlign("Miejsce OPEN", "42");
+                printData += formatLineRightAlign("Miejsce w kategorii", "7");
+                
+                // Polskie znaki w zdaniu
+                printData += '\nZDANIE Z POLSKIMI ZNAKAMI:\n';
+                
+                // Konwersja polskich znaków do PC850
+                function convertPolishChars(text) {
+                    return text
+                        .replace(/ą/g, '\xA5')
+                        .replace(/ć/g, '\x86')
+                        .replace(/ę/g, '\xA9')
+                        .replace(/ł/g, '\x9D')
+                        .replace(/ń/g, '\xE4')
+                        .replace(/ó/g, '\xA2')
+                        .replace(/ś/g, '\x8C')
+                        .replace(/ź/g, '\x8F')
+                        .replace(/ż/g, '\xAB')
+                        .replace(/Ą/g, '\xA4')
+                        .replace(/Ć/g, '\x8D')
+                        .replace(/Ę/g, '\xA8')
+                        .replace(/Ł/g, '\x9C')
+                        .replace(/Ń/g, '\xE3')
+                        .replace(/Ó/g, '\xE0')
+                        .replace(/Ś/g, '\x8B')
+                        .replace(/Ź/g, '\x8E')
+                        .replace(/Ż/g, '\xAA');
+                }
+                
+                const polishSentence = "Zażółć gęślą jaźń żółwiom";
+                printData += convertPolishChars(polishSentence) + '\n\n';
+                
+                // Stopka w jednej linii
+                printData += ESC + 'a' + '\x01'; // Centruj
+                printData += convertPolishChars("YO&GO Events - Twój pomiar czasu");
+                
+                // Obetnij papier - z mniejszym odstępem
+                printData += ESC + 'd' + '\x03'; // Wysuń tylko 3 linie
+                printData += GS + 'V' + '\x01'; // Obetnij
+                
+                // Dla drukarki USB wyślij bezpośrednio dane testowe
+                if (config.printer.type === 'usb' && config.printer.connected) {
+                    // Wyślij dane testowe do drukarki USB
+                    const success = await sendToPrinter(printData);
+                    
+                    if (success) {
+                        setStatus('printer-connection-status', 'Test wydrukowany pomyślnie', 'success');
+                    } else {
+                        setStatus('printer-connection-status', 'Błąd testu drukowania', 'error');
+                    }
+                } else {
+                    // Ustaw atrapa zawodnika dla wydruku systemowego z polskimi znakami
+                    selectedAthlete = {
+                        entry_bib: 'TEST',
+                        athlete_first_name: 'Test Zażółć',
+                        athlete_last_name: 'Gęślą Jaźń',
+                        athlete_sex: 'M',
+                        entry_race_age: '30',
+                        bracket_name: 'M30-34',
+                        race_distance: 'Półmaraton Leśny Bieg Pięciu Jezior',
+                        net_time: '01:23:45',
+                        gun_time: '01:24:00',
+                        overall_place: '42',
+                        gender_place: '7',
+                        division_place: '3',
+                        formatted_net_time: '01:23:45',
+                        formatted_gun_time: '01:24:00'
+                    };
+                    
+                    // Wyświetl w podglądzie
+                    displayAthletePreview(selectedAthlete);
+                    
+                    // Dla drukarki systemowej użyj standardowej funkcji
+                    const success = await printReceipt();
+                    
+                    if (success) {
+                        setStatus('printer-connection-status', 'Test wydrukowany pomyślnie', 'success');
+                    } else {
+                        setStatus('printer-connection-status', 'Błąd testu drukowania', 'error');
+                    }
+                }
+            } catch (error) {
+                console.error(`Błąd drukowania testu: ${error.message}`);
+                setStatus('printer-connection-status', `Błąd drukowania: ${error.message}`, 'error');
+            }
+        });
+        
+        /**
+         * Obsługa zmiany ID wydarzenia i zapisania
+         */
+        ui.eventIdInput.addEventListener('change', () => {
+            const eventId = ui.eventIdInput.value.trim();
+            
+            if (eventId) {
+                // Zapisz w konfiguracji i localStorage
+                config.api.eventId = eventId;
+                localStorage.setItem('chronotrack-event-id', eventId);
+                
+                // Reinicjalizuj API
+                clearRefreshTimers();
+                clearCache();
+                initializeApi();
+            }
+        });
+
+        // =====================================
+        // Inicjalizacja
+        // =====================================
+        
+        /**
+         * Inicjalizacja aplikacji
+         */
+        function init() {
+            // Ustaw początkowe ID wydarzenia z konfiguracji
+            if (config.api.eventId) {
+                ui.eventIdInput.value = config.api.eventId;
+            }
+            
+            // Ustaw własne wiadomości
+            ui.customMessageInput.value = config.customMessages.custom;
+            ui.footerMessageInput.value = config.customMessages.footer;
+            
+            // Ustaw typ drukarki
+            ui.printerType.value = config.printer.type;
+            
+            // Inicjalizuj UI
+            updatePrinterStatus();
+            
+            // Inicjalizuj API
+            initializeApi();
+            
+            console.log('YO&GO Events Results Printer - inicjalizacja zakończona');
+        }
+        
+        // Uruchom aplikację
+        init();
+    });
+    </script>
+</body>
+</html>

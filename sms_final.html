@@ -1,0 +1,1253 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YO&GO Events - SMS System</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f5f5f5; color: #333; }
+        .container { max-width: 1200px; margin: 20px auto; background: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        header { background: #FF8C00; color: white; padding: 20px; text-align: center; }
+        .section { padding: 20px; border-bottom: 1px solid #eee; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: 500; }
+        input, textarea, select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; }
+        button { background: #FF8C00; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; margin: 5px; }
+        button:hover { background: #FF7000; }
+        button:disabled { background: #6c757d; cursor: not-allowed; }
+        button.success { background: #28a745; }
+        button.danger { background: #dc3545; }
+        .status { padding: 10px; margin: 10px 0; border-radius: 4px; display: none; }
+        .status.show { display: block; }
+        .status.success { background: #d4edda; color: #155724; }
+        .status.error { background: #f8d7da; color: #721c24; }
+        .status.info { background: #d1ecf1; color: #0c5460; }
+        .status.warning { background: #fff3cd; color: #856404; }
+        .connection-status { background: #f8f9fa; border: 1px solid #dee2e6; padding: 10px; border-radius: 4px; margin: 10px 0; font-size: 12px; }
+        .connection-status.success { background: #d4edda; border-color: #c3e6cb; }
+        .connection-status.error { background: #f8d7da; border-color: #f5c6cb; }
+        .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin: 20px 0; }
+        .stat-card { background: #f8f9fa; padding: 15px; border-radius: 4px; text-align: center; }
+        .stat-number { font-size: 24px; font-weight: bold; color: #FF8C00; }
+        .athletes-list { max-height: 400px; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px; }
+        .athlete-item { padding: 12px; border-bottom: 1px solid #eee; cursor: pointer; }
+        .athlete-item:hover { background: #f8f9fa; }
+        .athlete-details { background: #f8f9fa; padding: 20px; border-radius: 4px; min-height: 300px; }
+        .sms-log { max-height: 250px; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px; background: white; }
+        .log-entry { padding: 8px 12px; border-bottom: 1px solid #eee; font-size: 12px; }
+        .log-entry.sent { background: #d4edda; }
+        .log-entry.error { background: #f8d7da; }
+        .ssl-warning { background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 4px; margin: 15px 0; }
+        .ssl-options { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🚀 YO&GO Events - SMS System</h1>
+            <p>Zabezpieczony system wysyłania SMS - v6.1 (SSL Fixed)</p>
+        </header>
+
+        <!-- Konfiguracja -->
+        <div class="section">
+            <h2>⚙️ Konfiguracja</h2>
+            <div class="grid">
+                <div>
+                    <h3>🏃 ChronoTrack</h3>
+                    <div class="form-group">
+                        <label>ID Wydarzenia:</label>
+                        <input type="text" id="event-id" value="86435">
+                    </div>
+                    <button onclick="testChronoTrack()">Test ChronoTrack</button>
+                    <button onclick="refreshData()">Pobierz dane</button>
+                    <div id="chronotrack-status" class="connection-status">
+                        <strong>Status ChronoTrack:</strong> <span id="chronotrack-text">Nie testowano</span>
+                    </div>
+                </div>
+                <div>
+                    <h3>📡 SerwerSMS</h3>
+                    <div class="form-group">
+                        <label>Login:</label>
+                        <input type="text" id="sms-user" value="webapi_yogoevents">
+                    </div>
+                    <div class="form-group">
+                        <label>Hasło:</label>
+                        <input type="password" id="sms-pass" value="Benekizenek2020!@#">
+                    </div>
+                    <div class="form-group">
+                        <label>Nadawca:</label>
+                        <input type="text" id="sms-sender" value="YOGOEvents">
+                    </div>
+                    <div class="form-group">
+                        <label>Proxy URL:</label>
+                        <select id="proxy-url" onchange="onProxyChange()">
+                            <option value="https://yogoeven.vot.pl/sms_proxy.php">HTTPS (Current)</option>
+                            <option value="http://yogoeven.vot.pl/sms_proxy.php">HTTP (Fallback)</option>
+                            <option value="https://api.serwersms.pl/messages/send_sms.json">Direct API (HTTPS)</option>
+                            <option value="custom">Custom URL...</option>
+                        </select>
+                        <input type="text" id="custom-proxy" placeholder="Wpisz własny URL..." style="display: none; margin-top: 5px;">
+                    </div>
+                    <button onclick="testSMS()">Test SerwerSMS</button>
+                    <div id="sms-status" class="connection-status">
+                        <strong>Status SerwerSMS:</strong> <span id="sms-text">Nie testowano</span>
+                    </div>
+                    
+                    <!-- SSL Warning -->
+                    <div id="ssl-warning" class="ssl-warning" style="display: none;">
+                        <h4>⚠️ Problem z certyfikatem SSL</h4>
+                        <p>Certyfikat SSL dla domeny nie jest ważny. Wybierz jedną z opcji:</p>
+                        <div class="ssl-options">
+                            <button onclick="switchToHttp()" class="danger">Użyj HTTP (niezabezpieczone)</button>
+                            <button onclick="useDirectAPI()" class="success">Użyj Direct API</button>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <h3>🏆 Kategorie</h3>
+                    <div class="form-group">
+                        <label>
+                            <input type="radio" name="category-mode" value="full" checked> Pełne kategorie wiekowe
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="radio" name="category-mode" value="partial"> Kategorie częściowe
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="radio" name="category-mode" value="none"> Bez kategorii wiekowych
+                        </label>
+                    </div>
+                </div>
+            </div>
+            
+            <div style="background: #e7f3ff; padding: 15px; border-radius: 4px; margin: 15px 0;">
+                <h4>🤖 Automatyzacja</h4>
+                <div style="display: flex; align-items: center; gap: 15px; margin: 10px 0;">
+                    <label>Odświeżanie co:</label>
+                    <input type="number" id="interval" value="2" min="1" max="10" style="width: 80px;">
+                    <span>minut</span>
+                    <button onclick="startAuto()" class="success">▶️ Start</button>
+                    <button onclick="stopAuto()" class="danger" id="stop-btn" disabled>⏹️ Stop</button>
+                    <button onclick="clearMemory()" class="danger">🗑️ Wyczyść pamięć</button>
+                </div>
+            </div>
+            
+            <div id="status" class="status"></div>
+        </div>
+
+        <!-- Statystyki -->
+        <div class="section">
+            <h2>📊 Statystyki</h2>
+            <div style="background: #fff3cd; padding: 10px; border-radius: 4px; margin: 10px 0;">
+                <strong>💰 Koszt SMS: 0.19 PLN netto (0.23 PLN brutto)</strong><br>
+                <span id="cost-display">Szacowany koszt: 0.00 PLN</span>
+            </div>
+            <div class="stats">
+                <div class="stat-card">
+                    <div class="stat-number" id="stat-reg">0</div>
+                    <div>Rejestracje</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="stat-res">0</div>
+                    <div>Wyniki</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="stat-comp">0</div>
+                    <div>Kompletne</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="stat-sent">0</div>
+                    <div>SMS wysłane</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="stat-pend">0</div>
+                    <div>Oczekujące</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="stat-phone">0</div>
+                    <div>Telefony</div>
+                </div>
+            </div>
+            <div style="text-align: center;">
+                <button onclick="sendToNew()" id="send-btn" disabled>📤 Wyślij SMS do nowych</button>
+            </div>
+        </div>
+
+        <!-- SMS Log -->
+        <div class="section">
+            <h2>📱 SMS Log</h2>
+            <div id="sms-log" class="sms-log">
+                <div class="log-entry">System uruchomiony</div>
+            </div>
+        </div>
+
+        <!-- Lista zawodników -->
+        <div class="section">
+            <h2>👥 Zawodnicy</h2>
+            <div class="grid">
+                <div>
+                    <div class="form-group">
+                        <label>Filtr:</label>
+                        <select id="filter" onchange="updateList()">
+                            <option value="all">Wszyscy</option>
+                            <option value="complete">Kompletne</option>
+                            <option value="sent">SMS wysłane</option>
+                            <option value="pending">Oczekujące</option>
+                            <option value="incomplete">Niekompletne</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Szukaj:</label>
+                        <input type="text" id="search" placeholder="BIB, imię, nazwisko" oninput="updateList()">
+                    </div>
+                    <div id="athletes-list" class="athletes-list"></div>
+                </div>
+                <div>
+                    <div id="athlete-details" class="athlete-details">
+                        <h3>👤 Szczegóły zawodnika</h3>
+                        <p>Wybierz zawodnika z listy.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Szablon SMS -->
+        <div class="section">
+            <h2>📝 Szablon SMS</h2>
+            <div class="form-group">
+                <label>Treść wiadomości:</label>
+                <textarea id="sms-template" rows="3">{EVENT_NAME}, {FIRST_NAME} twój czas netto {NET_TIME}, brutto {GUN_TIME}, miejsce open {OVERALL_PLACE}, kat K/M {GENDER_PLACE}, kat {DIVISION_NAME} {DIVISION_PLACE} Gratulujemy!</textarea>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // GLOBALNE ZMIENNE
+        let eventData = {
+            info: null,
+            registrations: new Map(),
+            openResults: new Map(),
+            genderResults: {M: new Map(), F: new Map()},
+            ageResults: new Map(),
+            athletes: new Map()
+        };
+        
+        let smsMemory = {
+            eventId: null,
+            sent: new Map(),
+            
+            init(eventId) {
+                this.eventId = eventId;
+                this.load();
+            },
+            
+            load() {
+                const key = 'sms_' + this.eventId;
+                const data = localStorage.getItem(key);
+                if (data) {
+                    try {
+                        const parsed = JSON.parse(data);
+                        this.sent = new Map(parsed.sent || []);
+                    } catch (e) {
+                        console.error('Błąd ładowania pamięci SMS:', e);
+                    }
+                }
+            },
+            
+            save() {
+                const key = 'sms_' + this.eventId;
+                localStorage.setItem(key, JSON.stringify({
+                    eventId: this.eventId,
+                    sent: Array.from(this.sent.entries())
+                }));
+            },
+            
+            markSent(bib, messageId, manual) {
+                if (this.sent.has(bib)) {
+                    console.warn('SMS dla BIB ' + bib + ' już był wysłany!');
+                    return false;
+                }
+                
+                this.sent.set(bib, {
+                    timestamp: new Date().toISOString(),
+                    messageId: messageId,
+                    manual: manual || false
+                });
+                this.save();
+                this.addLog(bib, 'sent', manual);
+                return true;
+            },
+            
+            wasSent(bib) {
+                return this.sent.has(bib);
+            },
+            
+            clear() {
+                this.sent.clear();
+                this.save();
+                document.getElementById('sms-log').innerHTML = '<div class="log-entry">Pamięć wyczyszczona</div>';
+            },
+            
+            addLog(bib, status, manual) {
+                const athlete = eventData.athletes.get(bib);
+                const name = athlete ? athlete.firstName + ' ' + athlete.lastName : 'BIB ' + bib;
+                const logContainer = document.getElementById('sms-log');
+                
+                const entry = document.createElement('div');
+                entry.className = 'log-entry ' + status;
+                entry.textContent = (status === 'sent' ? '✅' : '❌') + ' ' + name + (manual ? ' (ręcznie)' : ' (auto)') + ' - ' + new Date().toLocaleTimeString();
+                
+                logContainer.insertBefore(entry, logContainer.firstChild);
+                
+                const entries = logContainer.querySelectorAll('.log-entry');
+                if (entries.length > 30) {
+                    entries[entries.length - 1].remove();
+                }
+            }
+        };
+        
+        let automation = {
+            isRunning: false,
+            intervalId: null,
+            
+            start() {
+                if (this.isRunning) return;
+                
+                const minutes = parseInt(document.getElementById('interval').value) || 2;
+                this.isRunning = true;
+                
+                document.getElementById('stop-btn').disabled = false;
+                
+                refreshData(true);
+                this.intervalId = setInterval(() => refreshData(true), minutes * 60 * 1000);
+                
+                showStatus('🤖 Automatyzacja uruchomiona (co ' + minutes + ' min)', 'success');
+            },
+            
+            stop() {
+                if (!this.isRunning) return;
+                
+                this.isRunning = false;
+                document.getElementById('stop-btn').disabled = true;
+                
+                if (this.intervalId) {
+                    clearInterval(this.intervalId);
+                    this.intervalId = null;
+                }
+                
+                showStatus('⏹️ Automatyzacja zatrzymana', 'warning');
+            }
+        };
+        
+        let sendingInProgress = false;
+
+        // SSL/PROXY HELPER FUNCTIONS
+        function getProxyUrl() {
+            const select = document.getElementById('proxy-url');
+            if (select.value === 'custom') {
+                return document.getElementById('custom-proxy').value.trim();
+            }
+            return select.value;
+        }
+        
+        function onProxyChange() {
+            const select = document.getElementById('proxy-url');
+            const customInput = document.getElementById('custom-proxy');
+            
+            if (select.value === 'custom') {
+                customInput.style.display = 'block';
+                customInput.focus();
+            } else {
+                customInput.style.display = 'none';
+            }
+            
+            // Hide SSL warning when user changes proxy
+            document.getElementById('ssl-warning').style.display = 'none';
+        }
+        
+        function switchToHttp() {
+            document.getElementById('proxy-url').value = 'http://yogoeven.vot.pl/sms_proxy.php';
+            document.getElementById('ssl-warning').style.display = 'none';
+            showStatus('⚠️ Przełączono na HTTP (niezabezpieczone połączenie)', 'warning');
+        }
+        
+        function useDirectAPI() {
+            document.getElementById('proxy-url').value = 'https://api.serwersms.pl/messages/send_sms.json';
+            document.getElementById('ssl-warning').style.display = 'none';
+            showStatus('✅ Przełączono na Direct API', 'success');
+        }
+
+        // FUNKCJE POMOCNICZE
+        function showStatus(message, type) {
+            const statusEl = document.getElementById('status');
+            statusEl.textContent = message;
+            statusEl.className = 'status show ' + (type || 'info');
+        }
+        
+        function updateConnectionStatus(type, status, message) {
+            const statusBox = document.getElementById(type + '-status');
+            const textEl = document.getElementById(type + '-text');
+            statusBox.className = 'connection-status ' + status;
+            textEl.textContent = message;
+        }
+        
+        function normalizePhone(phone) {
+            if (!phone) return null;
+            let clean = String(phone).trim().replace(/[^\d]/g, '');
+            if (clean.length === 9) clean = '48' + clean;
+            else if (clean.length === 10 && clean[0] === '0') clean = '48' + clean.substring(1);
+            return /^48[1-9]\d{8}$/.test(clean) ? clean : null;
+        }
+        
+        function formatTime(time) {
+            if (!time || !time.includes(':')) return time || '-';
+            const parts = time.split(':');
+            let h = parseInt(parts[0]) || 0;
+            let m = parseInt(parts[1]) || 0;
+            let s = parseInt(parts[2] ? parts[2].split('.')[0] : 0) || 0;
+            if (parts[2] && parts[2].includes('.')) s++;
+            if (s >= 60) { m++; s -= 60; }
+            if (m >= 60) { h++; m -= 60; }
+            return h.toString().padStart(2,'0') + ':' + m.toString().padStart(2,'0') + ':' + s.toString().padStart(2,'0');
+        }
+        
+        function getCategoryMode() {
+            const radios = document.querySelectorAll('input[name="category-mode"]');
+            for (let radio of radios) {
+                if (radio.checked) return radio.value;
+            }
+            return 'full';
+        }
+
+        // API FUNCTIONS
+        function buildApiUrl(endpoint, params) {
+            params = params || {};
+            const config = {
+                client_id: '727dae7f',
+                user_id: 'lukasz@yogoevents.pl',
+                user_pass: 'f2b2f3082a9d2ae5091eb5920bee538dc01bb413',
+                format: 'json'
+            };
+            
+            Object.assign(config, params);
+            
+            const query = Object.entries(config)
+                .map(pair => pair[0] + '=' + encodeURIComponent(pair[1]))
+                .join('&');
+            
+            return 'https://api.chronotrack.com' + endpoint + '?' + query;
+        }
+        
+        async function fetchPages(endpoint, params) {
+            params = params || {};
+            let page = 1;
+            let allResults = [];
+            
+            while (page <= 20) {
+                try {
+                    const url = buildApiUrl(endpoint, Object.assign({}, params, {page: page, size: 100}));
+                    const response = await fetch(url);
+                    
+                    if (!response.ok) throw new Error('HTTP ' + response.status);
+                    
+                    const data = await response.json();
+                    let pageResults = [];
+                    
+                    if (endpoint.includes('/entry')) pageResults = data.event_entry || [];
+                    else if (endpoint.includes('/results')) pageResults = data.event_results || [];
+                    
+                    if (pageResults.length === 0) break;
+                    allResults = allResults.concat(pageResults);
+                    if (pageResults.length < 100) break;
+                    page++;
+                } catch (error) {
+                    console.error('Błąd strony ' + page + ':', error);
+                    break;
+                }
+            }
+            
+            return allResults;
+        }
+        
+        async function fetchEventInfo() {
+            const eventId = document.getElementById('event-id').value.trim();
+            const url = buildApiUrl('/api/event/' + eventId);
+            const response = await fetch(url);
+            
+            if (!response.ok) throw new Error('HTTP ' + response.status);
+            
+            const data = await response.json();
+            if (!data.event) throw new Error('Brak danych wydarzenia');
+            
+            eventData.info = {
+                id: data.event.event_id,
+                name: data.event.event_name,
+                date: data.event.event_start_time
+            };
+            
+            if (smsMemory.eventId !== eventData.info.id) {
+                smsMemory.init(eventData.info.id);
+            }
+            
+            return eventData.info;
+        }
+        
+        async function fetchRegistrations() {
+            const eventId = document.getElementById('event-id').value.trim();
+            const results = await fetchPages('/api/event/' + eventId + '/entry', {
+                include_test_entries: true
+            });
+            
+            eventData.registrations.clear();
+            
+            results.forEach(function(entry) {
+                if (!entry.entry_bib) return;
+                
+                let phone = null;
+                const phoneFields = ['athlete_home_phone', 'athlete_mobile_phone', 'athlete_emerg_phone'];
+                
+                for (let i = 0; i < phoneFields.length; i++) {
+                    if (entry[phoneFields[i]]) {
+                        phone = normalizePhone(entry[phoneFields[i]]);
+                        if (phone) break;
+                    }
+                }
+                
+                eventData.registrations.set(entry.entry_bib, {
+                    bib: entry.entry_bib,
+                    firstName: entry.athlete_first_name || '',
+                    lastName: entry.athlete_last_name || '',
+                    sex: entry.athlete_sex || '',
+                    age: entry.entry_race_age || '',
+                    category: entry.bracket_name || '',
+                    phone: phone
+                });
+            });
+            
+            return results.length;
+        }
+        
+        async function fetchResults() {
+            const eventId = document.getElementById('event-id').value.trim();
+            const categoryMode = getCategoryMode();
+            
+            // Wyniki OPEN
+            const openResults = await fetchPages('/api/event/' + eventId + '/results');
+            eventData.openResults.clear();
+            
+            openResults.forEach(function(result) {
+                if (!result.results_bib) return;
+                
+                eventData.openResults.set(result.results_bib, {
+                    bib: result.results_bib,
+                    netTime: formatTime(result.results_time),
+                    gunTime: formatTime(result.results_gun_time),
+                    overallPlace: result.results_rank,
+                    distance: result.results_race_name || ''
+                });
+            });
+            
+            // Wyniki K/M
+            const sexes = ['M', 'F'];
+            for (let i = 0; i < sexes.length; i++) {
+                const sex = sexes[i];
+                const genderResults = await fetchPages('/api/event/' + eventId + '/results', {
+                    bracket: 'sex',
+                    sex: sex
+                });
+                
+                eventData.genderResults[sex].clear();
+                
+                genderResults.forEach(function(result) {
+                    if (result.results_bib) {
+                        eventData.genderResults[sex].set(result.results_bib, {
+                            bib: result.results_bib,
+                            genderPlace: result.results_rank_in_bracket || result.results_rank
+                        });
+                    }
+                });
+            }
+            
+            // Wyniki kategorii
+            eventData.ageResults.clear();
+            
+            if (categoryMode !== 'none') {
+                const ageResults = await fetchPages('/api/event/' + eventId + '/results', {
+                    bracket: 'age'
+                });
+                
+                ageResults.forEach(function(result) {
+                    if (result.results_bib) {
+                        eventData.ageResults.set(result.results_bib, {
+                            bib: result.results_bib,
+                            categoryName: result.results_primary_bracket_name || '',
+                            categoryPlace: result.results_rank_in_bracket || result.results_rank
+                        });
+                    }
+                });
+            }
+            
+            return openResults.length;
+        }
+        
+        function combineData() {
+            eventData.athletes.clear();
+            
+            const stats = {
+                complete: 0,
+                sent: smsMemory.sent.size,
+                pending: 0,
+                phones: 0,
+                total: 0
+            };
+            
+            eventData.registrations.forEach(function(reg, bib) {
+                stats.total++;
+                
+                const athlete = Object.assign({}, reg);
+                
+                // Dodaj wyniki OPEN
+                const openResult = eventData.openResults.get(bib);
+                if (openResult) Object.assign(athlete, openResult);
+                
+                // Dodaj miejsce K/M
+                if (athlete.sex && eventData.genderResults[athlete.sex]) {
+                    const genderResult = eventData.genderResults[athlete.sex].get(bib);
+                    if (genderResult) athlete.genderPlace = genderResult.genderPlace;
+                }
+                
+                // Dodaj miejsce w kategorii
+                const categoryMode = getCategoryMode();
+                if (categoryMode !== 'none') {
+                    const ageResult = eventData.ageResults.get(bib);
+                    if (ageResult) {
+                        athlete.categoryPlace = ageResult.categoryPlace;
+                        if (!athlete.category) athlete.category = ageResult.categoryName;
+                    }
+                }
+                
+                // Sprawdź kompletność
+                const hasPhone = !!athlete.phone;
+                const hasResults = !!(athlete.netTime && athlete.gunTime && athlete.overallPlace);
+                const hasGender = !!athlete.genderPlace;
+                
+                let hasCategory = true;
+                if (categoryMode === 'full') {
+                    hasCategory = !!athlete.categoryPlace;
+                }
+                
+                athlete.isComplete = hasPhone && hasResults && hasGender && hasCategory;
+                athlete.smsSent = smsMemory.wasSent(bib);
+                athlete.isPending = athlete.isComplete && !athlete.smsSent;
+                
+                if (hasPhone) stats.phones++;
+                if (athlete.isComplete) stats.complete++;
+                if (athlete.isPending) stats.pending++;
+                
+                eventData.athletes.set(bib, athlete);
+            });
+            
+            return stats;
+        }
+        
+        function updateStats() {
+            const stats = combineData();
+            
+            document.getElementById('stat-reg').textContent = eventData.registrations.size;
+            document.getElementById('stat-res').textContent = eventData.openResults.size;
+            document.getElementById('stat-comp').textContent = stats.complete;
+            document.getElementById('stat-sent').textContent = stats.sent;
+            document.getElementById('stat-pend').textContent = stats.pending;
+            document.getElementById('stat-phone').textContent = stats.phones;
+            
+            const cost = (stats.pending * 0.23).toFixed(2);
+            document.getElementById('cost-display').textContent = 'Szacowany koszt: ' + cost + ' PLN (' + stats.pending + ' SMS)';
+            
+            document.getElementById('send-btn').disabled = stats.pending === 0 || sendingInProgress;
+            
+            updateList();
+        }
+        
+        function updateList() {
+            const filter = document.getElementById('filter').value;
+            const search = document.getElementById('search').value.toLowerCase();
+            
+            let athletes = Array.from(eventData.athletes.values());
+            
+            // Filtrowanie
+            if (filter === 'complete') athletes = athletes.filter(function(a) { return a.isComplete; });
+            else if (filter === 'sent') athletes = athletes.filter(function(a) { return a.smsSent; });
+            else if (filter === 'pending') athletes = athletes.filter(function(a) { return a.isPending; });
+            else if (filter === 'incomplete') athletes = athletes.filter(function(a) { return !a.isComplete; });
+            
+            // Wyszukiwanie
+            if (search) {
+                athletes = athletes.filter(function(a) {
+                    return a.bib.toString().includes(search) ||
+                           a.firstName.toLowerCase().includes(search) ||
+                           a.lastName.toLowerCase().includes(search);
+                });
+            }
+            
+            // Sortowanie
+            athletes.sort(function(a, b) { return parseInt(a.bib) - parseInt(b.bib); });
+            
+            // Renderowanie
+            const container = document.getElementById('athletes-list');
+            container.innerHTML = '';
+            
+            athletes.forEach(function(athlete) {
+                const item = document.createElement('div');
+                item.className = 'athlete-item';
+                item.dataset.bib = athlete.bib;
+                
+                let status;
+                if (athlete.smsSent) status = '📱 SMS wysłany';
+                else if (athlete.isPending) status = '⏳ Oczekuje';
+                else if (athlete.isComplete) status = '✅ Kompletny';
+                else status = '❌ Niekompletny';
+                
+                item.innerHTML = 
+                    '<div><strong>' + athlete.bib + '</strong> ' + athlete.firstName + ' ' + athlete.lastName + '</div>' +
+                    '<div style="font-size: 12px; color: #666;">' + status + ' | ' + (athlete.phone || 'Brak tel.') + '</div>';
+                
+                item.addEventListener('click', function() { showDetails(athlete); });
+                container.appendChild(item);
+            });
+            
+            if (athletes.length === 0) {
+                container.innerHTML = '<div class="athlete-item">Brak zawodników</div>';
+            }
+        }
+        
+        function showDetails(athlete) {
+            const eventName = eventData.info ? eventData.info.name : 'Nazwa wydarzenia';
+            
+            let smsPreview = '';
+            const template = document.getElementById('sms-template').value;
+            if (template && athlete.isComplete) {
+                smsPreview = template
+                    .replace(/{EVENT_NAME}/g, eventName)
+                    .replace(/{FIRST_NAME}/g, athlete.firstName)
+                    .replace(/{LAST_NAME}/g, athlete.lastName)
+                    .replace(/{NET_TIME}/g, athlete.netTime || '-')
+                    .replace(/{GUN_TIME}/g, athlete.gunTime || '-')
+                    .replace(/{OVERALL_PLACE}/g, athlete.overallPlace || '-')
+                    .replace(/{GENDER_PLACE}/g, athlete.genderPlace || '-')
+                    .replace(/{DIVISION_PLACE}/g, athlete.categoryPlace || '-')
+                    .replace(/{DIVISION_NAME}/g, athlete.category || '-');
+            }
+            
+            let smsInfo = '';
+            if (athlete.smsSent) {
+                const data = smsMemory.sent.get(athlete.bib);
+                if (data) {
+                    const time = new Date(data.timestamp).toLocaleString();
+                    const type = data.manual ? 'ręcznie' : 'automatycznie';
+                    smsInfo = '<p><strong>SMS wysłany:</strong> ' + time + ' (' + type + ')</p>';
+                }
+            }
+            
+            let manualButton = '';
+            if (athlete.isComplete && !athlete.smsSent && !sendingInProgress) {
+                manualButton = '<button onclick="sendManualSMS(\'' + athlete.bib + '\')" class="success">📤 Wyślij SMS ręcznie</button>';
+            }
+            
+            let previewHtml = '';
+            if (smsPreview) {
+                previewHtml = '<div style="background: #f0f0f0; padding: 10px; border-radius: 4px; margin-top: 10px;">' +
+                             '<h4>📱 Podgląd SMS:</h4>' +
+                             '<div style="font-family: monospace;">' + smsPreview + '</div>' +
+                             '<small>Długość: ' + smsPreview.length + ' znaków | Koszt: 0.23 PLN</small>' +
+                             '</div>';
+            }
+            
+            document.getElementById('athlete-details').innerHTML = 
+                '<h3>👤 Zawodnik BIB ' + athlete.bib + '</h3>' +
+                '<p><strong>Imię i nazwisko:</strong> ' + athlete.firstName + ' ' + athlete.lastName + '</p>' +
+                '<p><strong>Płeć / Wiek:</strong> ' + (athlete.sex || '-') + ' / ' + (athlete.age || '-') + '</p>' +
+                '<p><strong>Kategoria:</strong> ' + (athlete.category || '-') + '</p>' +
+                '<p><strong>Telefon:</strong> ' + (athlete.phone || 'Brak telefonu') + '</p>' +
+                '<p><strong>Czas netto:</strong> ' + (athlete.netTime || 'Brak wyniku') + '</p>' +
+                '<p><strong>Czas brutto:</strong> ' + (athlete.gunTime || 'Brak wyniku') + '</p>' +
+                '<p><strong>Miejsce OPEN:</strong> ' + (athlete.overallPlace || 'Brak wyniku') + '</p>' +
+                '<p><strong>Miejsce K/M:</strong> ' + (athlete.genderPlace || 'Brak wyniku') + '</p>' +
+                '<p><strong>Miejsce w kategorii:</strong> ' + (athlete.categoryPlace || 'Brak wyniku') + '</p>' +
+                '<p><strong>Status:</strong> ' + 
+                    (athlete.smsSent ? '📱 SMS wysłany' : 
+                     athlete.isComplete ? '✅ Gotowy' : '❌ Niekompletny') + '</p>' +
+                smsInfo +
+                manualButton +
+                previewHtml;
+        }
+
+        // SMS FUNCTIONS - Enhanced with SSL error handling
+        async function sendSMS(phone, message) {
+            const username = document.getElementById('sms-user').value.trim();
+            const password = document.getElementById('sms-pass').value.trim();
+            const sender = document.getElementById('sms-sender').value.trim();
+            const proxyUrl = getProxyUrl();
+            
+            console.log('📤 Wysyłanie SMS do ' + phone);
+            
+            // Check if using direct API
+            if (proxyUrl.includes('api.serwersms.pl')) {
+                return await sendDirectSMS(phone, message, username, password, sender);
+            }
+            
+            // Use proxy
+            try {
+                const response = await fetch(proxyUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        username: username,
+                        password: password,
+                        phone: phone,
+                        text: message,
+                        sender: sender,
+                        action: 'send'
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error('HTTP ' + response.status + ': ' + response.statusText);
+                }
+                
+                const result = await response.json();
+                
+                if (result.success === false || result.error) {
+                    const errorMsg = (result.error && result.error.message) || result.error || 'Nieznany błąd';
+                    throw new Error('SerwerSMS: ' + errorMsg);
+                }
+                
+                if (!result.items || result.items.length === 0) {
+                    if (result.success !== false) {
+                        return {
+                            success: true,
+                            items: [{ id: 'fallback_' + Date.now(), phone: phone, status: 'sent' }]
+                        };
+                    } else {
+                        throw new Error('SerwerSMS: Brak potwierdzenia wysłania');
+                    }
+                }
+                
+                console.log('✅ SMS wysłany pomyślnie do ' + phone);
+                return result;
+                
+            } catch (error) {
+                // Check if it's an SSL error
+                if (error.message.includes('SSL') || error.message.includes('CERT') || 
+                    error.message.includes('net::ERR_CERT') || error.name === 'TypeError') {
+                    
+                    console.warn('🔒 SSL Error detected, suggesting alternatives');
+                    document.getElementById('ssl-warning').style.display = 'block';
+                    throw new Error('Problem z certyfikatem SSL. Użyj opcji HTTP lub Direct API.');
+                }
+                throw error;
+            }
+        }
+        
+        async function sendDirectSMS(phone, message, username, password, sender) {
+            console.log('📤 Wysyłanie przez Direct API do ' + phone);
+            
+            const formData = new FormData();
+            formData.append('username', username);
+            formData.append('password', password);
+            formData.append('phone', phone);
+            formData.append('text', message);
+            formData.append('sender', sender);
+            
+            const response = await fetch('https://api.serwersms.pl/messages/send_sms.json', {
+                method: 'POST',
+                body: formData
+            });
+            
+            if (!response.ok) {
+                throw new Error('HTTP ' + response.status + ': ' + response.statusText);
+            }
+            
+            const result = await response.json();
+            
+            if (!result.success || result.error) {
+                const errorMsg = result.error || 'Nieznany błąd Direct API';
+                throw new Error('Direct API: ' + errorMsg);
+            }
+            
+            console.log('✅ SMS wysłany przez Direct API do ' + phone);
+            return {
+                success: true,
+                items: [{ id: result.id || ('direct_' + Date.now()), phone: phone, status: 'sent' }]
+            };
+        }
+        
+        async function sendToNewAthletes() {
+            if (sendingInProgress) {
+                console.warn('⚠️ Wysyłanie już w toku');
+                return 0;
+            }
+            
+            sendingInProgress = true;
+            document.getElementById('send-btn').disabled = true;
+            
+            try {
+                const template = document.getElementById('sms-template').value.trim();
+                if (!template) return 0;
+                
+                const newAthletes = Array.from(eventData.athletes.values()).filter(function(a) {
+                    return !smsMemory.wasSent(a.bib) && a.isComplete;
+                });
+                
+                if (newAthletes.length === 0) {
+                    console.log('📭 Brak nowych SMS do wysłania');
+                    return 0;
+                }
+                
+                const eventName = eventData.info ? eventData.info.name : 'Nazwa wydarzenia';
+                let sentCount = 0;
+                
+                console.log('🚀 Wysyłanie SMS do ' + newAthletes.length + ' zawodników');
+                
+                for (let i = 0; i < newAthletes.length; i++) {
+                    const athlete = newAthletes[i];
+                    
+                    // OSTATNIA WERYFIKACJA
+                    if (smsMemory.wasSent(athlete.bib)) {
+                        continue;
+                    }
+                    
+                    try {
+                        const message = template
+                            .replace(/{EVENT_NAME}/g, eventName)
+                            .replace(/{FIRST_NAME}/g, athlete.firstName)
+                            .replace(/{LAST_NAME}/g, athlete.lastName)
+                            .replace(/{NET_TIME}/g, athlete.netTime)
+                            .replace(/{GUN_TIME}/g, athlete.gunTime)
+                            .replace(/{OVERALL_PLACE}/g, athlete.overallPlace)
+                            .replace(/{GENDER_PLACE}/g, athlete.genderPlace)
+                            .replace(/{DIVISION_PLACE}/g, athlete.categoryPlace || '')
+                            .replace(/{DIVISION_NAME}/g, athlete.category || '');
+                        
+                        const result = await sendSMS(athlete.phone, message);
+                        const messageId = (result.items && result.items[0] && result.items[0].id) || ('auto_' + Date.now() + '_' + athlete.bib);
+                        
+                        if (smsMemory.markSent(athlete.bib, messageId, false)) {
+                            sentCount++;
+                        }
+                        
+                        // Opóźnienie 500ms między SMS-ami
+                        await new Promise(function(resolve) { setTimeout(resolve, 500); });
+                        
+                    } catch (error) {
+                        console.error('❌ SMS błąd ' + athlete.firstName + ' ' + athlete.lastName + ':', error);
+                        smsMemory.addLog(athlete.bib, 'error', false);
+                    }
+                }
+                
+                console.log('🏁 Wysłano: ' + sentCount + '/' + newAthletes.length);
+                return sentCount;
+                
+            } finally {
+                sendingInProgress = false;
+                document.getElementById('send-btn').disabled = false;
+            }
+        }
+
+        // MAIN FUNCTIONS
+        async function refreshData(isAuto) {
+            try {
+                if (!isAuto) showStatus('Odświeżanie danych...', 'info');
+                
+                await fetchEventInfo();
+                await fetchRegistrations();
+                await fetchResults();
+                
+                updateStats();
+                
+                if (isAuto && !sendingInProgress) {
+                    const sent = await sendToNewAthletes();
+                    if (sent > 0) {
+                        console.log('📱 Auto SMS: wysłano ' + sent);
+                        updateStats();
+                    }
+                } else {
+                    if (!isAuto) showStatus('✅ Dane odświeżone pomyślnie!', 'success');
+                }
+                
+            } catch (error) {
+                console.error('Błąd odświeżania:', error);
+                if (!isAuto) showStatus('❌ Błąd: ' + error.message, 'error');
+            }
+        }
+        
+        async function testChronoTrack() {
+            updateConnectionStatus('chronotrack', '', 'Testowanie...');
+            showStatus('Testowanie ChronoTrack...', 'info');
+            
+            try {
+                await fetchEventInfo();
+                const message = 'Połączono: ' + eventData.info.name;
+                updateConnectionStatus('chronotrack', 'success', message);
+                showStatus('✅ ChronoTrack OK - ' + eventData.info.name, 'success');
+            } catch (error) {
+                updateConnectionStatus('chronotrack', 'error', 'Błąd: ' + error.message);
+                showStatus('❌ ChronoTrack błąd: ' + error.message, 'error');
+            }
+        }
+        
+        async function testSMS() {
+            updateConnectionStatus('sms', '', 'Testowanie...');
+            showStatus('Testowanie SerwerSMS...', 'info');
+            
+            const username = document.getElementById('sms-user').value.trim();
+            const password = document.getElementById('sms-pass').value.trim();
+            const proxyUrl = getProxyUrl();
+            
+            if (!username || !password || !proxyUrl) {
+                updateConnectionStatus('sms', 'error', 'Uzupełnij dane logowania');
+                showStatus('❌ Uzupełnij dane SerwerSMS', 'error');
+                return;
+            }
+            
+            try {
+                // Hide SSL warning when testing
+                document.getElementById('ssl-warning').style.display = 'none';
+                
+                let response, result;
+                
+                if (proxyUrl.includes('api.serwersms.pl')) {
+                    // Test Direct API
+                    const formData = new FormData();
+                    formData.append('username', username);
+                    formData.append('password', password);
+                    formData.append('test', '1');
+                    
+                    response = await fetch('https://api.serwersms.pl/messages/send_sms.json', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    if (!response.ok) throw new Error('HTTP ' + response.status);
+                    result = await response.json();
+                    
+                    if (result.success || !result.error) {
+                        updateConnectionStatus('sms', 'success', 'Połączono przez Direct API');
+                        showStatus('✅ SerwerSMS OK (Direct API)', 'success');
+                    } else {
+                        throw new Error(result.error || 'Błąd autoryzacji Direct API');
+                    }
+                } else {
+                    // Test through proxy
+                    response = await fetch(proxyUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ username: username, password: password, action: 'test' })
+                    });
+                    
+                    if (!response.ok) throw new Error('HTTP ' + response.status);
+                    result = await response.json();
+                    
+                    if (result.success !== false && !result.error) {
+                        let msg = 'Połączono pomyślnie';
+                        if (result.endpoint_used && result.endpoint_used.includes('api2')) msg += ' (API v2)';
+                        
+                        updateConnectionStatus('sms', 'success', msg);
+                        showStatus('✅ SerwerSMS OK', 'success');
+                    } else {
+                        const errorMsg = (result.error && result.error.message) || result.error || 'Nieznany błąd';
+                        throw new Error(errorMsg);
+                    }
+                }
+                
+            } catch (error) {
+                console.error('SMS Test Error:', error);
+                
+                // Check if it's an SSL error
+                if (error.message.includes('SSL') || error.message.includes('CERT') || 
+                    error.message.includes('net::ERR_CERT') || error.name === 'TypeError') {
+                    
+                    updateConnectionStatus('sms', 'error', 'Problem z certyfikatem SSL');
+                    showStatus('❌ Problem z certyfikatem SSL', 'error');
+                    document.getElementById('ssl-warning').style.display = 'block';
+                } else {
+                    updateConnectionStatus('sms', 'error', 'Błąd: ' + error.message);
+                    showStatus('❌ SerwerSMS błąd: ' + error.message, 'error');
+                }
+            }
+        }
+        
+        async function sendToNew() {
+            if (sendingInProgress) {
+                showStatus('❌ Wysyłanie już w toku!', 'error');
+                return;
+            }
+            
+            const pending = Array.from(eventData.athletes.values()).filter(function(a) { return a.isPending; });
+            
+            if (pending.length === 0) {
+                showStatus('❌ Brak nowych zawodników', 'error');
+                return;
+            }
+            
+            const cost = (pending.length * 0.23).toFixed(2);
+            if (!confirm('Wysłać SMS do ' + pending.length + ' zawodników?\n\nKoszt: ' + cost + ' PLN (' + pending.length + ' × 0.23 PLN)\n\nUWAGA: Każdy SMS będzie wysłany tylko raz.')) {
+                return;
+            }
+            
+            showStatus('📤 Wysyłanie do ' + pending.length + ' zawodników...', 'info');
+            
+            try {
+                const sent = await sendToNewAthletes();
+                updateStats();
+                const finalCost = (sent * 0.23).toFixed(2);
+                showStatus('✅ Wysłano ' + sent + ' SMS (koszt: ' + finalCost + ' PLN)', 'success');
+            } catch (error) {
+                showStatus('❌ Błąd: ' + error.message, 'error');
+            }
+        }
+        
+        async function sendManualSMS(bib) {
+            if (sendingInProgress) {
+                alert('⚠️ Nie można wysłać - trwa masowe wysyłanie SMS!');
+                return;
+            }
+            
+            const athlete = eventData.athletes.get(bib);
+            if (!athlete || !athlete.isComplete) {
+                alert('Zawodnik nie ma kompletnych danych');
+                return;
+            }
+            
+            const template = document.getElementById('sms-template').value.trim();
+            if (!template) {
+                alert('Brak szablonu wiadomości');
+                return;
+            }
+            
+            if (!confirm('Wysłać SMS do ' + athlete.firstName + ' ' + athlete.lastName + '?\n\nKoszt: 0.23 PLN\n\nUWAGA: Ręczny SMS może być wysłany wielokrotnie!')) {
+                return;
+            }
+            
+            try {
+                const eventName = eventData.info ? eventData.info.name : 'Nazwa wydarzenia';
+                const message = template
+                    .replace(/{EVENT_NAME}/g, eventName)
+                    .replace(/{FIRST_NAME}/g, athlete.firstName)
+                    .replace(/{LAST_NAME}/g, athlete.lastName)
+                    .replace(/{NET_TIME}/g, athlete.netTime)
+                    .replace(/{GUN_TIME}/g, athlete.gunTime)
+                    .replace(/{OVERALL_PLACE}/g, athlete.overallPlace)
+                    .replace(/{GENDER_PLACE}/g, athlete.genderPlace)
+                    .replace(/{DIVISION_PLACE}/g, athlete.categoryPlace || '')
+                    .replace(/{DIVISION_NAME}/g, athlete.category || '');
+                
+                const result = await sendSMS(athlete.phone, message);
+                const messageId = (result.items && result.items[0] && result.items[0].id) || ('manual_' + Date.now() + '_' + bib);
+                
+                // DLA RĘCZNYCH SMS ZAWSZE OZNACZ
+                smsMemory.sent.set(bib, {
+                    timestamp: new Date().toISOString(),
+                    messageId: messageId,
+                    manual: true
+                });
+                smsMemory.save();
+                smsMemory.addLog(bib, 'sent', true);
+                
+                updateStats();
+                showDetails(eventData.athletes.get(bib));
+                
+                alert('✅ SMS wysłany do ' + athlete.firstName + ' ' + athlete.lastName + '\nKoszt: 0.23 PLN');
+                
+            } catch (error) {
+                smsMemory.addLog(bib, 'error', true);
+                alert('❌ Błąd: ' + error.message);
+            }
+        }
+        
+        function startAuto() {
+            if (sendingInProgress) {
+                showStatus('❌ Nie można uruchomić - trwa wysyłanie SMS!', 'error');
+                return;
+            }
+            automation.start();
+        }
+        
+        function stopAuto() {
+            automation.stop();
+        }
+        
+        function clearMemory() {
+            if (sendingInProgress) {
+                alert('⚠️ Nie można wyczyścić pamięci - trwa wysyłanie SMS!');
+                return;
+            }
+            
+            if (confirm('Wyczyścić pamięć SMS?\n\nWszyscy zawodnicy będą ponownie uprawnieni do SMS!\n\nUWAGA: To może spowodować ponowne wysłanie SMS do wszystkich!')) {
+                smsMemory.clear();
+                updateStats();
+                showStatus('🗑️ Pamięć SMS wyczyszczona', 'warning');
+            }
+        }
+
+        // INICJALIZACJA
+        console.log('🚀 SMS System v6.1 - SSL FIXED VERSION');
+        document.getElementById('sms-log').innerHTML = '<div class="log-entry">System uruchomiony - ' + new Date().toLocaleTimeString() + '</div>';
+        
+        // Załaduj ustawienia
+        const settings = ['event-id', 'sms-user', 'sms-pass', 'sms-sender'];
+        settings.forEach(function(id) {
+            const saved = localStorage.getItem(id);
+            if (saved) document.getElementById(id).value = saved;
+            
+            document.getElementById(id).addEventListener('change', function() {
+                localStorage.setItem(id, document.getElementById(id).value.trim());
+            });
+        });
+        
+        // Load proxy URL setting
+        const savedProxy = localStorage.getItem('proxy-url');
+        if (savedProxy) {
+            const select = document.getElementById('proxy-url');
+            const option = Array.from(select.options).find(opt => opt.value === savedProxy);
+            if (option) {
+                select.value = savedProxy;
+            } else {
+                select.value = 'custom';
+                document.getElementById('custom-proxy').value = savedProxy;
+                document.getElementById('custom-proxy').style.display = 'block';
+            }
+        }
+        
+        // Save proxy URL changes
+        document.getElementById('proxy-url').addEventListener('change', function() {
+            const value = this.value === 'custom' ? document.getElementById('custom-proxy').value : this.value;
+            localStorage.setItem('proxy-url', value);
+        });
+        
+        document.getElementById('custom-proxy').addEventListener('input', function() {
+            localStorage.setItem('proxy-url', this.value);
+        });
+        
+        // Załaduj tryb kategorii
+        const savedCategoryMode = localStorage.getItem('category-mode') || 'full';
+        const categoryRadio = document.querySelector('input[name="category-mode"][value="' + savedCategoryMode + '"]');
+        if (categoryRadio) categoryRadio.checked = true;
+        
+        document.querySelectorAll('input[name="category-mode"]').forEach(function(radio) {
+            radio.addEventListener('change', function() {
+                if (radio.checked) {
+                    localStorage.setItem('category-mode', radio.value);
+                }
+            });
+        });
+        
+        showStatus('✅ System gotowy! Kliknij "Test ChronoTrack" i "Test SerwerSMS" aby sprawdzić połączenia.', 'info');
+        console.log('✅ System zainicjalizowany - SSL fixes applied!');
+    </script>
+</body>
+</html>
