@@ -89,10 +89,30 @@ class ChronoTrack_Database {
             KEY participant_id (participant_id)
         ) $charset_collate;";
 
+        // Columns configuration table
+        $columns_table = $wpdb->prefix . 'chronotrack_columns';
+        $columns_sql = "CREATE TABLE IF NOT EXISTS $columns_table (
+            id bigint(20) NOT NULL AUTO_INCREMENT,
+            event_id varchar(255) NOT NULL,
+            column_id varchar(100) NOT NULL,
+            column_name varchar(255) NOT NULL,
+            column_description text,
+            api_attributes text NOT NULL,
+            column_order int(11) DEFAULT 0,
+            is_active tinyint(1) DEFAULT 1,
+            created_at datetime DEFAULT CURRENT_TIMESTAMP,
+            updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY  (id),
+            KEY event_id (event_id),
+            KEY is_active (is_active),
+            UNIQUE KEY event_column (event_id, column_id)
+        ) $charset_collate;";
+
         require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
         dbDelta($events_sql);
         dbDelta($results_sql);
         dbDelta($splits_sql);
+        dbDelta($columns_sql);
     }
 
     /**
@@ -362,5 +382,144 @@ class ChronoTrack_Database {
 
         // Delete event
         $wpdb->delete($events_table, array('event_id' => $event_id));
+    }
+
+    /**
+     * Get default columns configuration
+     */
+    public function get_default_columns() {
+        return array(
+            array('id' => 'overall_place', 'name' => 'Mce Open', 'description' => 'Miejsce w klasyfikacji ogólnej', 'api_options' => array('overall_place', 'position', 'results_rank'), 'selected' => true),
+            array('id' => 'entry_bib', 'name' => 'Nr Start', 'description' => 'Numer startowy', 'api_options' => array('entry_bib', 'bib_number', 'results_bib'), 'selected' => true),
+            array('id' => 'full_name', 'name' => 'Nazwisko, Imię', 'description' => 'Nazwisko i imię zawodnika', 'api_options' => array('full_name', 'athlete_last_name,athlete_first_name'), 'selected' => true),
+            array('id' => 'city', 'name' => 'Miejscowość', 'description' => 'Miejscowość zawodnika', 'api_options' => array('city', 'athlete_city'), 'selected' => true),
+            array('id' => 'club', 'name' => 'Klub', 'description' => 'Klub zawodnika', 'api_options' => array('club', 'athlete_club'), 'selected' => true),
+            array('id' => 'category', 'name' => 'Kat', 'description' => 'Kategoria wiekowa', 'api_options' => array('category', 'bracket_name', 'results_primary_bracket_name'), 'selected' => true),
+            array('id' => 'category_position', 'name' => 'Msc Kat', 'description' => 'Miejsce w kategorii wiekowej', 'api_options' => array('category_position', 'division_place', 'results_division_rank'), 'selected' => true),
+            array('id' => 'gender_position', 'name' => 'Msc M/K', 'description' => 'Miejsce w kategorii płci', 'api_options' => array('gender_position', 'results_sex_rank'), 'selected' => true),
+            array('id' => 'finish_time', 'name' => 'Czas Brutto', 'description' => 'Czas od wystrzału', 'api_options' => array('finish_time', 'gun_time', 'formatted_gun_time'), 'selected' => true),
+            array('id' => 'net_time', 'name' => 'Czas Netto', 'description' => 'Czas od przekroczenia linii startu', 'api_options' => array('net_time', 'formatted_net_time'), 'selected' => true),
+            array('id' => 'pace', 'name' => 'Tempo Min/km', 'description' => 'Tempo biegu', 'api_options' => array('pace', 'formatted_pace', 'results_pace'), 'selected' => false),
+            array('id' => 'age', 'name' => 'Wiek', 'description' => 'Wiek zawodnika', 'api_options' => array('age', 'entry_race_age', 'results_age'), 'selected' => false),
+            array('id' => 'gender', 'name' => 'Płeć', 'description' => 'Płeć zawodnika', 'api_options' => array('gender', 'athlete_sex', 'results_sex'), 'selected' => false),
+        );
+    }
+
+    /**
+     * Initialize default columns for an event
+     */
+    public function initialize_default_columns($event_id) {
+        $default_columns = $this->get_default_columns();
+        $order = 0;
+
+        foreach ($default_columns as $column) {
+            if ($column['selected']) {
+                $this->save_column($event_id, array(
+                    'column_id' => $column['id'],
+                    'column_name' => $column['name'],
+                    'column_description' => $column['description'],
+                    'api_attributes' => $column['api_options'],
+                    'column_order' => $order++,
+                    'is_active' => 1,
+                ));
+            }
+        }
+    }
+
+    /**
+     * Save or update column configuration
+     */
+    public function save_column($event_id, $column_data) {
+        global $wpdb;
+        $table = $wpdb->prefix . 'chronotrack_columns';
+
+        $data = array(
+            'event_id' => sanitize_text_field($event_id),
+            'column_id' => sanitize_text_field($column_data['column_id']),
+            'column_name' => sanitize_text_field($column_data['column_name']),
+            'column_description' => sanitize_text_field($column_data['column_description'] ?? ''),
+            'api_attributes' => wp_json_encode($column_data['api_attributes'] ?? array()),
+            'column_order' => absint($column_data['column_order'] ?? 0),
+            'is_active' => absint($column_data['is_active'] ?? 1),
+        );
+
+        // Check if column exists
+        $existing = $wpdb->get_row($wpdb->prepare(
+            "SELECT id FROM $table WHERE event_id = %s AND column_id = %s",
+            $data['event_id'],
+            $data['column_id']
+        ));
+
+        if ($existing) {
+            $wpdb->update(
+                $table,
+                $data,
+                array('id' => $existing->id)
+            );
+            return $existing->id;
+        } else {
+            $wpdb->insert($table, $data);
+            return $wpdb->insert_id;
+        }
+    }
+
+    /**
+     * Get columns for an event
+     */
+    public function get_event_columns($event_id, $active_only = true) {
+        global $wpdb;
+        $table = $wpdb->prefix . 'chronotrack_columns';
+
+        if ($active_only) {
+            $columns = $wpdb->get_results($wpdb->prepare(
+                "SELECT * FROM $table WHERE event_id = %s AND is_active = 1 ORDER BY column_order ASC",
+                $event_id
+            ));
+        } else {
+            $columns = $wpdb->get_results($wpdb->prepare(
+                "SELECT * FROM $table WHERE event_id = %s ORDER BY column_order ASC",
+                $event_id
+            ));
+        }
+
+        foreach ($columns as $column) {
+            if (!empty($column->api_attributes)) {
+                $column->api_attributes = json_decode($column->api_attributes, true);
+            }
+        }
+
+        return $columns;
+    }
+
+    /**
+     * Delete column
+     */
+    public function delete_column($event_id, $column_id) {
+        global $wpdb;
+        $table = $wpdb->prefix . 'chronotrack_columns';
+
+        return $wpdb->delete($table, array(
+            'event_id' => $event_id,
+            'column_id' => $column_id,
+        ));
+    }
+
+    /**
+     * Update column order
+     */
+    public function update_column_order($event_id, $column_orders) {
+        global $wpdb;
+        $table = $wpdb->prefix . 'chronotrack_columns';
+
+        foreach ($column_orders as $column_id => $order) {
+            $wpdb->update(
+                $table,
+                array('column_order' => absint($order)),
+                array(
+                    'event_id' => $event_id,
+                    'column_id' => $column_id,
+                )
+            );
+        }
     }
 }

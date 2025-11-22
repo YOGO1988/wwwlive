@@ -2,7 +2,7 @@
 
 WordPress plugin for displaying live race results from ChronoTrack with multi-event support and detailed participant statistics.
 
-## Version 3.6.0
+## Version 3.7.0
 
 ### Features
 
@@ -117,6 +117,7 @@ When an event ends:
 - `wp_chronotrack_events` - Event configurations
 - `wp_chronotrack_results` - Cached results
 - `wp_chronotrack_splits` - Split time details
+- `wp_chronotrack_columns` - Column configurations (v3.7.0+)
 
 **AJAX Endpoints:**
 - `chronotrack_get_results` - Fetch standings
@@ -127,6 +128,30 @@ When an event ends:
 Available for customization (contact developer for details)
 
 ### Changelog
+
+#### 3.7.0
+- **MAJOR**: Real ChronoTrack API integration with authentication
+- Full API support with pagination for large results
+- Split times fetching and parsing from API
+- Proper time formatting (HH:MM:SS) from API responses
+- Better error logging for debugging
+- Database schema extended with column configuration support
+- Foundation for custom column management (UI coming in next version)
+
+#### 3.6.3
+- Fixed interval to consistent 3.5 seconds
+- Fixed double table rendering issue
+- Added comprehensive debug logging
+- Timestamp display improvements
+
+#### 3.6.2
+- Intelligent auto-refresh (fast when active, slower when no changes)
+- UI improvements
+
+#### 3.6.1
+- Fixed auto-refresh interval
+- Added Polish translations
+- Improved error handling
 
 #### 3.6.0
 - Added Finish Line (META) view
