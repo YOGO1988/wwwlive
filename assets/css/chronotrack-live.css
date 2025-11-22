@@ -2,6 +2,25 @@
  * ChronoTrack Live Results - Frontend Styles
  */
 
+/* Hide WordPress sidebar ONLY on pages with ChronoTrack results */
+body:has(.chronotrack-results-container) #secondary,
+body:has(.chronotrack-results-container) .sidebar,
+body:has(.chronotrack-results-container) aside.widget-area,
+body:has(.chronotrack-results-container) .site-sidebar {
+    display: none !important;
+}
+
+/* Expand main content area to full width when ChronoTrack is present */
+body:has(.chronotrack-results-container) #primary,
+body:has(.chronotrack-results-container) #main,
+body:has(.chronotrack-results-container) .site-main,
+body:has(.chronotrack-results-container) .content-area {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
 /* Container */
 .chronotrack-results-container {
     max-width: 100%;
