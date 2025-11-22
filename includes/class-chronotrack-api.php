@@ -374,10 +374,14 @@ class ChronoTrack_API {
         // Distance - prefer entry data
         $distance = $entry['distance'] ?? $result['results_race_name'] ?? $result['race_distance'] ?? '';
 
-        // Debug logging for first result
+        // Debug logging - show ALL fields from API
         static $debug_logged = false;
         if (!$debug_logged) {
-            error_log('ChronoTrack API - Sample result data:');
+            error_log('========================================');
+            error_log('ChronoTrack API - Raw result (ALL FIELDS):');
+            error_log(print_r($result, true));
+            error_log('========================================');
+            error_log('ChronoTrack API - Checking specific rank fields:');
             error_log('  results_sex: ' . ($result['results_sex'] ?? 'NULL'));
             error_log('  results_gender_rank: ' . ($result['results_gender_rank'] ?? 'NULL'));
             error_log('  results_sex_rank: ' . ($result['results_sex_rank'] ?? 'NULL'));
@@ -386,6 +390,7 @@ class ChronoTrack_API {
             error_log('  results_rank_in_bracket: ' . ($result['results_rank_in_bracket'] ?? 'NULL'));
             error_log('  results_race_name: ' . ($result['results_race_name'] ?? 'NULL'));
             error_log('  results_primary_bracket_name: ' . ($result['results_primary_bracket_name'] ?? 'NULL'));
+            error_log('========================================');
             $debug_logged = true;
         }
 
