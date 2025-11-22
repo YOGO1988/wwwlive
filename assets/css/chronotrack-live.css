@@ -57,9 +57,9 @@
 
 .chronotrack-view-toggle {
     padding: 10px 20px;
-    border: 2px solid #ff6600;
+    border: 2px solid #ff8844;
     background: #fff;
-    color: #ff6600;
+    color: #ff8844;
     border-radius: 4px;
     cursor: pointer;
     font-size: 16px;
@@ -72,7 +72,7 @@
 }
 
 .chronotrack-view-toggle.active {
-    background: #ff6600;
+    background: #ff8844;
     color: #fff;
 }
 

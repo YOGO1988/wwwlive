@@ -108,12 +108,18 @@ class ChronoTrack_API {
             }
         }
 
+        // Clean location - remove comma and everything after it
+        $location = $event_data['location_city'] ?? '';
+        if (strpos($location, ',') !== false) {
+            $location = trim(substr($location, 0, strpos($location, ',')));
+        }
+
         return array(
             'event_id' => $event_data['event_id'] ?? '',
             'event_name' => $event_data['event_name'] ?? '',
             'event_date' => $event_date,
             'timezone' => $event_data['location_time_zone'] ?? '',
-            'location' => trim(($event_data['location_city'] ?? '') . ', ' . ($event_data['location_country'] ?? ''), ', '),
+            'location' => $location,
             'status' => ($event_data['event_is_published'] ?? '0') === '1' ? 'active' : 'inactive',
         );
     }
@@ -253,7 +259,7 @@ class ChronoTrack_API {
             $params = array(
                 'format' => 'json',
                 'page' => $page,
-                'per_page' => 100,
+                'size' => 100,  // CHANGED from per_page to size - API requires 'size' parameter
                 'include_all_fields' => 'true',
                 'need_athlete_birthdate' => 'true',
                 'need_transaction_account' => 'true',

@@ -37,6 +37,7 @@ $columns = $db->get_event_columns($event->event_id, true);
             <?php endif; ?>
         </div>
 
+        <h1 class="chronotrack-event-name"><?php echo esc_html($event->event_name); ?></h1>
         <div class="chronotrack-event-date">
             <?php echo date_i18n(get_option('date_format'), strtotime($event->event_date)); ?>
             <?php if (!empty($event->event_location)): ?>

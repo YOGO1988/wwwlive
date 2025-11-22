@@ -532,6 +532,23 @@
             html += '</table>';
             html += '</div>';
 
+            // Split Times - Międzyczasy
+            if (participant.split_times && participant.split_times.length > 0) {
+                html += '<div class="chronotrack-details-section">';
+                html += '<h3>Międzyczasy</h3>';
+                html += '<table class="chronotrack-details-table">';
+                participant.split_times.forEach((split) => {
+                    if (split.interval_name && split.formatted_time) {
+                        html += '<tr>';
+                        html += '<th>' + this.escapeHtml(split.interval_name) + ':</th>';
+                        html += '<td class="chronotrack-time">' + this.escapeHtml(split.formatted_time) + '</td>';
+                        html += '</tr>';
+                    }
+                });
+                html += '</table>';
+                html += '</div>';
+            }
+
             html += '</div>';
             html += '</div>';
 
@@ -656,11 +673,11 @@
         },
 
         /**
-         * Format position - show '-' if position is 0
+         * Format position - show empty string if position is 0
          */
         formatPosition: function(value) {
             if (value === 0 || value === '0' || value === '' || value === null || value === undefined) {
-                return '-';
+                return '';
             }
             return value;
         },
