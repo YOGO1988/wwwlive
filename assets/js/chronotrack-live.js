@@ -220,6 +220,9 @@
                 return;
             }
 
+            // Remove "Brak wyników" row if it exists
+            tbody.find('.chronotrack-no-results').closest('tr').remove();
+
             // Build a map of existing rows by bib_number (unique identifier)
             const existingRows = {};
             tbody.find('tr[data-bib]').each(function() {
@@ -348,8 +351,8 @@
                         }
                     }
 
-                    // Try direct attribute
-                    if (result.hasOwnProperty(attr) && result[attr] !== null && result[attr] !== '') {
+                    // Try direct attribute - accept 0 as valid value
+                    if (result.hasOwnProperty(attr) && result[attr] !== null && result[attr] !== undefined && result[attr] !== '') {
                         return result[attr];
                     }
                 }
