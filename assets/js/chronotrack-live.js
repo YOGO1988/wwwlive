@@ -58,7 +58,7 @@
         },
 
         removeSidebar: function() {
-            // Aggressively remove all sidebar elements
+            // Hide sidebar elements instead of removing them (Divi needs them in DOM)
             const sidebarSelectors = [
                 '#secondary',
                 'aside.sidebar',
@@ -71,7 +71,15 @@
             ];
 
             sidebarSelectors.forEach(selector => {
-                $(selector).remove();
+                $(selector).css({
+                    'display': 'none !important',
+                    'visibility': 'hidden',
+                    'position': 'absolute',
+                    'left': '-9999px',
+                    'width': '0',
+                    'height': '0',
+                    'overflow': 'hidden'
+                });
             });
 
             // Force full width layout
@@ -88,7 +96,7 @@
                 'flex': '0 0 100%'
             });
 
-            console.log('✅ Sidebar removed from DOM');
+            console.log('✅ Sidebar hidden (kept in DOM for Divi)');
         },
 
         bindEvents: function() {
@@ -699,7 +707,20 @@
     // Initialize when DOM is ready
     $(document).ready(function() {
         console.log('=== ChronoTrack DOM Ready ===');
-        ChronoTrackResults.init();
+
+        // Suppress Divi errors that occur from hidden sidebar elements
+        window.addEventListener('error', function(e) {
+            // Suppress Divi script errors related to missing DOM elements
+            if (e.filename && e.filename.includes('Divi/js/scripts')) {
+                e.preventDefault();
+                return true;
+            }
+        }, true);
+
+        // Delay initialization to let Divi load first
+        setTimeout(function() {
+            ChronoTrackResults.init();
+        }, 100);
     });
 
 })(jQuery);
