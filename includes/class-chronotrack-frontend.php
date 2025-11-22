@@ -12,6 +12,8 @@ class ChronoTrack_Frontend {
     public function __construct() {
         add_shortcode('chronotrack_results', array($this, 'results_shortcode'));
         add_filter('the_content', array($this, 'add_results_to_content'));
+        add_action('wp_head', array($this, 'hide_sidebar_for_chronotrack'));
+        add_filter('body_class', array($this, 'add_body_class'));
     }
 
     /**
@@ -97,5 +99,60 @@ class ChronoTrack_Frontend {
         ob_start();
         include CHRONOTRACK_LIVE_PLUGIN_DIR . 'templates/frontend/participant-details.php';
         return ob_get_clean();
+    }
+
+    /**
+     * Hide sidebar on ChronoTrack pages
+     */
+    public function hide_sidebar_for_chronotrack() {
+        if (!$this->is_chronotrack_page()) {
+            return;
+        }
+
+        ?>
+        <style type="text/css">
+            /* Hide WordPress sidebar on ChronoTrack pages */
+            .chronotrack-page #secondary,
+            .chronotrack-page aside,
+            .chronotrack-page .sidebar,
+            .chronotrack-page .widget-area {
+                display: none !important;
+            }
+
+            /* Make content full width */
+            .chronotrack-page #primary,
+            .chronotrack-page .site-main,
+            .chronotrack-page .content-area {
+                width: 100% !important;
+                max-width: 100% !important;
+                flex: 0 0 100% !important;
+            }
+
+            /* Hide meta info */
+            .chronotrack-page .entry-meta,
+            .chronotrack-page .entry-footer {
+                display: none !important;
+            }
+
+            /* Full width container */
+            .chronotrack-page .site-content {
+                width: 100% !important;
+                max-width: 1400px;
+                margin: 0 auto;
+                padding: 0 20px;
+            }
+        </style>
+        <?php
+    }
+
+    /**
+     * Add body class for ChronoTrack pages
+     */
+    public function add_body_class($classes) {
+        if ($this->is_chronotrack_page()) {
+            $classes[] = 'chronotrack-page';
+            $classes[] = 'page-template-full-width';
+        }
+        return $classes;
     }
 }

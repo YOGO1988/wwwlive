@@ -2,7 +2,7 @@
 
 WordPress plugin for displaying live race results from ChronoTrack with multi-event support and detailed participant statistics.
 
-## Version 3.8.0
+## Version 3.8.1
 
 ### Features
 
@@ -128,6 +128,13 @@ When an event ends:
 Available for customization (contact developer for details)
 
 ### Changelog
+
+#### 3.8.1
+- **FIX**: Manual "Pobierz wyniki" button in events list to fetch results from API
+- **FIX**: Auto-fetch event name, date, location from API when entering Event ID
+- **FIX**: Hide WordPress sidebar on ChronoTrack pages (full width layout)
+- **FIX**: Multi-line column headers to save horizontal space
+- Better error messages for API fetch operations
 
 #### 3.8.0
 - **MAJOR**: Full column customization system

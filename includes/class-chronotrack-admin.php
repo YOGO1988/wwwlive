@@ -14,7 +14,9 @@ class ChronoTrack_Admin {
         add_action('admin_post_chronotrack_save_event', array($this, 'save_event'));
         add_action('admin_post_chronotrack_delete_event', array($this, 'delete_event'));
         add_action('admin_post_chronotrack_save_columns', array($this, 'save_columns'));
+        add_action('admin_post_chronotrack_fetch_results', array($this, 'manual_fetch_results'));
         add_action('admin_enqueue_scripts', array($this, 'enqueue_admin_scripts'));
+        add_action('wp_ajax_chronotrack_fetch_event_info', array($this, 'ajax_fetch_event_info'));
     }
 
     /**
@@ -345,5 +347,67 @@ class ChronoTrack_Admin {
             admin_url('admin.php')
         ));
         exit;
+    }
+
+    /**
+     * Manual fetch results from API
+     */
+    public function manual_fetch_results() {
+        if (!current_user_can('manage_options')) {
+            wp_die(__('Unauthorized', 'chronotrack-live'));
+        }
+
+        check_admin_referer('chronotrack_fetch_results', 'nonce');
+
+        $event_id = sanitize_text_field($_GET['event_id']);
+        $api = chronotrack_live_results()->api;
+
+        // Fetch results from API
+        $results = $api->fetch_results($event_id);
+
+        $message = !empty($results) ? 'results_fetched' : 'no_results';
+
+        wp_redirect(add_query_arg(
+            array(
+                'page' => 'chronotrack-live',
+                'message' => $message,
+                'count' => count($results)
+            ),
+            admin_url('admin.php')
+        ));
+        exit;
+    }
+
+    /**
+     * AJAX: Fetch event info from API
+     */
+    public function ajax_fetch_event_info() {
+        check_ajax_referer('chronotrack_admin', 'nonce');
+
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(array('message' => 'Unauthorized'));
+            return;
+        }
+
+        $event_id = sanitize_text_field($_POST['event_id'] ?? '');
+
+        if (empty($event_id)) {
+            wp_send_json_error(array('message' => 'Brak Event ID'));
+            return;
+        }
+
+        $api = chronotrack_live_results()->api;
+        $event_info = $api->fetch_event_info($event_id);
+
+        if ($event_info) {
+            wp_send_json_success(array(
+                'event_name' => $event_info['event_name'],
+                'event_date' => $event_info['event_date'],
+                'location' => $event_info['location'],
+                'status' => $event_info['status'],
+            ));
+        } else {
+            wp_send_json_error(array('message' => 'Nie można pobrać danych wydarzenia z API'));
+        }
     }
 }

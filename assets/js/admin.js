@@ -6,6 +6,45 @@
     'use strict';
 
     $(document).ready(function() {
+        // Auto-fetch event info from API when Event ID is entered
+        $('#event_id').on('blur', function() {
+            const eventId = $(this).val().trim();
+            if (!eventId || $(this).attr('readonly')) {
+                return;
+            }
+
+            // Check if event name is already filled
+            if ($('#event_name').val().trim()) {
+                return;
+            }
+
+            // Fetch event info from API
+            $.ajax({
+                url: chronotrackAdmin.ajaxUrl,
+                type: 'POST',
+                data: {
+                    action: 'chronotrack_fetch_event_info',
+                    event_id: eventId,
+                    nonce: chronotrackAdmin.nonce
+                },
+                success: function(response) {
+                    if (response.success && response.data) {
+                        $('#event_name').val(response.data.event_name);
+                        if (response.data.event_date) {
+                            // Convert to datetime-local format
+                            const date = new Date(response.data.event_date);
+                            const formatted = date.toISOString().slice(0, 16);
+                            $('#event_date').val(formatted);
+                        }
+                        alert('Dane wydarzenia pobrane z ChronoTrack API!');
+                    }
+                },
+                error: function() {
+                    console.log('Nie udało się pobrać danych wydarzenia');
+                }
+            });
+        });
+
         // Initialize sortable columns
         if ($('.chronotrack-columns-list').length) {
             $('.chronotrack-columns-list').sortable({

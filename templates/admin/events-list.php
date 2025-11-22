@@ -23,6 +23,14 @@ if (!defined('ABSPATH')) {
             <div class="notice notice-success is-dismissible">
                 <p><?php _e('Event deleted successfully.', 'chronotrack-live'); ?></p>
             </div>
+        <?php elseif ($_GET['message'] === 'results_fetched'): ?>
+            <div class="notice notice-success is-dismissible">
+                <p><?php printf(__('Pobrano %d wyników z ChronoTrack API.', 'chronotrack-live'), isset($_GET['count']) ? intval($_GET['count']) : 0); ?></p>
+            </div>
+        <?php elseif ($_GET['message'] === 'no_results'): ?>
+            <div class="notice notice-warning is-dismissible">
+                <p><?php _e('Brak wyników w ChronoTrack API dla tego wydarzenia.', 'chronotrack-live'); ?></p>
+            </div>
         <?php endif; ?>
     <?php endif; ?>
 
@@ -79,6 +87,10 @@ if (!defined('ABSPATH')) {
                             </a> |
                             <a href="<?php echo admin_url('admin.php?page=chronotrack-columns&event_id=' . urlencode($event->event_id)); ?>">
                                 <?php _e('Columns', 'chronotrack-live'); ?>
+                            </a> |
+                            <a href="<?php echo wp_nonce_url(admin_url('admin-post.php?action=chronotrack_fetch_results&event_id=' . urlencode($event->event_id)), 'chronotrack_fetch_results', 'nonce'); ?>"
+                               class="chronotrack-fetch-btn">
+                                <?php _e('Pobierz wyniki', 'chronotrack-live'); ?>
                             </a> |
                             <a href="<?php echo wp_nonce_url(admin_url('admin-post.php?action=chronotrack_delete_event&event_id=' . urlencode($event->event_id)), 'chronotrack_delete_event', 'nonce'); ?>"
                                onclick="return confirm('<?php _e('Are you sure you want to delete this event?', 'chronotrack-live'); ?>');">

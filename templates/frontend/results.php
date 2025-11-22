@@ -90,7 +90,16 @@ $columns = $db->get_event_columns($event->event_id, true);
                         <?php if (!empty($columns)): ?>
                             <?php foreach ($columns as $column): ?>
                                 <th class="col-<?php echo esc_attr($column->column_id); ?>" title="<?php echo esc_attr($column->column_description ?? ''); ?>">
-                                    <?php echo esc_html($column->column_name); ?>
+                                    <?php
+                                    // Split multi-word column names into multiple lines
+                                    $name = $column->column_name;
+                                    if (strpos($name, ' ') !== false) {
+                                        $parts = explode(' ', $name, 2); // Split on first space
+                                        echo esc_html($parts[0]) . '<br>' . esc_html($parts[1]);
+                                    } else {
+                                        echo esc_html($name);
+                                    }
+                                    ?>
                                 </th>
                             <?php endforeach; ?>
                         <?php else: ?>
