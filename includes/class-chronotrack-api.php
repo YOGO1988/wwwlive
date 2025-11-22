@@ -283,8 +283,20 @@ class ChronoTrack_API {
 
                     $interval_name = $result['results_interval_name'] ?? '';
 
-                    // Check if this is main result or split time
+                    // Determine if this is main result or split time
+                    $is_main_result = false;
+
+                    // Primary check: known main result interval names
                     if (in_array($interval_name, array('Full Course', 'Finish', '')) || empty($interval_name)) {
+                        $is_main_result = true;
+                    }
+                    // Fallback: if we don't have a main result yet, accept first result for this BIB
+                    else if ($all_results_by_bib[$bib]['main_result'] === null) {
+                        $is_main_result = true;
+                        error_log("FALLBACK: Using interval_name '{$interval_name}' as main result for BIB {$bib}");
+                    }
+
+                    if ($is_main_result) {
                         // Main result - only save if we don't have one yet
                         if ($all_results_by_bib[$bib]['main_result'] === null) {
                             $all_results_by_bib[$bib]['main_result'] = $result;
