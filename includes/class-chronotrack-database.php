@@ -9,6 +9,40 @@ if (!defined('ABSPATH')) {
 
 class ChronoTrack_Database {
 
+    public function __construct() {
+        // Run migrations on plugin load (version check prevents running every time)
+        $this->maybe_run_migrations();
+    }
+
+    /**
+     * Run database migrations if needed
+     */
+    private function maybe_run_migrations() {
+        $db_version = get_option('chronotrack_db_version', '0');
+        $current_version = '4.0.4';
+
+        if (version_compare($db_version, $current_version, '<')) {
+            $this->run_migrations();
+            update_option('chronotrack_db_version', $current_version);
+        }
+    }
+
+    /**
+     * Run database migrations
+     */
+    private function run_migrations() {
+        global $wpdb;
+        $events_table = $wpdb->prefix . 'chronotrack_events';
+
+        // Migration: Add event_location column if it doesn't exist
+        $column_exists = $wpdb->get_results(
+            "SHOW COLUMNS FROM $events_table LIKE 'event_location'"
+        );
+        if (empty($column_exists)) {
+            $wpdb->query("ALTER TABLE $events_table ADD COLUMN event_location varchar(500) AFTER event_date");
+        }
+    }
+
     /**
      * Create database tables
      */
@@ -117,14 +151,6 @@ class ChronoTrack_Database {
         dbDelta($results_sql);
         dbDelta($splits_sql);
         dbDelta($columns_sql);
-
-        // Migration: Add event_location column if it doesn't exist
-        $column_exists = $wpdb->get_results(
-            "SHOW COLUMNS FROM $events_table LIKE 'event_location'"
-        );
-        if (empty($column_exists)) {
-            $wpdb->query("ALTER TABLE $events_table ADD COLUMN event_location varchar(500) AFTER event_date");
-        }
     }
 
     /**
