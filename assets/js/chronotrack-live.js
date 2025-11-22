@@ -238,12 +238,14 @@
                 console.log('🔍 First result data:', {
                     bib: results[0].bib_number,
                     name: results[0].full_name,
+                    gender: results[0].gender,
                     category_position: results[0].category_position,
                     gender_position: results[0].gender_position,
                     city: results[0].city,
                     club: results[0].club,
                     distance: results[0].distance
                 });
+                console.log('📊 All fields available:', Object.keys(results[0]));
             }
 
             // Update or add each result

@@ -375,8 +375,11 @@ class ChronoTrack_API {
         if (!$debug_logged) {
             error_log('ChronoTrack API - Sample result data:');
             error_log('  results_sex: ' . ($result['results_sex'] ?? 'NULL'));
-            error_log('  results_division_rank: ' . ($result['results_division_rank'] ?? 'NULL'));
+            error_log('  results_gender_rank: ' . ($result['results_gender_rank'] ?? 'NULL'));
             error_log('  results_sex_rank: ' . ($result['results_sex_rank'] ?? 'NULL'));
+            error_log('  results_bracket_rank: ' . ($result['results_bracket_rank'] ?? 'NULL'));
+            error_log('  results_division_rank: ' . ($result['results_division_rank'] ?? 'NULL'));
+            error_log('  results_rank_in_bracket: ' . ($result['results_rank_in_bracket'] ?? 'NULL'));
             error_log('  results_race_name: ' . ($result['results_race_name'] ?? 'NULL'));
             error_log('  results_primary_bracket_name: ' . ($result['results_primary_bracket_name'] ?? 'NULL'));
             $debug_logged = true;
@@ -406,12 +409,12 @@ class ChronoTrack_API {
             'position' => $result['results_rank'] ?? 0,
             'overall_place' => $result['results_rank'] ?? 0,  // Alternative
             'results_rank' => $result['results_rank'] ?? 0,  // Alternative
-            'category_position' => $result['results_division_rank'] ?? 0,
-            'division_place' => $result['results_division_rank'] ?? 0,  // Alternative
-            'results_division_rank' => $result['results_division_rank'] ?? 0,  // Alternative
-            'gender_position' => $result['results_sex_rank'] ?? 0,
-            'sex_place' => $result['results_sex_rank'] ?? 0,  // Alternative
-            'results_sex_rank' => $result['results_sex_rank'] ?? 0,  // Alternative
+            'category_position' => $result['results_bracket_rank'] ?? $result['results_division_rank'] ?? $result['results_rank_in_bracket'] ?? 0,
+            'division_place' => $result['results_bracket_rank'] ?? $result['results_division_rank'] ?? $result['results_rank_in_bracket'] ?? 0,  // Alternative
+            'results_division_rank' => $result['results_bracket_rank'] ?? $result['results_division_rank'] ?? $result['results_rank_in_bracket'] ?? 0,  // Alternative
+            'gender_position' => $result['results_gender_rank'] ?? $result['results_sex_rank'] ?? 0,
+            'sex_place' => $result['results_gender_rank'] ?? $result['results_sex_rank'] ?? 0,  // Alternative
+            'results_sex_rank' => $result['results_gender_rank'] ?? $result['results_sex_rank'] ?? 0,  // Alternative
             'finish_time' => $this->format_time($result['results_gun_time'] ?? ''),
             'gun_time' => $this->format_time($result['results_gun_time'] ?? ''),  // Alternative
             'results_gun_time' => $this->format_time($result['results_gun_time'] ?? ''),  // Alternative
