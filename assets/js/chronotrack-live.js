@@ -46,49 +46,12 @@
 
             console.log('✅ chronotrackData loaded:', chronotrackData);
 
-            // Remove WordPress sidebar completely from DOM
-            this.removeSidebar();
-
             this.bindEvents();
 
             // Start auto-refresh immediately (user wants this!)
             this.startAutoRefresh();
 
             console.log('=== ChronoTrack Live Init END ===');
-        },
-
-        removeSidebar: function() {
-            // Aggressively remove all sidebar elements
-            const sidebarSelectors = [
-                '#secondary',
-                'aside.sidebar',
-                '.sidebar',
-                '.widget-area',
-                '#sidebar',
-                '[id*="sidebar"]',
-                '[class*="sidebar"]:not(.chronotrack-distance-filters)',
-                'aside:not(.chronotrack-results-container)'
-            ];
-
-            sidebarSelectors.forEach(selector => {
-                $(selector).remove();
-            });
-
-            // Force full width layout
-            $('.site-content, .hfeed, #content').css({
-                'display': 'block',
-                'width': '100%',
-                'max-width': '100%',
-                'grid-template-columns': 'none'
-            });
-
-            $('#primary, .content-area, article, main').css({
-                'width': '100%',
-                'max-width': '100%',
-                'flex': '0 0 100%'
-            });
-
-            console.log('✅ Sidebar removed from DOM');
         },
 
         bindEvents: function() {
