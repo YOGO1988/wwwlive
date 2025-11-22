@@ -40,7 +40,8 @@
             console.log('✅ chronotrackData loaded:', chronotrackData);
 
             this.bindEvents();
-            this.loadResults();
+
+            // Start auto-refresh immediately (user wants this!)
             this.startAutoRefresh();
 
             console.log('=== ChronoTrack Live Init END ===');
@@ -77,6 +78,25 @@
             $(document).on('click', '.chronotrack-modal-close, .chronotrack-modal', (e) => {
                 if (e.target === e.currentTarget) {
                     this.closeModal();
+                }
+            });
+
+            // Manual refresh button
+            $(document).on('click', '.chronotrack-manual-refresh', (e) => {
+                e.preventDefault();
+                console.log('🔄 Manual refresh triggered');
+                this.loadResults(this.currentView);
+            });
+
+            // Toggle auto-refresh
+            $(document).on('click', '.chronotrack-toggle-autorefresh', (e) => {
+                e.preventDefault();
+                if (this.refreshInterval) {
+                    this.stopAutoRefresh();
+                    $(e.currentTarget).text('Włącz auto-odświeżanie');
+                } else {
+                    this.startAutoRefresh();
+                    $(e.currentTarget).text('Wyłącz auto-odświeżanie');
                 }
             });
         },
@@ -379,7 +399,10 @@
         },
 
         startAutoRefresh: function() {
-            const interval = chronotrackData.refreshInterval || 5000;
+            // Default 3.5 seconds (between 3-4 as requested)
+            const interval = chronotrackData.refreshInterval || 3500;
+
+            console.log('▶️ Starting auto-refresh with interval:', interval + 'ms');
 
             this.refreshInterval = setInterval(() => {
                 this.loadResults(this.currentView);
@@ -388,7 +411,9 @@
 
         stopAutoRefresh: function() {
             if (this.refreshInterval) {
+                console.log('⏸️ Stopping auto-refresh');
                 clearInterval(this.refreshInterval);
+                this.refreshInterval = null;
             }
         },
 
