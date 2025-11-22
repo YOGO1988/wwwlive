@@ -2,23 +2,42 @@
  * ChronoTrack Live Results - Frontend Styles
  */
 
-/* Hide WordPress sidebar ONLY on pages with ChronoTrack results */
-body:has(.chronotrack-results-container) #secondary,
-body:has(.chronotrack-results-container) .sidebar,
-body:has(.chronotrack-results-container) aside.widget-area,
-body:has(.chronotrack-results-container) .site-sidebar {
+/* Hide WordPress sidebar ONLY on ChronoTrack pages */
+body.chronotrack-page #secondary,
+body.chronotrack-page .sidebar,
+body.chronotrack-page aside.widget-area,
+body.chronotrack-page .widget-area,
+body.chronotrack-page .site-sidebar,
+body.chronotrack-page #sidebar,
+body.chronotrack-page .sidebar-primary,
+body.chronotrack-page .sidebar-secondary {
     display: none !important;
 }
 
-/* Expand main content area to full width when ChronoTrack is present */
-body:has(.chronotrack-results-container) #primary,
-body:has(.chronotrack-results-container) #main,
-body:has(.chronotrack-results-container) .site-main,
-body:has(.chronotrack-results-container) .content-area {
+/* Expand main content area to full width on ChronoTrack pages */
+body.chronotrack-page #primary,
+body.chronotrack-page #main,
+body.chronotrack-page .site-main,
+body.chronotrack-page .content-area,
+body.chronotrack-page #content,
+body.chronotrack-page .entry-content,
+body.chronotrack-page article {
     width: 100% !important;
     max-width: 100% !important;
-    margin: 0 !important;
-    padding: 0 !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    float: none !important;
+}
+
+/* Force full width layout */
+body.chronotrack-page .site-content,
+body.chronotrack-page .site-inner,
+body.chronotrack-page .wrap,
+body.chronotrack-page .container {
+    max-width: 100% !important;
+    width: 100% !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
 }
 
 /* Container */
