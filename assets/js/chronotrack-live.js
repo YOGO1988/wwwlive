@@ -292,7 +292,8 @@
             const row = $('<tr>')
                 .attr('data-result-id', result.id)
                 .attr('data-bib', result.bib_number)
-                .attr('data-distance', result.distance || '');
+                .attr('data-distance', result.distance || '')
+                .attr('data-bracket-positions', JSON.stringify(result.bracket_positions || {}));
 
             // Use dynamic columns if available
             if (this.columns && this.columns.length > 0) {
@@ -433,6 +434,17 @@
                 const rowCategory = row.find('.col-category').text();
                 const rowDistance = row.attr('data-distance') || '';
 
+                // Get bracket positions from data attribute
+                let bracketPositions = {};
+                try {
+                    const bracketData = row.attr('data-bracket-positions');
+                    if (bracketData) {
+                        bracketPositions = JSON.parse(bracketData);
+                    }
+                } catch (e) {
+                    // Ignore parse errors
+                }
+
                 let show = true;
 
                 // Search filter
@@ -440,9 +452,15 @@
                     show = false;
                 }
 
-                // Category filter
-                if (category && rowCategory !== category) {
-                    show = false;
+                // Category filter - check both category column AND bracket_positions
+                if (category) {
+                    // Check if participant belongs to this bracket
+                    const belongsToBracket = Object.keys(bracketPositions).includes(category);
+                    const matchesCategory = rowCategory === category;
+
+                    if (!belongsToBracket && !matchesCategory) {
+                        show = false;
+                    }
                 }
 
                 // Distance filter
@@ -455,11 +473,18 @@
         },
 
         populateFilters: function(results) {
-            const categories = new Set();
+            const brackets = new Set();
 
+            // Collect all unique brackets from bracket_positions
             results.forEach((result) => {
+                if (result.bracket_positions && typeof result.bracket_positions === 'object') {
+                    Object.keys(result.bracket_positions).forEach((bracketName) => {
+                        brackets.add(bracketName);
+                    });
+                }
+                // Fallback: also add category field if available
                 if (result.category) {
-                    categories.add(result.category);
+                    brackets.add(result.category);
                 }
             });
 
@@ -467,9 +492,9 @@
             const currentValue = categorySelect.val();
 
             categorySelect.find('option:not(:first)').remove();
-            Array.from(categories).sort().forEach((category) => {
+            Array.from(brackets).sort().forEach((bracket) => {
                 categorySelect.append(
-                    $('<option>').val(category).text(category)
+                    $('<option>').val(bracket).text(bracket)
                 );
             });
 
@@ -530,6 +555,28 @@
             html += '<tr><th>Czas netto:</th><td class="chronotrack-time">' + this.escapeHtml(participant.net_time) + '</td></tr>';
             html += '</table>';
             html += '</div>';
+
+            // Bracket Positions - Pozycje w kategoriach
+            if (participant.bracket_positions && Object.keys(participant.bracket_positions).length > 0) {
+                html += '<div class="chronotrack-details-section">';
+                html += '<h3>Pozycje w kategoriach</h3>';
+                html += '<table class="chronotrack-details-table">';
+
+                // Sort brackets alphabetically
+                const sortedBrackets = Object.keys(participant.bracket_positions).sort();
+                sortedBrackets.forEach((bracketName) => {
+                    const position = participant.bracket_positions[bracketName];
+                    if (position && position > 0) {
+                        html += '<tr>';
+                        html += '<th>' + this.escapeHtml(bracketName) + ':</th>';
+                        html += '<td class="chronotrack-position">' + position + '</td>';
+                        html += '</tr>';
+                    }
+                });
+
+                html += '</table>';
+                html += '</div>';
+            }
 
             // Split Times - Międzyczasy
             if (participant.split_times && participant.split_times.length > 0) {
