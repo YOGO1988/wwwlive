@@ -58,7 +58,7 @@
         },
 
         removeSidebar: function() {
-            // Hide sidebar elements instead of removing them (Divi needs them in DOM)
+            // Aggressively remove all sidebar elements
             const sidebarSelectors = [
                 '#secondary',
                 'aside.sidebar',
@@ -71,15 +71,7 @@
             ];
 
             sidebarSelectors.forEach(selector => {
-                $(selector).css({
-                    'display': 'none !important',
-                    'visibility': 'hidden',
-                    'position': 'absolute',
-                    'left': '-9999px',
-                    'width': '0',
-                    'height': '0',
-                    'overflow': 'hidden'
-                });
+                $(selector).remove();
             });
 
             // Force full width layout
@@ -96,7 +88,7 @@
                 'flex': '0 0 100%'
             });
 
-            console.log('✅ Sidebar hidden (kept in DOM for Divi)');
+            console.log('✅ Sidebar removed from DOM');
         },
 
         bindEvents: function() {
@@ -707,43 +699,7 @@
     // Initialize when DOM is ready
     $(document).ready(function() {
         console.log('=== ChronoTrack DOM Ready ===');
-
-        // Suppress Divi errors that occur from hidden sidebar elements
-        window.addEventListener('error', function(e) {
-            // Suppress Divi script errors related to missing DOM elements
-            if (e.filename && e.filename.includes('Divi/js/scripts')) {
-                e.preventDefault();
-                return true;
-            }
-        }, true);
-
-        // Delay initialization to let Divi load first
-        setTimeout(function() {
-            ChronoTrackResults.init();
-
-            // Force container visibility after init
-            setTimeout(function() {
-                const container = $('.chronotrack-results-container');
-                if (container.length) {
-                    container.css({
-                        'display': 'block !important',
-                        'visibility': 'visible !important',
-                        'opacity': '1 !important'
-                    });
-
-                    // Check what's covering the page
-                    const centerX = window.innerWidth / 2;
-                    const centerY = window.innerHeight / 2;
-                    const elementsAtCenter = document.elementsFromPoint(centerX, centerY);
-
-                    console.log('🔍 Elements at center after 500ms:', elementsAtCenter.slice(0, 5).map(el => ({
-                        tag: el.tagName,
-                        class: el.className,
-                        id: el.id
-                    })));
-                }
-            }, 500);
-        }, 100);
+        ChronoTrackResults.init();
     });
 
 })(jQuery);
