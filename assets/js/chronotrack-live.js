@@ -237,9 +237,14 @@
                     const value = this.getColumnValue(result, column);
                     const cell = $('<td>').addClass('col-' + column.id);
 
-                    // Special formatting for full_name
+                    // Special formatting for full_name - make it clickable
                     if (column.id === 'full_name' || column.id.includes('name')) {
-                        cell.html('<strong>' + this.escapeHtml(value) + '</strong>');
+                        const nameLink = $('<a>')
+                            .attr('href', '#')
+                            .addClass('chronotrack-view-details')
+                            .attr('data-participant-id', result.participant_id)
+                            .html('<strong>' + this.escapeHtml(value) + '</strong>');
+                        cell.append(nameLink);
                     } else {
                         cell.text(value);
                     }
@@ -250,22 +255,21 @@
                 // Fallback to hardcoded columns
                 row.append($('<td>').addClass('col-position').text(result.position));
                 row.append($('<td>').addClass('col-bib').text(result.bib_number));
-                row.append($('<td>').addClass('col-name').html(
-                    '<strong>' + this.escapeHtml(result.full_name) + '</strong>'
-                ));
+
+                // Make name clickable in fallback mode too
+                const nameLink = $('<a>')
+                    .attr('href', '#')
+                    .addClass('chronotrack-view-details')
+                    .attr('data-participant-id', result.participant_id)
+                    .html('<strong>' + this.escapeHtml(result.full_name) + '</strong>');
+                row.append($('<td>').addClass('col-name').append(nameLink));
+
                 row.append($('<td>').addClass('col-category').text(result.category));
                 row.append($('<td>').addClass('col-club').text(result.club));
                 row.append($('<td>').addClass('col-time').text(result.finish_time));
             }
 
-            // Actions column
-            const detailsBtn = $('<a>')
-                .attr('href', '#')
-                .addClass('chronotrack-view-details')
-                .attr('data-participant-id', result.participant_id)
-                .text(chronotrackData.strings.details);
-
-            row.append($('<td>').addClass('col-actions').append(detailsBtn));
+            // No separate actions column - name is now clickable
 
             return row;
         },
@@ -319,22 +323,21 @@
 
             row.append($('<td>').addClass('col-finish-time').text(finishTime));
             row.append($('<td>').addClass('col-bib').text(result.bib_number));
-            row.append($('<td>').addClass('col-name').html(
-                '<strong>' + this.escapeHtml(result.full_name) + '</strong>'
-            ));
+
+            // Make name clickable
+            const nameLink = $('<a>')
+                .attr('href', '#')
+                .addClass('chronotrack-view-details')
+                .attr('data-participant-id', result.participant_id)
+                .html('<strong>' + this.escapeHtml(result.full_name) + '</strong>');
+            row.append($('<td>').addClass('col-name').append(nameLink));
+
             row.append($('<td>').addClass('col-category').text(result.category));
             row.append($('<td>').addClass('col-club').text(result.club));
             row.append($('<td>').addClass('col-time').text(result.finish_time));
             row.append($('<td>').addClass('col-position').text(result.position));
 
-            // Actions
-            const detailsBtn = $('<a>')
-                .attr('href', '#')
-                .addClass('chronotrack-view-details')
-                .attr('data-participant-id', result.participant_id)
-                .text(chronotrackData.strings.details);
-
-            row.append($('<td>').addClass('col-actions').append(detailsBtn));
+            // No separate actions column - name is now clickable
 
             return row;
         },

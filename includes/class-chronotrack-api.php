@@ -254,6 +254,12 @@ class ChronoTrack_API {
 
         $participant_id = $result['athlete_id'] ?? uniqid('participant_');
 
+        // Extract birth year from birthdate
+        $birth_year = '';
+        if (!empty($result['results_birthdate'])) {
+            $birth_year = substr($result['results_birthdate'], 0, 4);
+        }
+
         return array(
             'participant_id' => $participant_id,
             'bib_number' => $result['results_bib'] ?? '',
@@ -264,15 +270,23 @@ class ChronoTrack_API {
             'gender' => $result['results_sex'] ?? '',
             'city' => $result['results_city'] ?? '',
             'club' => $result['results_club'] ?? '',
+            'birth_year' => $birth_year,
             'category' => $result['results_primary_bracket_name'] ?? '',
+            'bracket_name' => $result['results_primary_bracket_name'] ?? '',
             'position' => $result['results_rank'] ?? 0,
+            'overall_place' => $result['results_rank'] ?? 0,
             'category_position' => $result['results_division_rank'] ?? 0,
+            'division_place' => $result['results_division_rank'] ?? 0,
             'gender_position' => $result['results_sex_rank'] ?? 0,
+            'sex_place' => $result['results_sex_rank'] ?? 0,
             'finish_time' => $this->format_time($result['results_gun_time'] ?? ''),
+            'gun_time' => $this->format_time($result['results_gun_time'] ?? ''),
             'finish_time_seconds' => $this->parse_time_to_seconds($result['results_gun_time'] ?? ''),
             'net_time' => $this->format_time($result['results_time'] ?? ''),
+            'formatted_net_time' => $this->format_time($result['results_time'] ?? ''),
             'net_time_seconds' => $this->parse_time_to_seconds($result['results_time'] ?? ''),
             'pace' => $this->format_pace($result['results_pace'] ?? ''),
+            'formatted_pace' => $this->format_pace($result['results_pace'] ?? ''),
             'split_times' => $split_times,
             'finish_timestamp' => current_time('mysql'),
             'status' => $result['results_status'] ?? 'OK',
@@ -281,19 +295,22 @@ class ChronoTrack_API {
 
     /**
      * Format time from API (seconds to HH:MM:SS)
+     * Rounds to full seconds (removes hundredths)
      */
     private function format_time($time_string) {
         if (empty($time_string) || $time_string === '-') {
             return '-';
         }
 
-        // If already formatted, return as is
+        // If already formatted (HH:MM:SS), check for hundredths
         if (strpos($time_string, ':') !== false) {
+            // Remove hundredths if present (e.g., "01:23:45.67" → "01:23:45")
+            $time_string = preg_replace('/\.\d+$/', '', $time_string);
             return $time_string;
         }
 
-        // Convert seconds to HH:MM:SS
-        $seconds = intval($time_string);
+        // Convert seconds to HH:MM:SS, rounding to full seconds
+        $seconds = round(floatval($time_string)); // Round to remove hundredths
         $hours = floor($seconds / 3600);
         $minutes = floor(($seconds % 3600) / 60);
         $secs = $seconds % 60;
