@@ -643,11 +643,11 @@
         },
 
         showLoading: function() {
-            $('.chronotrack-loading').show();
+            $('.chronotrack-loading-row').show();
         },
 
         hideLoading: function() {
-            $('.chronotrack-loading').hide();
+            $('.chronotrack-loading-row').hide();
         },
 
         showError: function(message) {

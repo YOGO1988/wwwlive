@@ -370,6 +370,18 @@ class ChronoTrack_API {
         // Distance - prefer entry data
         $distance = $entry['distance'] ?? $result['results_race_name'] ?? $result['race_distance'] ?? '';
 
+        // Debug logging for first result
+        static $debug_logged = false;
+        if (!$debug_logged) {
+            error_log('ChronoTrack API - Sample result data:');
+            error_log('  results_sex: ' . ($result['results_sex'] ?? 'NULL'));
+            error_log('  results_division_rank: ' . ($result['results_division_rank'] ?? 'NULL'));
+            error_log('  results_sex_rank: ' . ($result['results_sex_rank'] ?? 'NULL'));
+            error_log('  results_race_name: ' . ($result['results_race_name'] ?? 'NULL'));
+            error_log('  results_primary_bracket_name: ' . ($result['results_primary_bracket_name'] ?? 'NULL'));
+            $debug_logged = true;
+        }
+
         return array(
             'participant_id' => $participant_id,
             'bib_number' => $result['results_bib'] ?? '',

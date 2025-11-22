@@ -80,12 +80,6 @@ $columns = $db->get_event_columns($event->event_id, true);
         </select>
     </div>
 
-    <!-- Loading Indicator -->
-    <div class="chronotrack-loading" style="display: none;">
-        <div class="chronotrack-spinner"></div>
-        <p>Ładowanie wyników...</p>
-    </div>
-
     <!-- Results Table - Standings View -->
     <div class="chronotrack-view chronotrack-view-standings active">
         <div class="chronotrack-table-wrapper">
@@ -126,6 +120,14 @@ $columns = $db->get_event_columns($event->event_id, true);
                         </td>
                     </tr>
                 </tbody>
+                <tfoot>
+                    <tr class="chronotrack-loading-row" style="display: none;">
+                        <td colspan="20" style="text-align: center; padding: 15px;">
+                            <div class="chronotrack-spinner"></div>
+                            <p style="margin: 10px 0 0 0;">Ładowanie wyników...</p>
+                        </td>
+                    </tr>
+                </tfoot>
             </table>
         </div>
     </div>
