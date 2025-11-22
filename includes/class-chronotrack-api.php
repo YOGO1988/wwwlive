@@ -318,15 +318,20 @@ class ChronoTrack_API {
         }
 
         // Fetch SEX bracket results (gender positions)
+        error_log("========== FETCHING SEX BRACKET FOR EVENT {$event_id} ==========");
         $sex_results = $this->fetch_sex_bracket_results($event_id);
+        error_log("SEX BRACKET COMPLETE: Got " . count($sex_results) . " gender positions");
 
         // Fetch AGE bracket results (category positions)
+        error_log("========== FETCHING AGE BRACKET FOR EVENT {$event_id} ==========");
         $age_results = $this->fetch_age_bracket_results($event_id);
+        error_log("AGE BRACKET COMPLETE: Got " . count($age_results) . " category positions");
 
         // Process collected results
         error_log("ChronoTrack API: Processing results for " . count($all_results_by_bib) . " athletes");
 
         $processed_results = array();
+        $first_bib_logged = false;
         foreach ($all_results_by_bib as $bib => $data) {
             if ($data['main_result'] === null) {
                 error_log("ChronoTrack API: No main result for BIB {$bib}, skipping");
@@ -340,8 +345,23 @@ class ChronoTrack_API {
             $sex_data = $sex_results[$bib] ?? array();
             $age_data = $age_results[$bib] ?? array();
 
+            // Debug first BIB
+            if (!$first_bib_logged) {
+                error_log("========== MERGE DEBUG FOR BIB {$bib} ==========");
+                error_log("SEX DATA: " . print_r($sex_data, true));
+                error_log("AGE DATA: " . print_r($age_data, true));
+                $first_bib_logged = true;
+            }
+
             $processed_result = $this->process_single_result($result, $data['split_times'], $entry, $sex_data, $age_data);
             if ($processed_result) {
+                // Debug first processed result
+                if (count($processed_results) === 0) {
+                    error_log("FIRST PROCESSED RESULT:");
+                    error_log("  BIB: " . $processed_result['bib_number']);
+                    error_log("  Gender position: " . $processed_result['gender_position']);
+                    error_log("  Category position: " . $processed_result['category_position']);
+                }
                 $processed_results[] = $processed_result;
             }
         }
