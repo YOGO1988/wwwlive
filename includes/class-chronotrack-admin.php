@@ -13,6 +13,8 @@ class ChronoTrack_Admin {
         add_action('admin_menu', array($this, 'add_admin_menu'));
         add_action('admin_post_chronotrack_save_event', array($this, 'save_event'));
         add_action('admin_post_chronotrack_delete_event', array($this, 'delete_event'));
+        add_action('admin_post_chronotrack_save_columns', array($this, 'save_columns'));
+        add_action('admin_enqueue_scripts', array($this, 'enqueue_admin_scripts'));
     }
 
     /**
@@ -55,6 +57,34 @@ class ChronoTrack_Admin {
             'chronotrack-settings',
             array($this, 'settings_page')
         );
+
+        // Hidden submenu for columns management (accessed via event edit)
+        add_submenu_page(
+            null, // Hidden from menu
+            __('Manage Columns', 'chronotrack-live'),
+            __('Manage Columns', 'chronotrack-live'),
+            'manage_options',
+            'chronotrack-columns',
+            array($this, 'columns_page')
+        );
+    }
+
+    /**
+     * Enqueue admin scripts and styles
+     */
+    public function enqueue_admin_scripts($hook) {
+        if (strpos($hook, 'chronotrack') === false) {
+            return;
+        }
+
+        wp_enqueue_script('jquery-ui-sortable');
+        wp_enqueue_style('chronotrack-admin', CHRONOTRACK_LIVE_PLUGIN_URL . 'assets/css/admin.css', array(), CHRONOTRACK_LIVE_VERSION);
+        wp_enqueue_script('chronotrack-admin', CHRONOTRACK_LIVE_PLUGIN_URL . 'assets/js/admin.js', array('jquery', 'jquery-ui-sortable'), CHRONOTRACK_LIVE_VERSION, true);
+
+        wp_localize_script('chronotrack-admin', 'chronotrackAdmin', array(
+            'ajaxUrl' => admin_url('admin-ajax.php'),
+            'nonce' => wp_create_nonce('chronotrack_admin'),
+        ));
     }
 
     /**
@@ -96,6 +126,13 @@ class ChronoTrack_Admin {
         }
 
         include CHRONOTRACK_LIVE_PLUGIN_DIR . 'templates/admin/settings.php';
+    }
+
+    /**
+     * Columns management page
+     */
+    public function columns_page() {
+        include CHRONOTRACK_LIVE_PLUGIN_DIR . 'templates/admin/columns-manager.php';
     }
 
     /**
@@ -157,6 +194,12 @@ class ChronoTrack_Admin {
 
         // Save event
         $event_db_id = $db->save_event($event_data);
+
+        // Initialize default columns for new events
+        $existing_columns = $db->get_event_columns($event_data['event_id'], false);
+        if (empty($existing_columns)) {
+            $db->initialize_default_columns($event_data['event_id']);
+        }
 
         // Create or update page
         $page_id = $this->create_event_page($event_data['event_id'], $event_data['event_name']);
@@ -259,5 +302,48 @@ class ChronoTrack_Admin {
         $page_id = wp_insert_post($page_data);
 
         return $page_id;
+    }
+
+    /**
+     * Save columns configuration
+     */
+    public function save_columns() {
+        if (!current_user_can('manage_options')) {
+            wp_die(__('Unauthorized', 'chronotrack-live'));
+        }
+
+        check_admin_referer('chronotrack_save_columns', 'chronotrack_columns_nonce');
+
+        $event_id = sanitize_text_field($_POST['event_id']);
+        $db = chronotrack_live_results()->db;
+
+        // Delete all existing columns for this event
+        global $wpdb;
+        $wpdb->delete($wpdb->prefix . 'chronotrack_columns', array('event_id' => $event_id));
+
+        // Save new columns configuration
+        if (!empty($_POST['columns'])) {
+            foreach ($_POST['columns'] as $order => $column_data) {
+                $db->save_column($event_id, array(
+                    'column_id' => sanitize_text_field($column_data['id']),
+                    'column_name' => sanitize_text_field($column_data['name']),
+                    'column_description' => sanitize_text_field($column_data['description'] ?? ''),
+                    'api_attributes' => array_map('sanitize_text_field', $column_data['api_attributes'] ?? array()),
+                    'column_order' => absint($order),
+                    'is_active' => 1,
+                ));
+            }
+        }
+
+        wp_redirect(add_query_arg(
+            array(
+                'page' => 'chronotrack-add-event',
+                'event_id' => $event_id,
+                'tab' => 'columns',
+                'message' => 'columns_saved'
+            ),
+            admin_url('admin.php')
+        ));
+        exit;
     }
 }

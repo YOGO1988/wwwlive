@@ -17,6 +17,7 @@
         lastResultCount: 0,
         unchangedCount: 0,
         currentInterval: 3500, // Start with 3.5 seconds
+        columns: [], // Dynamic columns configuration
 
         init: function() {
             console.log('=== ChronoTrack Live Init START ===');
@@ -141,6 +142,12 @@
                     if (response.success) {
                         this.consecutiveErrors = 0; // Reset error counter
 
+                        // Save columns configuration
+                        if (response.data.columns && response.data.columns.length > 0) {
+                            this.columns = response.data.columns;
+                            console.log('📋 Columns loaded:', this.columns.length);
+                        }
+
                         const newCount = response.data.count || 0;
                         const hasChanges = newCount !== this.lastResultCount;
 
@@ -224,25 +231,34 @@
         createResultRow: function(result) {
             const row = $('<tr>').attr('data-result-id', result.id);
 
-            row.append($('<td>').addClass('col-position').text(result.position));
-            row.append($('<td>').addClass('col-bib').text(result.bib_number));
-            row.append($('<td>').addClass('col-name').html(
-                '<strong>' + this.escapeHtml(result.full_name) + '</strong>'
-            ));
-            row.append($('<td>').addClass('col-category').text(result.category));
-            row.append($('<td>').addClass('col-club').text(result.club));
-            row.append($('<td>').addClass('col-time').text(result.finish_time));
+            // Use dynamic columns if available
+            if (this.columns && this.columns.length > 0) {
+                this.columns.forEach((column) => {
+                    const value = this.getColumnValue(result, column);
+                    const cell = $('<td>').addClass('col-' + column.id);
 
-            // Add split times if configured
-            if (result.split_times && result.split_times.length > 0) {
-                result.split_times.forEach((split) => {
-                    if (split.show_in_main) {
-                        row.append($('<td>').addClass('col-split').text(split.time));
+                    // Special formatting for full_name
+                    if (column.id === 'full_name' || column.id.includes('name')) {
+                        cell.html('<strong>' + this.escapeHtml(value) + '</strong>');
+                    } else {
+                        cell.text(value);
                     }
+
+                    row.append(cell);
                 });
+            } else {
+                // Fallback to hardcoded columns
+                row.append($('<td>').addClass('col-position').text(result.position));
+                row.append($('<td>').addClass('col-bib').text(result.bib_number));
+                row.append($('<td>').addClass('col-name').html(
+                    '<strong>' + this.escapeHtml(result.full_name) + '</strong>'
+                ));
+                row.append($('<td>').addClass('col-category').text(result.category));
+                row.append($('<td>').addClass('col-club').text(result.club));
+                row.append($('<td>').addClass('col-time').text(result.finish_time));
             }
 
-            // Actions
+            // Actions column
             const detailsBtn = $('<a>')
                 .attr('href', '#')
                 .addClass('chronotrack-view-details')
@@ -252,6 +268,32 @@
             row.append($('<td>').addClass('col-actions').append(detailsBtn));
 
             return row;
+        },
+
+        getColumnValue: function(result, column) {
+            // Try each API attribute in order until we find a value
+            if (column.api_attributes && column.api_attributes.length > 0) {
+                for (let i = 0; i < column.api_attributes.length; i++) {
+                    const attr = column.api_attributes[i];
+
+                    // Handle special case for full_name
+                    if (attr === 'full_name' || attr === 'athlete_last_name,athlete_first_name') {
+                        if (result.full_name) {
+                            return result.full_name;
+                        }
+                        if (result.last_name || result.first_name) {
+                            return (result.last_name || '') + ' ' + (result.first_name || '');
+                        }
+                    }
+
+                    // Try direct attribute
+                    if (result.hasOwnProperty(attr) && result[attr] !== null && result[attr] !== '') {
+                        return result[attr];
+                    }
+                }
+            }
+
+            return '-';
         },
 
         renderMetaResults: function(results) {

@@ -9,6 +9,10 @@ if (!defined('ABSPATH')) {
 
 $max_logo_width = get_option('chronotrack_max_logo_width', 400);
 $max_logo_height = get_option('chronotrack_max_logo_height', 200);
+
+// Get dynamic columns configuration
+$db = chronotrack_live_results()->db;
+$columns = $db->get_event_columns($event->event_id, true);
 ?>
 
 <div class="chronotrack-results-container" data-event-id="<?php echo esc_attr($event->event_id); ?>">
@@ -83,18 +87,20 @@ $max_logo_height = get_option('chronotrack_max_logo_height', 200);
             <table class="chronotrack-results-table">
                 <thead>
                     <tr>
-                        <th class="col-position">Miej.</th>
-                        <th class="col-bib">Nr</th>
-                        <th class="col-name">Imię i nazwisko</th>
-                        <th class="col-category">Kategoria</th>
-                        <th class="col-club">Klub</th>
-                        <th class="col-time">Czas</th>
-                        <?php if (!empty($event->split_times_config)): ?>
-                            <?php foreach ($event->split_times_config as $split): ?>
-                                <?php if ($split['show_in_main']): ?>
-                                    <th class="col-split"><?php echo esc_html($split['name']); ?></th>
-                                <?php endif; ?>
+                        <?php if (!empty($columns)): ?>
+                            <?php foreach ($columns as $column): ?>
+                                <th class="col-<?php echo esc_attr($column->column_id); ?>" title="<?php echo esc_attr($column->column_description ?? ''); ?>">
+                                    <?php echo esc_html($column->column_name); ?>
+                                </th>
                             <?php endforeach; ?>
+                        <?php else: ?>
+                            <!-- Fallback to default columns if none configured -->
+                            <th class="col-position">Miej.</th>
+                            <th class="col-bib">Nr</th>
+                            <th class="col-name">Imię i nazwisko</th>
+                            <th class="col-category">Kategoria</th>
+                            <th class="col-club">Klub</th>
+                            <th class="col-time">Czas</th>
                         <?php endif; ?>
                         <th class="col-actions"></th>
                     </tr>

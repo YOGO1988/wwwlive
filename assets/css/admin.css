@@ -1,0 +1,195 @@
+/**
+ * ChronoTrack Live - Admin CSS
+ */
+
+/* Tabs Navigation */
+.nav-tab-wrapper {
+    margin-bottom: 20px;
+}
+
+/* Column Management */
+.chronotrack-columns-manager {
+    max-width: 900px;
+}
+
+.chronotrack-columns-list {
+    border: 1px solid #ddd;
+    background: #fff;
+    border-radius: 4px;
+}
+
+.chronotrack-column-item {
+    padding: 15px;
+    border-bottom: 1px solid #ddd;
+    background: #fff;
+    cursor: move;
+    transition: background 0.2s;
+}
+
+.chronotrack-column-item:last-child {
+    border-bottom: none;
+}
+
+.chronotrack-column-item:hover {
+    background: #f9f9f9;
+}
+
+.chronotrack-column-item.ui-sortable-helper {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    background: #fff;
+}
+
+.chronotrack-column-header {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 10px;
+}
+
+.chronotrack-column-handle {
+    font-size: 18px;
+    color: #999;
+    cursor: move;
+}
+
+.chronotrack-column-name {
+    flex: 1;
+}
+
+.chronotrack-column-name input {
+    width: 100%;
+    font-weight: 600;
+}
+
+.chronotrack-column-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.chronotrack-column-body {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    gap: 15px;
+    margin-top: 10px;
+}
+
+.chronotrack-column-field label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 600;
+    font-size: 12px;
+    color: #666;
+}
+
+.chronotrack-column-field input,
+.chronotrack-column-field select {
+    width: 100%;
+}
+
+.chronotrack-api-attributes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.chronotrack-api-attr {
+    display: inline-block;
+    padding: 4px 10px;
+    background: #0073aa;
+    color: #fff;
+    border-radius: 3px;
+    font-size: 12px;
+}
+
+.chronotrack-api-attr button {
+    background: none;
+    border: none;
+    color: #fff;
+    margin-left: 5px;
+    cursor: pointer;
+    font-size: 14px;
+    padding: 0;
+}
+
+.chronotrack-add-attribute {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.chronotrack-add-attribute select {
+    flex: 1;
+}
+
+.chronotrack-add-column-btn {
+    margin: 20px 0;
+}
+
+/* Available API Attributes */
+.chronotrack-available-attributes {
+    margin-top: 30px;
+    padding: 20px;
+    background: #f5f5f5;
+    border-radius: 4px;
+}
+
+.chronotrack-available-attributes h3 {
+    margin-top: 0;
+}
+
+.chronotrack-attr-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 8px;
+}
+
+.chronotrack-attr-item {
+    padding: 6px 10px;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+    font-size: 12px;
+    font-family: monospace;
+    cursor: help;
+}
+
+/* Button Styles */
+.button-delete {
+    background: #dc3232;
+    border-color: #dc3232;
+    color: #fff;
+}
+
+.button-delete:hover {
+    background: #c62d2d;
+    border-color: #c62d2d;
+    color: #fff;
+}
+
+/* Messages */
+.chronotrack-message {
+    padding: 12px;
+    margin: 20px 0;
+    border-left: 4px solid #00a32a;
+    background: #f0f8f0;
+}
+
+.chronotrack-message.error {
+    border-color: #dc3232;
+    background: #f8e8e8;
+}
+
+/* Responsive */
+@media (max-width: 782px) {
+    .chronotrack-column-body {
+        grid-template-columns: 1fr;
+    }
+
+    .chronotrack-column-header {
+        flex-wrap: wrap;
+    }
+
+    .chronotrack-attr-list {
+        grid-template-columns: 1fr;
+    }
+}

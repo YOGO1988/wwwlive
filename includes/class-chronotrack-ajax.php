@@ -50,9 +50,11 @@ class ChronoTrack_Ajax {
         try {
             $db = chronotrack_live_results()->db;
             $results = $db->get_results($event_id);
+            $columns = $db->get_event_columns($event_id, true);
 
             wp_send_json_success(array(
                 'results' => $this->format_results($results),
+                'columns' => $this->format_columns($columns),
                 'count' => count($results),
                 'timestamp' => current_time('timestamp'),
                 'event_id' => $event_id
@@ -87,9 +89,11 @@ class ChronoTrack_Ajax {
         try {
             $db = chronotrack_live_results()->db;
             $results = $db->get_recent_finishers($event_id, $limit);
+            $columns = $db->get_event_columns($event_id, true);
 
             wp_send_json_success(array(
                 'results' => $this->format_results($results),
+                'columns' => $this->format_columns($columns),
                 'count' => count($results),
                 'timestamp' => current_time('timestamp'),
                 'event_id' => $event_id
@@ -178,6 +182,25 @@ class ChronoTrack_Ajax {
                 'net_time' => $result->net_time,
                 'split_times' => $result->split_times ?? array(),
                 'finish_timestamp' => $result->finish_timestamp,
+            );
+        }
+
+        return $formatted;
+    }
+
+    /**
+     * Format columns configuration for JSON response
+     */
+    private function format_columns($columns) {
+        $formatted = array();
+
+        foreach ($columns as $column) {
+            $formatted[] = array(
+                'id' => $column->column_id,
+                'name' => $column->column_name,
+                'description' => $column->column_description ?? '',
+                'api_attributes' => $column->api_attributes ?? array(),
+                'order' => $column->column_order,
             );
         }
 

@@ -2,7 +2,7 @@
 
 WordPress plugin for displaying live race results from ChronoTrack with multi-event support and detailed participant statistics.
 
-## Version 3.7.0
+## Version 3.8.0
 
 ### Features
 
@@ -129,6 +129,15 @@ Available for customization (contact developer for details)
 
 ### Changelog
 
+#### 3.8.0
+- **MAJOR**: Full column customization system
+- Admin UI for managing result table columns
+- Add custom columns, edit names, reorder with drag & drop
+- Bind columns to API attributes with fallback support
+- Dynamic frontend rendering based on column configuration
+- Each event can have unique column layout
+- Real-time column updates without code changes
+
 #### 3.7.0
 - **MAJOR**: Real ChronoTrack API integration with authentication
 - Full API support with pagination for large results
@@ -136,7 +145,6 @@ Available for customization (contact developer for details)
 - Proper time formatting (HH:MM:SS) from API responses
 - Better error logging for debugging
 - Database schema extended with column configuration support
-- Foundation for custom column management (UI coming in next version)
 
 #### 3.6.3
 - Fixed interval to consistent 3.5 seconds
