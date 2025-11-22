@@ -129,10 +129,102 @@ class ChronoTrack_API {
     }
 
     /**
+     * Fetch participant entries from ChronoTrack API
+     * This provides additional data like city, club, custom fields
+     */
+    public function fetch_entries($event_id) {
+        error_log("ChronoTrack API: Fetching participant entries for event {$event_id}");
+
+        $all_entries = array();
+        $page = 1;
+        $has_more_pages = true;
+
+        while ($has_more_pages) {
+            $params = array(
+                'page' => $page,
+                'size' => 50,
+                'include_test_entries' => 'true',
+                'elide_json' => 'false',
+                'contact_details' => 'true',
+                'include_all_fields' => 'true',
+                'need_athlete_birthdate' => 'true',
+            );
+
+            $endpoint = "/api/event/{$event_id}/entry";
+            $response = $this->make_api_request($endpoint, $params);
+
+            if ($response && (isset($response['event_entry']) || isset($response['entries']))) {
+                $entries = $response['event_entry'] ?? $response['entries'] ?? array();
+
+                if (!empty($entries)) {
+                    error_log("ChronoTrack API: Page {$page}: found " . count($entries) . " entries");
+
+                    foreach ($entries as $entry) {
+                        $bib = $entry['entry_bib'] ?? '';
+                        if (!empty($bib)) {
+                            // Extract city
+                            $city = $entry['location_city'] ?? $entry['athlete_city'] ?? '';
+
+                            // Extract club from various possible fields
+                            $club = '';
+                            if (!empty($entry['club'])) {
+                                $club = $entry['club'];
+                            } elseif (!empty($entry['athlete_club'])) {
+                                $club = $entry['athlete_club'];
+                            } else {
+                                // Check custom_element fields for club
+                                foreach ($entry as $key => $value) {
+                                    if (strpos($key, 'custom_element') === 0 && !empty($value)) {
+                                        // Likely club field
+                                        if (empty($club)) {
+                                            $club = $value;
+                                        }
+                                    }
+                                }
+                            }
+
+                            $all_entries[$bib] = array(
+                                'city' => $city,
+                                'club' => $club,
+                                'athlete_city' => $city,
+                                'athlete_club' => $club,
+                                'location_city' => $entry['location_city'] ?? '',
+                                'birthdate' => $entry['athlete_birthdate'] ?? $entry['reg_transaction_account_birthdate'] ?? '',
+                            );
+                        }
+                    }
+
+                    // Check for more pages
+                    if (isset($response['page']) && isset($response['page_count'])) {
+                        $has_more_pages = intval($response['page']) < intval($response['page_count']);
+                    } elseif (count($entries) >= 50) {
+                        $has_more_pages = true;
+                    } else {
+                        $has_more_pages = false;
+                    }
+
+                    $page++;
+                } else {
+                    $has_more_pages = false;
+                }
+            } else {
+                error_log('ChronoTrack API: No entries on this page');
+                $has_more_pages = false;
+            }
+        }
+
+        error_log("ChronoTrack API: Fetched entries for " . count($all_entries) . " participants");
+        return $all_entries;
+    }
+
+    /**
      * Fetch results from ChronoTrack API with pagination
      */
     public function fetch_results($event_id) {
         error_log("ChronoTrack API: Fetching results for event {$event_id}");
+
+        // First, fetch participant entries to get city and club data
+        $entries_by_bib = $this->fetch_entries($event_id);
 
         $all_results_by_bib = array();
         $page = 1;
@@ -227,7 +319,8 @@ class ChronoTrack_API {
             }
 
             $result = $data['main_result'];
-            $processed_result = $this->process_single_result($result, $data['split_times']);
+            $entry = $entries_by_bib[$bib] ?? array();
+            $processed_result = $this->process_single_result($result, $data['split_times'], $entry);
             if ($processed_result) {
                 $processed_results[] = $processed_result;
             }
@@ -245,8 +338,9 @@ class ChronoTrack_API {
 
     /**
      * Process single result from API
+     * Merges result data with entry data (for city, club, etc.)
      */
-    private function process_single_result($result, $split_times = array()) {
+    private function process_single_result($result, $split_times = array(), $entry = array()) {
         // Sort split times by time (shortest first)
         usort($split_times, function($a, $b) {
             return $this->parse_time_to_seconds($a['formatted_time']) - $this->parse_time_to_seconds($b['formatted_time']);
@@ -254,11 +348,19 @@ class ChronoTrack_API {
 
         $participant_id = $result['athlete_id'] ?? uniqid('participant_');
 
-        // Extract birth year from birthdate
+        // Extract birth year from birthdate (prefer entry data, fallback to result)
         $birth_year = '';
-        if (!empty($result['results_birthdate'])) {
+        if (!empty($entry['birthdate'])) {
+            $birth_year = substr($entry['birthdate'], 0, 4);
+        } elseif (!empty($result['results_birthdate'])) {
             $birth_year = substr($result['results_birthdate'], 0, 4);
         }
+
+        // City - prefer entry data
+        $city = $entry['city'] ?? $result['results_city'] ?? '';
+
+        // Club - prefer entry data
+        $club = $entry['club'] ?? $result['results_club'] ?? '';
 
         return array(
             'participant_id' => $participant_id,
@@ -268,25 +370,35 @@ class ChronoTrack_API {
             'full_name' => trim(($result['results_last_name'] ?? '') . ' ' . ($result['results_first_name'] ?? '')),
             'age' => $result['results_age'] ?? 0,
             'gender' => $result['results_sex'] ?? '',
-            'city' => $result['results_city'] ?? '',
-            'club' => $result['results_club'] ?? '',
+            'city' => $city,
+            'athlete_city' => $city,  // Alternative field name
+            'location_city' => $city,  // Alternative field name
+            'club' => $club,
+            'athlete_club' => $club,  // Alternative field name
             'birth_year' => $birth_year,
+            'birthdate' => $entry['birthdate'] ?? $result['results_birthdate'] ?? '',  // Alternative field name
             'category' => $result['results_primary_bracket_name'] ?? '',
-            'bracket_name' => $result['results_primary_bracket_name'] ?? '',
+            'bracket_name' => $result['results_primary_bracket_name'] ?? '',  // Alternative
+            'results_primary_bracket_name' => $result['results_primary_bracket_name'] ?? '',  // Alternative
             'position' => $result['results_rank'] ?? 0,
-            'overall_place' => $result['results_rank'] ?? 0,
+            'overall_place' => $result['results_rank'] ?? 0,  // Alternative
+            'results_rank' => $result['results_rank'] ?? 0,  // Alternative
             'category_position' => $result['results_division_rank'] ?? 0,
-            'division_place' => $result['results_division_rank'] ?? 0,
+            'division_place' => $result['results_division_rank'] ?? 0,  // Alternative
+            'results_division_rank' => $result['results_division_rank'] ?? 0,  // Alternative
             'gender_position' => $result['results_sex_rank'] ?? 0,
-            'sex_place' => $result['results_sex_rank'] ?? 0,
+            'sex_place' => $result['results_sex_rank'] ?? 0,  // Alternative
+            'results_sex_rank' => $result['results_sex_rank'] ?? 0,  // Alternative
             'finish_time' => $this->format_time($result['results_gun_time'] ?? ''),
-            'gun_time' => $this->format_time($result['results_gun_time'] ?? ''),
+            'gun_time' => $this->format_time($result['results_gun_time'] ?? ''),  // Alternative
+            'results_gun_time' => $this->format_time($result['results_gun_time'] ?? ''),  // Alternative
             'finish_time_seconds' => $this->parse_time_to_seconds($result['results_gun_time'] ?? ''),
             'net_time' => $this->format_time($result['results_time'] ?? ''),
-            'formatted_net_time' => $this->format_time($result['results_time'] ?? ''),
+            'formatted_net_time' => $this->format_time($result['results_time'] ?? ''),  // Alternative
+            'results_time' => $this->format_time($result['results_time'] ?? ''),  // Alternative
             'net_time_seconds' => $this->parse_time_to_seconds($result['results_time'] ?? ''),
             'pace' => $this->format_pace($result['results_pace'] ?? ''),
-            'formatted_pace' => $this->format_pace($result['results_pace'] ?? ''),
+            'formatted_pace' => $this->format_pace($result['results_pace'] ?? ''),  // Alternative
             'split_times' => $split_times,
             'finish_timestamp' => current_time('mysql'),
             'status' => $result['results_status'] ?? 'OK',

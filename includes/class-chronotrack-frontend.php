@@ -111,35 +111,60 @@ class ChronoTrack_Frontend {
 
         ?>
         <style type="text/css">
-            /* Hide WordPress sidebar on ChronoTrack pages */
+            /* Aggressively hide WordPress sidebar on ChronoTrack pages */
             .chronotrack-page #secondary,
             .chronotrack-page aside,
             .chronotrack-page .sidebar,
-            .chronotrack-page .widget-area {
+            .chronotrack-page .widget-area,
+            .chronotrack-page aside.sidebar,
+            .chronotrack-page #sidebar,
+            .chronotrack-page .secondary,
+            .chronotrack-page [id*="sidebar"],
+            .chronotrack-page [class*="sidebar"],
+            .chronotrack-page [class*="widget"] {
                 display: none !important;
+                visibility: hidden !important;
+                opacity: 0 !important;
+                height: 0 !important;
+                width: 0 !important;
+                margin: 0 !important;
+                padding: 0 !important;
             }
 
             /* Make content full width */
             .chronotrack-page #primary,
             .chronotrack-page .site-main,
-            .chronotrack-page .content-area {
+            .chronotrack-page .content-area,
+            .chronotrack-page .entry-content,
+            .chronotrack-page article,
+            .chronotrack-page main {
                 width: 100% !important;
                 max-width: 100% !important;
                 flex: 0 0 100% !important;
+                margin-left: 0 !important;
+                margin-right: 0 !important;
             }
 
             /* Hide meta info */
             .chronotrack-page .entry-meta,
-            .chronotrack-page .entry-footer {
+            .chronotrack-page .entry-footer,
+            .chronotrack-page .entry-header {
                 display: none !important;
             }
 
             /* Full width container */
-            .chronotrack-page .site-content {
+            .chronotrack-page .site-content,
+            .chronotrack-page .hfeed {
                 width: 100% !important;
-                max-width: 1400px;
+                max-width: 100% !important;
                 margin: 0 auto;
-                padding: 0 20px;
+                padding: 20px;
+            }
+
+            /* Force single column layout */
+            .chronotrack-page .site-content {
+                display: block !important;
+                grid-template-columns: 1fr !important;
             }
         </style>
         <?php

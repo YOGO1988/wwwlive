@@ -16,7 +16,8 @@
         maxConsecutiveErrors: 3,
         lastResultCount: 0,
         unchangedCount: 0,
-        currentInterval: 3500, // Start with 3.5 seconds
+        currentInterval: 10000, // 10 seconds for incremental updates
+        fullCheckInterval: null, // Separate interval for full checks every 60 seconds
         columns: [], // Dynamic columns configuration
 
         init: function() {
@@ -155,20 +156,9 @@
                             console.log('🆕 New results detected:', newCount, '(was:', this.lastResultCount + ')');
                             this.lastResultCount = newCount;
                             this.unchangedCount = 0;
-
-                            // Reset to fast interval when there are changes
-                            if (this.currentInterval !== 3500) {
-                                this.adjustRefreshInterval(3500);
-                            }
                         } else {
                             this.unchangedCount++;
                             console.log('⏸️ No changes, count:', this.unchangedCount);
-
-                            // After 10 unchanged checks (~35 seconds), slow down to 60 seconds
-                            if (this.unchangedCount >= 10 && this.currentInterval !== 60000) {
-                                console.log('⏱️ Slowing refresh to 60 seconds (no changes detected)');
-                                this.adjustRefreshInterval(60000);
-                            }
                         }
 
                         if (view === 'meta') {
@@ -209,23 +199,49 @@
             console.log('🎨 renderResults called, results:', results ? results.length : 'NULL');
             const tbody = $('#chronotrack-results-body');
 
-            // Clear only if we have new data
             if (!results || results.length === 0) {
                 console.log('❌ No results to render');
                 tbody.html('<tr><td colspan="20" class="chronotrack-no-results">Brak wyników</td></tr>');
                 return;
             }
 
-            // Clear existing rows
-            tbody.empty();
-
-            // Render each result
-            results.forEach((result) => {
-                const row = this.createResultRow(result);
-                tbody.append(row);
+            // Update in place to prevent page jumping and preserve filters
+            const existingRows = {};
+            tbody.find('tr[data-result-id]').each(function() {
+                const id = $(this).attr('data-result-id');
+                existingRows[id] = $(this);
             });
 
-            console.log('✅ Rendered', results.length, 'results');
+            // Update or add each result
+            results.forEach((result, index) => {
+                const existingRow = existingRows[result.id];
+
+                if (existingRow) {
+                    // Update existing row in place
+                    const newRow = this.createResultRow(result);
+                    existingRow.replaceWith(newRow);
+                    delete existingRows[result.id];
+                } else {
+                    // New result - add it in the correct position
+                    const newRow = this.createResultRow(result);
+                    const rows = tbody.find('tr[data-result-id]');
+
+                    if (index === 0 || rows.length === 0) {
+                        tbody.prepend(newRow);
+                    } else if (index >= rows.length) {
+                        tbody.append(newRow);
+                    } else {
+                        rows.eq(index - 1).after(newRow);
+                    }
+                }
+            });
+
+            // Remove rows that no longer exist in results
+            $.each(existingRows, function(id, row) {
+                row.fadeOut(200, function() { $(this).remove(); });
+            });
+
+            console.log('✅ Rendered', results.length, 'results (in-place update)');
         },
 
         createResultRow: function(result) {
@@ -433,34 +449,33 @@
         },
 
         renderParticipantDetails: function(participant) {
-            // This will be rendered server-side via AJAX endpoint
-            // For now, create a simple details view
+            // Polish translations for participant details
             let html = '<div class="chronotrack-participant-details">';
             html += '<h2>' + this.escapeHtml(participant.full_name) + '</h2>';
             html += '<div class="chronotrack-details-grid">';
 
-            // Basic info
+            // Basic info - Podstawowe informacje
             html += '<div class="chronotrack-details-section">';
-            html += '<h3>Basic Information</h3>';
+            html += '<h3>Podstawowe informacje</h3>';
             html += '<table class="chronotrack-details-table">';
-            html += '<tr><th>Bib Number:</th><td>' + this.escapeHtml(participant.bib_number) + '</td></tr>';
-            html += '<tr><th>Age:</th><td>' + participant.age + '</td></tr>';
-            html += '<tr><th>Gender:</th><td>' + this.escapeHtml(participant.gender) + '</td></tr>';
-            html += '<tr><th>City:</th><td>' + this.escapeHtml(participant.city) + '</td></tr>';
-            html += '<tr><th>Club:</th><td>' + this.escapeHtml(participant.club) + '</td></tr>';
-            html += '<tr><th>Category:</th><td>' + this.escapeHtml(participant.category) + '</td></tr>';
+            html += '<tr><th>Numer startowy:</th><td>' + this.escapeHtml(participant.bib_number) + '</td></tr>';
+            html += '<tr><th>Wiek:</th><td>' + participant.age + '</td></tr>';
+            html += '<tr><th>Płeć:</th><td>' + this.escapeHtml(participant.gender) + '</td></tr>';
+            html += '<tr><th>Miejscowość:</th><td>' + this.escapeHtml(participant.city) + '</td></tr>';
+            html += '<tr><th>Klub:</th><td>' + this.escapeHtml(participant.club) + '</td></tr>';
+            html += '<tr><th>Kategoria:</th><td>' + this.escapeHtml(participant.category) + '</td></tr>';
             html += '</table>';
             html += '</div>';
 
-            // Results
+            // Results - Wyniki
             html += '<div class="chronotrack-details-section">';
-            html += '<h3>Results</h3>';
+            html += '<h3>Wyniki</h3>';
             html += '<table class="chronotrack-details-table">';
-            html += '<tr><th>Overall Position:</th><td class="chronotrack-position">' + participant.position + '</td></tr>';
-            html += '<tr><th>Category Position:</th><td class="chronotrack-position">' + participant.category_position + '</td></tr>';
-            html += '<tr><th>Gender Position:</th><td class="chronotrack-position">' + participant.gender_position + '</td></tr>';
-            html += '<tr><th>Finish Time (Gross):</th><td class="chronotrack-time">' + this.escapeHtml(participant.finish_time) + '</td></tr>';
-            html += '<tr><th>Net Time:</th><td class="chronotrack-time">' + this.escapeHtml(participant.net_time) + '</td></tr>';
+            html += '<tr><th>Miejsce Open:</th><td class="chronotrack-position">' + participant.position + '</td></tr>';
+            html += '<tr><th>Miejsce w kategorii:</th><td class="chronotrack-position">' + participant.category_position + '</td></tr>';
+            html += '<tr><th>Miejsce M/K:</th><td class="chronotrack-position">' + participant.gender_position + '</td></tr>';
+            html += '<tr><th>Czas brutto:</th><td class="chronotrack-time">' + this.escapeHtml(participant.finish_time) + '</td></tr>';
+            html += '<tr><th>Czas netto:</th><td class="chronotrack-time">' + this.escapeHtml(participant.net_time) + '</td></tr>';
             html += '</table>';
             html += '</div>';
 
@@ -479,15 +494,22 @@
         },
 
         startAutoRefresh: function() {
-            // Default 3.5 seconds (between 3-4 as requested)
-            const interval = 3500; // Always 3.5 seconds
+            // Max 10 seconds for incremental updates
+            const interval = 10000; // 10 seconds
             this.currentInterval = interval;
 
-            console.log('▶️ Starting auto-refresh with interval:', interval + 'ms');
+            console.log('▶️ Starting auto-refresh with interval:', interval + 'ms (10s incremental)');
 
+            // Incremental updates every 10 seconds
             this.refreshInterval = setInterval(() => {
                 this.loadResults(this.currentView);
             }, interval);
+
+            // Full check every 60 seconds
+            this.fullCheckInterval = setInterval(() => {
+                console.log('🔄 Full check (60s interval)');
+                this.loadResults(this.currentView);
+            }, 60000); // 60 seconds
         },
 
         stopAutoRefresh: function() {
@@ -496,17 +518,29 @@
                 clearInterval(this.refreshInterval);
                 this.refreshInterval = null;
             }
+            if (this.fullCheckInterval) {
+                console.log('⏸️ Stopping full check interval');
+                clearInterval(this.fullCheckInterval);
+                this.fullCheckInterval = null;
+            }
         },
 
         adjustRefreshInterval: function(newInterval) {
             console.log('🔄 Adjusting refresh interval from', this.currentInterval + 'ms to', newInterval + 'ms');
             this.currentInterval = newInterval;
 
-            // Restart timer with new interval
+            // Restart timer with new interval (but keep max at 10 seconds)
             this.stopAutoRefresh();
+            const finalInterval = Math.min(newInterval, 10000); // Max 10 seconds
             this.refreshInterval = setInterval(() => {
                 this.loadResults(this.currentView);
-            }, newInterval);
+            }, finalInterval);
+
+            // Keep full check at 60 seconds
+            this.fullCheckInterval = setInterval(() => {
+                console.log('🔄 Full check (60s interval)');
+                this.loadResults(this.currentView);
+            }, 60000);
         },
 
         updateTimestamp: function() {
