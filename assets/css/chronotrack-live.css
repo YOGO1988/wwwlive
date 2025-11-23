@@ -52,9 +52,18 @@ body.chronotrack-page .container {
     max-width: 100%;
     width: 100%;
     margin: 0;
-    padding: 20px;
+    padding: 20px 0; /* Only top/bottom padding, no left/right */
     background: #fff;
     box-sizing: border-box;
+}
+
+/* Add horizontal padding only to specific elements that need it */
+.chronotrack-header,
+.chronotrack-controls,
+.chronotrack-distance-filters,
+.chronotrack-filters {
+    padding-left: 20px;
+    padding-right: 20px;
 }
 
 /* Header */
@@ -260,12 +269,18 @@ body.chronotrack-page .container {
 }
 
 /* Row colors - using classes instead of nth-child for dynamic filtering */
+.chronotrack-results-table tbody tr {
+    width: 100%;
+}
+
 .chronotrack-results-table tbody tr.row-even {
     background: #f5f5f5;
+    width: 100%;
 }
 
 .chronotrack-results-table tbody tr.row-odd {
     background: #fff;
+    width: 100%;
 }
 
 .chronotrack-results-table tbody tr:hover {
@@ -333,17 +348,18 @@ body.chronotrack-page .container {
     height: 100%;
     overflow: auto;
     background-color: rgba(0,0,0,0.5);
+    padding-top: 80px; /* Space for WordPress menu */
 }
 
 .chronotrack-modal-content {
     background-color: #fefefe;
-    margin: 1% auto;
+    margin: 20px auto 40px auto; /* More top margin to avoid menu */
     padding: 15px;
     border: 1px solid #888;
     border-radius: 8px;
     width: 85%;
     max-width: 650px;
-    max-height: 95vh;
+    max-height: 85vh; /* Reduced from 95vh to account for padding-top */
     overflow-y: auto;
     position: relative;
     z-index: 999999999 !important;

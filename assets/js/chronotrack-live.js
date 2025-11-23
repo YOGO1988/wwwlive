@@ -783,6 +783,13 @@
 
             html += '<tr><th>Czas brutto:</th><td class="chronotrack-time">' + this.escapeHtml(participant.finish_time) + '</td></tr>';
             html += '<tr><th>Czas netto:</th><td class="chronotrack-time">' + this.escapeHtml(participant.net_time) + '</td></tr>';
+
+            // Add pace with unit
+            if (participant.pace) {
+                const paceUnit = 'min/km'; // Default assumption for metric
+                html += '<tr><th>Tempo:</th><td class="chronotrack-time">' + this.escapeHtml(participant.pace) + ' ' + paceUnit + '</td></tr>';
+            }
+
             html += '</table>';
             html += '</div>';
             html += '</div>'; // End column 2
@@ -792,14 +799,7 @@
             // Split Times BELOW the 2-column layout (full width)
             if (participant.split_times && participant.split_times.length > 0) {
                 html += '<div class="chronotrack-details-section chronotrack-splits-full-width">';
-                html += '<h3>Międzyczasy';
-                // Add pace info with unit
-                if (participant.pace) {
-                    // Determine unit (min/km or min/mi) - ChronoTrack usually uses min/km for metric
-                    const paceUnit = 'min/km'; // Default assumption
-                    html += ' <span style="font-weight:normal; font-size:0.9em; color:#666;">(Tempo: ' + this.escapeHtml(participant.pace) + ' ' + paceUnit + ')</span>';
-                }
-                html += '</h3>';
+                html += '<h3>Międzyczasy</h3>';
                 html += '<table class="chronotrack-details-table">';
                 participant.split_times.forEach((split) => {
                     if (split.interval_name && split.formatted_time) {
