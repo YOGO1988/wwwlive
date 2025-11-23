@@ -18,26 +18,26 @@ class ChronoTrack_PDF_Generator {
     /**
      * Generate PDF for specific distance
      *
-     * @param int $event_id ChronoTrack Event ID
+     * @param int $page_id WordPress Page ID
      * @param string $distance Distance name to filter results
      * @return string|WP_Error Path to generated PDF or error
      */
-    public function generate_pdf($event_id, $distance) {
+    public function generate_pdf($page_id, $distance) {
         // Check if TCPDF is available
         if (!$this->load_tcpdf()) {
             return new WP_Error('tcpdf_missing', __('TCPDF library not found. Please install TCPDF.', 'chronotrack-live'));
         }
 
-        // Get event data
+        // Get event data from WordPress Page ID
         $db = chronotrack_live_results()->db;
-        $event = $db->get_event_by_chronotrack_id($event_id);
+        $event = $db->get_event_by_page($page_id);
 
         if (!$event) {
-            return new WP_Error('event_not_found', __('Event not found.', 'chronotrack-live'));
+            return new WP_Error('event_not_found', __('Event not found for this page.', 'chronotrack-live'));
         }
 
-        // Get results for this distance
-        $results = $db->get_results($event_id);
+        // Get results for this ChronoTrack Event ID
+        $results = $db->get_results($event->event_id);
 
         if (empty($results)) {
             return new WP_Error('no_results', __('No results found for this event.', 'chronotrack-live'));
@@ -49,11 +49,15 @@ class ChronoTrack_PDF_Generator {
         });
 
         if (empty($filtered_results)) {
-            return new WP_Error('no_results_distance', __('No results found for this distance.', 'chronotrack-live'));
+            return new WP_Error('no_results_distance', __('No results found for this distance: ' . $distance, 'chronotrack-live'));
         }
 
         // Get column configuration
-        $columns = $db->get_event_columns($event_id, true);
+        $columns = $db->get_event_columns($event->event_id, true);
+
+        if (empty($columns)) {
+            return new WP_Error('no_columns', __('No columns configured for this event.', 'chronotrack-live'));
+        }
 
         // Generate PDF
         try {
