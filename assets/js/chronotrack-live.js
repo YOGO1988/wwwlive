@@ -784,12 +784,6 @@
             html += '<tr><th>Czas brutto:</th><td class="chronotrack-time">' + this.escapeHtml(participant.finish_time) + '</td></tr>';
             html += '<tr><th>Czas netto:</th><td class="chronotrack-time">' + this.escapeHtml(participant.net_time) + '</td></tr>';
 
-            // Add pace with unit
-            if (participant.pace) {
-                const paceUnit = 'min/km'; // Default assumption for metric
-                html += '<tr><th>Tempo:</th><td class="chronotrack-time">' + this.escapeHtml(participant.pace) + ' ' + paceUnit + '</td></tr>';
-            }
-
             html += '</table>';
             html += '</div>';
             html += '</div>'; // End column 2
@@ -829,6 +823,11 @@
                 html += '<span class="chronotrack-time">' + this.escapeHtml(participant.finish_time) + '</span>';
                 if (participant.position && participant.position > 0) {
                     html += ' <span class="chronotrack-split-position">(mce: ' + participant.position + ')</span>';
+                }
+                // Add pace with unit if available
+                if (participant.pace) {
+                    const paceUnit = 'min/km'; // Default assumption for metric
+                    html += ' <span class="chronotrack-pace">(' + this.escapeHtml(participant.pace) + ' ' + paceUnit + ')</span>';
                 }
                 html += '</td>';
                 html += '</tr>';

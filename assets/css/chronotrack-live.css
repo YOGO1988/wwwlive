@@ -242,12 +242,14 @@ body.chronotrack-page .container {
 /* Table */
 .chronotrack-table-wrapper {
     overflow-x: auto;
+    width: 100%;
 }
 
 .chronotrack-results-table {
     width: 100%;
     border-collapse: collapse;
     font-size: 12px;
+    table-layout: fixed;
 }
 
 .chronotrack-results-table thead {
@@ -496,6 +498,13 @@ body.chronotrack-page .container {
 }
 
 .chronotrack-split-position {
+    font-size: 12px;
+    font-weight: 400;
+    color: #666;
+    margin-left: 8px;
+}
+
+.chronotrack-pace {
     font-size: 12px;
     font-weight: 400;
     color: #666;
