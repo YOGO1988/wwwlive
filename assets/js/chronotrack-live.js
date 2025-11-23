@@ -636,8 +636,13 @@
             const categorySelect = $('#chronotrack-category-filter');
             const currentValue = categorySelect.val();
 
-            // Remove all options (no "Wszystkie kategorie" option)
+            // Remove all options
             categorySelect.find('option').remove();
+
+            // Add "Open" option to show all results
+            categorySelect.append(
+                $('<option>').val('').text('Open (wszystkie)')
+            );
 
             // Add categories sorted alphabetically
             Array.from(brackets).sort().forEach((bracket) => {
@@ -646,13 +651,13 @@
                 );
             });
 
-            // Only restore value if it still exists in new list
+            // Restore previous value if it exists
             const optionExists = Array.from(categorySelect.find('option')).some(opt => opt.value === currentValue);
-            if (optionExists && currentValue) {
+            if (optionExists) {
                 categorySelect.val(currentValue);
-            } else if (brackets.size > 0) {
-                // Auto-select first category if no previous selection
-                categorySelect.val(categorySelect.find('option:first').val());
+            } else {
+                // Default to "Open" (show all)
+                categorySelect.val('');
             }
         },
 
@@ -720,6 +725,13 @@
                     const position = participant.bracket_positions[bracketName];
                     // ONLY show brackets with actual position (> 0)
                     if (position && position > 0) {
+                        // CRITICAL FIX: Skip SEX brackets (M, K, F) if they duplicate gender_position
+                        // This prevents showing "Miejsce M/K: 6" and then "M: 6" (redundant)
+                        const isSexBracket = ['M', 'K', 'F', 'Male', 'Female', 'Mężczyźni', 'Kobiety'].includes(bracketName);
+                        if (isSexBracket && position == participant.gender_position) {
+                            return; // Skip this bracket - it's already shown as "Miejsce M/K"
+                        }
+
                         html += '<tr><th>' + this.escapeHtml(bracketName) + ':</th><td class="chronotrack-position">' + position + '</td></tr>';
                     }
                 });
