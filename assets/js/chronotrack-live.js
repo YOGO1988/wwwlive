@@ -340,8 +340,15 @@
                 row.remove();
             });
 
-            // Recolor rows after rendering
-            this.recolorRows(tbody);
+            // CRITICAL FIX: Apply filters after rendering (for initial load)
+            // This ensures newly added rows are filtered if a distance is selected
+            if (this.selectedDistance) {
+                console.log('🔄 Applying distance filter after render:', this.selectedDistance);
+                this.filterResults();
+            } else {
+                // Just recolor if no filters active
+                this.recolorRows(tbody);
+            }
 
             console.log('✅ Rendered', results.length, 'results (background update, preserved filters)');
         },
@@ -750,11 +757,8 @@
                 container.append(btn);
             });
 
-            // If we just auto-selected, apply the filter immediately
-            if (wasEmpty && this.selectedDistance) {
-                console.log('🔄 Applying initial distance filter');
-                this.filterResults();
-            }
+            // NOTE: Don't call filterResults() here - it will be called in renderResults()
+            // after rows are actually added to the table
         },
 
         selectDistance: function(distance) {

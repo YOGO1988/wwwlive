@@ -583,7 +583,17 @@ class ChronoTrack_API {
             return $this->parse_time_to_seconds($a['formatted_time']) - $this->parse_time_to_seconds($b['formatted_time']);
         });
 
-        $participant_id = $result['athlete_id'] ?? uniqid('participant_');
+        // CRITICAL FIX: Use stable participant_id based on bib_number
+        // This prevents "participant not found" errors after refresh
+        // If athlete_id available, use it; otherwise use bib-based ID (stable across refreshes)
+        $bib = $result['results_bib'] ?? '';
+        if (!empty($result['athlete_id'])) {
+            $participant_id = $result['athlete_id'];
+        } elseif (!empty($bib)) {
+            $participant_id = 'bib_' . $bib;  // Stable ID based on bib number
+        } else {
+            $participant_id = uniqid('participant_');  // Fallback for missing data
+        }
 
         // Extract birth year from birthdate (prefer entry data, fallback to result)
         $birth_year = '';
