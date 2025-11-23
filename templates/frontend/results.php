@@ -55,19 +55,18 @@ $columns = $db->get_event_columns($event->event_id, true);
             META (Linia mety)
         </button>
 
-        <div class="chronotrack-live-indicator">
-            <div style="text-align: center;">
-                <div class="chronotrack-live-text">Na żywo</div>
+        <div class="chronotrack-live-wrapper">
+            <div class="chronotrack-live-indicator">
+                <span class="chronotrack-live-text">Na żywo</span>
                 <button class="chronotrack-manual-refresh-icon" title="Odśwież">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
                     </svg>
                 </button>
             </div>
-        </div>
-
-        <div class="chronotrack-last-update">
-            <span id="chronotrack-timestamp"></span>
+            <div class="chronotrack-last-update">
+                <span id="chronotrack-timestamp"></span>
+            </div>
         </div>
     </div>
 

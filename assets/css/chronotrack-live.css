@@ -14,6 +14,13 @@ body.chronotrack-page .sidebar-secondary {
     display: none !important;
 }
 
+/* Hide page title on ChronoTrack pages (duplicate of event name) */
+body.chronotrack-page .entry-title,
+body.chronotrack-page .page-title,
+body.chronotrack-page h1.entry-title {
+    display: none !important;
+}
+
 /* Expand main content area to full width on ChronoTrack pages */
 body.chronotrack-page #primary,
 body.chronotrack-page #main,
@@ -114,17 +121,26 @@ body.chronotrack-page .container {
     color: #fff;
 }
 
-/* Live Indicator */
-.chronotrack-live-indicator {
+/* Live Indicator Wrapper */
+.chronotrack-live-wrapper {
     margin-left: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+
+/* Live Indicator - Na żywo + button in one line */
+.chronotrack-live-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
 .chronotrack-live-text {
     color: #dc3545;
     font-weight: 600;
     font-size: 14px;
-    display: block;
-    margin-bottom: 4px;
 }
 
 .chronotrack-manual-refresh-icon {
@@ -135,8 +151,6 @@ body.chronotrack-page .container {
     color: #666;
     transition: all 0.3s ease;
     border-radius: 4px;
-    display: block;
-    margin: 0 auto;
 }
 
 .chronotrack-manual-refresh-icon:hover {
@@ -145,9 +159,11 @@ body.chronotrack-page .container {
     transform: rotate(180deg);
 }
 
+/* Last update - below live indicator */
 .chronotrack-last-update {
     color: #666;
-    font-size: 14px;
+    font-size: 12px;
+    text-align: center;
 }
 
 /* Distance Filter Buttons */

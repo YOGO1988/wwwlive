@@ -238,15 +238,15 @@ class ChronoTrack_API {
 
                             // Extract club from various possible fields
                             $club = '';
-                            if (!empty($entry['club'])) {
+                            if (!empty($entry['club']) && $entry['club'] !== 'Tak') {
                                 $club = $entry['club'];
-                            } elseif (!empty($entry['athlete_club'])) {
+                            } elseif (!empty($entry['athlete_club']) && $entry['athlete_club'] !== 'Tak') {
                                 $club = $entry['athlete_club'];
                             } else {
-                                // Check custom_element fields for club
+                                // Check custom_element fields for club (ignore "Tak" responses)
                                 foreach ($entry as $key => $value) {
-                                    if (strpos($key, 'custom_element') === 0 && !empty($value)) {
-                                        // Likely club field
+                                    if (strpos($key, 'custom_element') === 0 && !empty($value) && $value !== 'Tak') {
+                                        // Likely club field - ignore "Tak" (yes/no questions)
                                         if (empty($club)) {
                                             $club = $value;
                                         }
