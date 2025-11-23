@@ -364,6 +364,27 @@ body.chronotrack-page .container {
     margin-top: 20px;
 }
 
+/* 3-column layout for participant details */
+.chronotrack-details-grid-3col {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 15px;
+    margin-top: 20px;
+}
+
+.chronotrack-details-column {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+/* Responsive: stack on small screens */
+@media (max-width: 900px) {
+    .chronotrack-details-grid-3col {
+        grid-template-columns: 1fr;
+    }
+}
+
 .chronotrack-details-section {
     background: #f9f9f9;
     padding: 15px;

@@ -585,7 +585,10 @@
             // Polish translations for participant details
             let html = '<div class="chronotrack-participant-details">';
             html += '<h2>' + this.escapeHtml(participant.full_name) + '</h2>';
-            html += '<div class="chronotrack-details-grid">';
+            html += '<div class="chronotrack-details-grid-3col">';
+
+            // Column 1: Basic info + Bracket positions
+            html += '<div class="chronotrack-details-column">';
 
             // Basic info - Podstawowe informacje
             html += '<div class="chronotrack-details-section">';
@@ -596,18 +599,6 @@
             html += '<tr><th>Miejscowość:</th><td>' + this.escapeHtml(this.cleanValue(participant.city)) + '</td></tr>';
             html += '<tr><th>Klub:</th><td>' + this.escapeHtml(this.cleanValue(participant.club)) + '</td></tr>';
             html += '<tr><th>Kategoria:</th><td>' + this.escapeHtml(this.cleanValue(participant.category)) + '</td></tr>';
-            html += '</table>';
-            html += '</div>';
-
-            // Results - Wyniki
-            html += '<div class="chronotrack-details-section">';
-            html += '<h3>Wyniki</h3>';
-            html += '<table class="chronotrack-details-table">';
-            html += '<tr><th>Miejsce Open:</th><td class="chronotrack-position">' + this.formatPosition(participant.position) + '</td></tr>';
-            html += '<tr><th>Miejsce w kategorii:</th><td class="chronotrack-position">' + this.formatPosition(participant.category_position) + '</td></tr>';
-            html += '<tr><th>Miejsce M/K:</th><td class="chronotrack-position">' + this.formatPosition(participant.gender_position) + '</td></tr>';
-            html += '<tr><th>Czas brutto:</th><td class="chronotrack-time">' + this.escapeHtml(participant.finish_time) + '</td></tr>';
-            html += '<tr><th>Czas netto:</th><td class="chronotrack-time">' + this.escapeHtml(participant.net_time) + '</td></tr>';
             html += '</table>';
             html += '</div>';
 
@@ -632,6 +623,25 @@
                 html += '</table>';
                 html += '</div>';
             }
+
+            html += '</div>'; // End column 1
+
+            // Column 2: Results
+            html += '<div class="chronotrack-details-column">';
+            html += '<div class="chronotrack-details-section">';
+            html += '<h3>Wyniki</h3>';
+            html += '<table class="chronotrack-details-table">';
+            html += '<tr><th>Miejsce Open:</th><td class="chronotrack-position">' + this.formatPosition(participant.position) + '</td></tr>';
+            html += '<tr><th>Miejsce w kategorii:</th><td class="chronotrack-position">' + this.formatPosition(participant.category_position) + '</td></tr>';
+            html += '<tr><th>Miejsce M/K:</th><td class="chronotrack-position">' + this.formatPosition(participant.gender_position) + '</td></tr>';
+            html += '<tr><th>Czas brutto:</th><td class="chronotrack-time">' + this.escapeHtml(participant.finish_time) + '</td></tr>';
+            html += '<tr><th>Czas netto:</th><td class="chronotrack-time">' + this.escapeHtml(participant.net_time) + '</td></tr>';
+            html += '</table>';
+            html += '</div>';
+            html += '</div>'; // End column 2
+
+            // Column 3: Split Times
+            html += '<div class="chronotrack-details-column">';
 
             // Split Times - Międzyczasy
             if (participant.split_times && participant.split_times.length > 0) {
@@ -662,8 +672,9 @@
                 html += '</div>';
             }
 
-            html += '</div>';
-            html += '</div>';
+            html += '</div>'; // End column 3
+            html += '</div>'; // End grid-3col
+            html += '</div>'; // End participant-details
 
             $('#chronotrack-modal-body').html(html);
         },
