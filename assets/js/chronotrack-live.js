@@ -236,6 +236,18 @@
                         console.log('✅ API refresh successful:', response.data.count, 'results');
                         this.consecutiveErrors = 0;
 
+                        // CRITICAL FIX: Update distances and columns from refresh response
+                        if (response.data.distances && response.data.distances.length > 0) {
+                            this.distances = response.data.distances;
+                            console.log('📏 Distances updated from refresh:', this.distances.length);
+                            this.renderDistanceButtons();
+                        }
+
+                        if (response.data.columns && response.data.columns.length > 0) {
+                            this.columns = response.data.columns;
+                            console.log('📋 Columns updated from refresh:', this.columns.length);
+                        }
+
                         // After API refresh, reload from cache to get full data
                         this.loadResults(this.currentView);
                     } else {

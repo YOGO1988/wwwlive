@@ -457,7 +457,27 @@ class ChronoTrack_API {
             // Fetch ALL brackets (categories) and their results
             error_log("========== FETCHING ALL BRACKETS FOR EVENT {$event_id} ==========");
             $all_brackets = $this->fetch_event_brackets($event_id);
-            error_log("BRACKETS COMPLETE: Found " . count($all_brackets) . " total brackets");
+            error_log("BRACKETS COMPLETE: Found " . count($all_brackets) . " total brackets from /bracket endpoint");
+
+            // CRITICAL FIX: If /bracket endpoint returns 0, extract brackets from results
+            if (empty($all_brackets)) {
+                error_log("WARNING: /bracket endpoint returned 0 brackets, extracting from results_primary_bracket_name");
+                $unique_brackets = array();
+                foreach ($all_results_by_bib as $bib => $data) {
+                    if (isset($data['main_result']['results_primary_bracket_name'])) {
+                        $bracket_name = $data['main_result']['results_primary_bracket_name'];
+                        if (!empty($bracket_name) && !isset($unique_brackets[$bracket_name])) {
+                            $unique_brackets[$bracket_name] = array(
+                                'name' => $bracket_name,
+                                'type' => 'PRIMARY',
+                                'id' => ''
+                            );
+                        }
+                    }
+                }
+                $all_brackets = array_values($unique_brackets);
+                error_log("FALLBACK: Extracted " . count($all_brackets) . " unique brackets from results");
+            }
 
             if (!empty($all_brackets)) {
                 error_log("BRACKET NAMES: " . implode(', ', array_column($all_brackets, 'name')));

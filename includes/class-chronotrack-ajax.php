@@ -151,8 +151,16 @@ class ChronoTrack_Ajax {
             wp_send_json_error(array('message' => $results->get_error_message()));
         }
 
+        // CRITICAL FIX: Also fetch and include distances/columns after API refresh
+        // Otherwise frontend can't render distance buttons
+        $db = chronotrack_live_results()->db;
+        $columns = $db->get_event_columns($event_id, true);
+        $distances = $db->get_unique_distances($event_id);
+
         wp_send_json_success(array(
             'results' => $this->format_results($results),
+            'columns' => $this->format_columns($columns),
+            'distances' => $distances,
             'count' => count($results),
             'timestamp' => current_time('timestamp'),
         ));
@@ -160,32 +168,38 @@ class ChronoTrack_Ajax {
 
     /**
      * Format results for JSON response
+     * Handles both objects (from database) and arrays (from API)
      */
     private function format_results($results) {
         $formatted = array();
 
         foreach ($results as $result) {
+            // Handle both object and array formats
+            $is_array = is_array($result);
+
             $formatted[] = array(
-                'id' => $result->id,
-                'participant_id' => $result->participant_id,
-                'bib_number' => $result->bib_number,
-                'first_name' => $result->first_name,
-                'last_name' => $result->last_name,
-                'full_name' => $result->first_name . ' ' . $result->last_name,
-                'age' => $result->age,
-                'gender' => $result->gender,
-                'city' => $result->city,
-                'club' => $result->club,
-                'distance' => $result->distance ?? '',
-                'category' => $result->category,
-                'position' => $result->position,
-                'category_position' => $result->category_position,
-                'gender_position' => $result->gender_position,
-                'finish_time' => $result->finish_time,
-                'net_time' => $result->net_time,
-                'split_times' => $result->split_times ?? array(),
-                'bracket_positions' => $result->bracket_positions ?? array(),
-                'finish_timestamp' => $result->finish_timestamp,
+                'id' => $is_array ? ($result['id'] ?? 0) : $result->id,
+                'participant_id' => $is_array ? ($result['participant_id'] ?? '') : $result->participant_id,
+                'bib_number' => $is_array ? ($result['bib_number'] ?? '') : $result->bib_number,
+                'first_name' => $is_array ? ($result['first_name'] ?? '') : $result->first_name,
+                'last_name' => $is_array ? ($result['last_name'] ?? '') : $result->last_name,
+                'full_name' => $is_array ?
+                    ($result['first_name'] ?? '') . ' ' . ($result['last_name'] ?? '') :
+                    $result->first_name . ' ' . $result->last_name,
+                'age' => $is_array ? ($result['age'] ?? 0) : $result->age,
+                'gender' => $is_array ? ($result['gender'] ?? '') : $result->gender,
+                'city' => $is_array ? ($result['city'] ?? '') : $result->city,
+                'club' => $is_array ? ($result['club'] ?? '') : $result->club,
+                'distance' => $is_array ? ($result['distance'] ?? '') : ($result->distance ?? ''),
+                'category' => $is_array ? ($result['category'] ?? '') : $result->category,
+                'position' => $is_array ? ($result['position'] ?? 0) : $result->position,
+                'category_position' => $is_array ? ($result['category_position'] ?? 0) : $result->category_position,
+                'gender_position' => $is_array ? ($result['gender_position'] ?? 0) : $result->gender_position,
+                'finish_time' => $is_array ? ($result['finish_time'] ?? '') : $result->finish_time,
+                'net_time' => $is_array ? ($result['net_time'] ?? '') : $result->net_time,
+                'split_times' => $is_array ? ($result['split_times'] ?? array()) : ($result->split_times ?? array()),
+                'bracket_positions' => $is_array ? ($result['bracket_positions'] ?? array()) : ($result->bracket_positions ?? array()),
+                'finish_timestamp' => $is_array ? ($result['finish_timestamp'] ?? '') : $result->finish_timestamp,
             );
         }
 
