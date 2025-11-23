@@ -184,6 +184,7 @@ class ChronoTrack_Ajax {
                 'finish_time' => $result->finish_time,
                 'net_time' => $result->net_time,
                 'split_times' => $result->split_times ?? array(),
+                'bracket_positions' => $result->bracket_positions ?? array(),
                 'finish_timestamp' => $result->finish_timestamp,
             );
         }
@@ -233,6 +234,7 @@ class ChronoTrack_Ajax {
             'finish_time' => $result->finish_time,
             'net_time' => $result->net_time,
             'split_times' => $result->split_times ?? array(),
+            'bracket_positions' => $result->bracket_positions ?? array(),
             'detailed_splits' => $result->detailed_splits ?? array(),
             'finish_timestamp' => $result->finish_timestamp,
             'raw_data' => $result->raw_data ?? array(),

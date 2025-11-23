@@ -97,8 +97,8 @@
             // Manual refresh button (both old button and new icon)
             $(document).on('click', '.chronotrack-manual-refresh, .chronotrack-manual-refresh-icon', (e) => {
                 e.preventDefault();
-                console.log('🔄 Manual refresh triggered');
-                this.loadResults(this.currentView);
+                console.log('🔄 Manual refresh triggered - fetching from API');
+                this.refreshFromAPI();
             });
 
             // Toggle auto-refresh
@@ -204,6 +204,61 @@
                 },
                 complete: () => {
                     console.log('✅ AJAX Complete - resetting isLoading');
+                    this.isLoading = false;
+                    this.hideLoading();
+                }
+            });
+        },
+
+        refreshFromAPI: function() {
+            // Prevent concurrent requests
+            if (this.isLoading) {
+                console.log('⏳ Already loading, skipping...');
+                return;
+            }
+
+            this.isLoading = true;
+            this.showLoading();
+
+            console.log('📡 Refreshing from API for event:', this.eventId);
+
+            $.ajax({
+                url: chronotrackData.ajaxUrl,
+                type: 'POST',
+                data: {
+                    action: 'chronotrack_refresh_results',
+                    event_id: this.eventId,
+                    nonce: chronotrackData.nonce
+                },
+                timeout: 60000, // 60 seconds for API fetch
+                success: (response) => {
+                    if (response.success) {
+                        console.log('✅ API refresh successful:', response.data.count, 'results');
+                        this.consecutiveErrors = 0;
+
+                        // After API refresh, reload from cache to get full data
+                        this.loadResults(this.currentView);
+                    } else {
+                        console.error('❌ API refresh failed:', response.data.message);
+                        this.showError(response.data.message || 'Błąd odświeżania');
+                        this.consecutiveErrors++;
+                    }
+                },
+                error: (xhr, status, error) => {
+                    console.error('❌ AJAX error during API refresh:', {status, error, xhr});
+                    this.consecutiveErrors++;
+
+                    let errorMsg = 'Błąd pobierania wyników z API';
+                    if (status === 'timeout') {
+                        errorMsg = 'Przekroczono limit czasu (60s) - API powolne lub nieaktywny event';
+                    } else if (xhr.status === 0) {
+                        errorMsg = 'Brak połączenia z serwerem';
+                    }
+
+                    this.showError(errorMsg);
+                },
+                complete: () => {
+                    console.log('✅ API refresh complete');
                     this.isLoading = false;
                     this.hideLoading();
                 }
@@ -659,22 +714,19 @@
         },
 
         startAutoRefresh: function() {
-            // Max 10 seconds for incremental updates
-            const interval = 10000; // 10 seconds
+            // Fetch from API every 60 seconds for live updates
+            const interval = 60000; // 60 seconds
             this.currentInterval = interval;
 
-            console.log('▶️ Starting auto-refresh with interval:', interval + 'ms (10s incremental)');
+            console.log('▶️ Starting auto-refresh with interval:', interval + 'ms (60s API fetch)');
 
-            // Incremental updates every 10 seconds
+            // Fetch fresh data from API every 60 seconds
             this.refreshInterval = setInterval(() => {
-                this.loadResults(this.currentView);
+                this.refreshFromAPI();  // Fetch from API
             }, interval);
 
-            // Full check every 60 seconds
-            this.fullCheckInterval = setInterval(() => {
-                console.log('🔄 Full check (60s interval)');
-                this.loadResults(this.currentView);
-            }, 60000); // 60 seconds
+            // Initial fetch
+            this.refreshFromAPI();
         },
 
         stopAutoRefresh: function() {
@@ -698,13 +750,13 @@
             this.stopAutoRefresh();
             const finalInterval = Math.min(newInterval, 10000); // Max 10 seconds
             this.refreshInterval = setInterval(() => {
-                this.loadResults(this.currentView);
+                this.refreshFromAPI();  // Fetch from API, not cache
             }, finalInterval);
 
             // Keep full check at 60 seconds
             this.fullCheckInterval = setInterval(() => {
                 console.log('🔄 Full check (60s interval)');
-                this.loadResults(this.currentView);
+                this.refreshFromAPI();  // Fetch from API, not cache
             }, 60000);
         },
 
