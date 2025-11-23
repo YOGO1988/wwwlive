@@ -378,13 +378,22 @@
                     const value = this.getColumnValue(result, column);
                     const cell = $('<td>').addClass('col-' + column.id);
 
-                    // Special formatting for full_name - make it clickable
+                    // Special formatting for full_name - make it clickable with flag
                     if (column.id === 'full_name' || column.id.includes('name')) {
+                        // Add country flag before name if available
+                        let flagEmoji = '';
+                        if (result.country && typeof CountryFlags !== 'undefined') {
+                            flagEmoji = CountryFlags.getFlag(result.country);
+                            if (flagEmoji) {
+                                flagEmoji = flagEmoji + ' '; // Add space after flag
+                            }
+                        }
+
                         const nameLink = $('<a>')
                             .attr('href', '#')
                             .addClass('chronotrack-view-details')
                             .attr('data-participant-id', result.participant_id)
-                            .html('<strong>' + this.escapeHtml(value) + '</strong>');
+                            .html(flagEmoji + '<strong>' + this.escapeHtml(value) + '</strong>');
                         cell.append(nameLink);
                     } else {
                         cell.text(this.cleanValue(value));
@@ -397,12 +406,20 @@
                 row.append($('<td>').addClass('col-position').text(this.cleanValue(result.position)));
                 row.append($('<td>').addClass('col-bib').text(this.cleanValue(result.bib_number)));
 
-                // Make name clickable in fallback mode too
+                // Make name clickable in fallback mode too (with flag)
+                let flagEmoji = '';
+                if (result.country && typeof CountryFlags !== 'undefined') {
+                    flagEmoji = CountryFlags.getFlag(result.country);
+                    if (flagEmoji) {
+                        flagEmoji = flagEmoji + ' '; // Add space after flag
+                    }
+                }
+
                 const nameLink = $('<a>')
                     .attr('href', '#')
                     .addClass('chronotrack-view-details')
                     .attr('data-participant-id', result.participant_id)
-                    .html('<strong>' + this.escapeHtml(result.full_name) + '</strong>');
+                    .html(flagEmoji + '<strong>' + this.escapeHtml(result.full_name) + '</strong>');
                 row.append($('<td>').addClass('col-name').append(nameLink));
 
                 row.append($('<td>').addClass('col-category').text(this.cleanValue(result.category)));
@@ -689,7 +706,17 @@
         renderParticipantDetails: function(participant, event) {
             // Polish translations for participant details
             let html = '<div class="chronotrack-participant-details">';
-            html += '<h2>' + this.escapeHtml(participant.full_name) + '</h2>';
+
+            // Add country flag before name if available
+            let flagEmoji = '';
+            if (participant.country && typeof CountryFlags !== 'undefined') {
+                flagEmoji = CountryFlags.getFlag(participant.country);
+                if (flagEmoji) {
+                    flagEmoji = flagEmoji + ' '; // Add space after flag
+                }
+            }
+
+            html += '<h2>' + flagEmoji + this.escapeHtml(participant.full_name) + '</h2>';
 
             // Event info header
             if (event) {

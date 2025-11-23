@@ -102,11 +102,20 @@ class ChronoTrack_Live_Results {
             CHRONOTRACK_LIVE_VERSION
         );
 
+        // Enqueue country flags helper (before main script)
+        wp_enqueue_script(
+            'chronotrack-country-flags',
+            CHRONOTRACK_LIVE_PLUGIN_URL . 'assets/js/country-flags.js',
+            array(),
+            CHRONOTRACK_LIVE_VERSION,
+            true
+        );
+
         // Enqueue JavaScript
         wp_enqueue_script(
             'chronotrack-live',
             CHRONOTRACK_LIVE_PLUGIN_URL . 'assets/js/chronotrack-live.js',
-            array('jquery'),
+            array('jquery', 'chronotrack-country-flags'),
             CHRONOTRACK_LIVE_VERSION,
             true
         );
