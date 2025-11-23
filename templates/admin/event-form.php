@@ -64,22 +64,22 @@ $is_edit = $event !== null;
 
             <tr>
                 <th scope="row">
-                    <label for="event_status"><?php _e('Event Status', 'chronotrack-live'); ?></label>
+                    <label for="event_status"><?php _e('Status', 'chronotrack-live'); ?></label>
                 </th>
                 <td>
                     <select id="event_status" name="event_status">
-                        <option value="active" <?php echo ($is_edit && $event->event_status === 'active') ? 'selected' : ''; ?>>
-                            <?php _e('Active (auto-refresh results)', 'chronotrack-live'); ?>
+                        <option value="upcoming" <?php echo ($is_edit && $event->event_status === 'upcoming') ? 'selected' : ''; ?>>
+                            <?php _e('Nadchodzące (auto-refresh czeka na godzinę startu)', 'chronotrack-live'); ?>
+                        </option>
+                        <option value="live" <?php echo ($is_edit && ($event->event_status === 'live' || $event->event_status === 'active')) ? 'selected' : ''; ?>>
+                            <?php _e('Trwające (auto-refresh działa teraz)', 'chronotrack-live'); ?>
                         </option>
                         <option value="completed" <?php echo ($is_edit && $event->event_status === 'completed') ? 'selected' : ''; ?>>
-                            <?php _e('Completed (archived)', 'chronotrack-live'); ?>
-                        </option>
-                        <option value="upcoming" <?php echo ($is_edit && $event->event_status === 'upcoming') ? 'selected' : ''; ?>>
-                            <?php _e('Upcoming', 'chronotrack-live'); ?>
+                            <?php _e('Zakończone (auto-refresh zatrzymany)', 'chronotrack-live'); ?>
                         </option>
                     </select>
                     <p class="description">
-                        <?php _e('Active events will automatically refresh results. Set to Completed to archive.', 'chronotrack-live'); ?>
+                        <?php _e('Nadchodzące: auto-refresh startuje automatycznie o wybranej dacie/godzinie. Trwające: auto-refresh działa. Zakończone: auto-refresh zatrzymany.', 'chronotrack-live'); ?>
                     </p>
                 </td>
             </tr>

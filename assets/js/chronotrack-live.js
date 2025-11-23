@@ -48,8 +48,8 @@
 
             this.bindEvents();
 
-            // Start auto-refresh immediately (user wants this!)
-            this.startAutoRefresh();
+            // Check event status and start auto-refresh based on status and time
+            this.checkEventStatusAndStartRefresh();
 
             console.log('=== ChronoTrack Live Init END ===');
         },
@@ -913,6 +913,97 @@
 
             // Filter results
             this.filterResults();
+        },
+
+        checkEventStatusAndStartRefresh: function() {
+            const status = chronotrackData.eventStatus || 'live';
+            const eventDate = chronotrackData.eventDate;
+
+            console.log('📊 Event status:', status, 'Event date:', eventDate);
+
+            // Handle different event statuses
+            if (status === 'completed') {
+                // Event is completed - show final results, NO auto-refresh
+                console.log('🏁 Event completed - showing final results (no auto-refresh)');
+                this.loadResults(this.currentView);  // Load once from database
+                this.showUpcomingMessage('Zawody zakończone. Poniżej znajdują się wyniki finalne.', false);
+                return;
+            }
+
+            if (status === 'upcoming' && eventDate) {
+                // Event is upcoming - check if it's time to start
+                const now = new Date();
+                const startTime = new Date(eventDate);
+
+                console.log('⏰ Current time:', now);
+                console.log('⏰ Event start time:', startTime);
+
+                if (now < startTime) {
+                    // Still before event start - show countdown, NO auto-refresh yet
+                    const hours = Math.floor((startTime - now) / (1000 * 60 * 60));
+                    const minutes = Math.floor(((startTime - now) % (1000 * 60 * 60)) / (1000 * 60));
+
+                    const formattedDate = startTime.toLocaleDateString('pl-PL', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+
+                    let countdownMsg = 'Zawody rozpoczną się ' + formattedDate;
+                    if (hours > 0) {
+                        countdownMsg += ' (za ' + hours + 'h ' + minutes + 'min)';
+                    } else if (minutes > 0) {
+                        countdownMsg += ' (za ' + minutes + ' minut)';
+                    } else {
+                        countdownMsg += ' (już niebawem!)';
+                    }
+
+                    console.log('⏳ Event not started yet:', countdownMsg);
+                    this.showUpcomingMessage(countdownMsg, true);
+
+                    // Check every minute if it's time to start
+                    setInterval(() => {
+                        const nowCheck = new Date();
+                        if (nowCheck >= startTime) {
+                            console.log('🚀 Event time reached! Starting auto-refresh...');
+                            location.reload(); // Reload page to start auto-refresh
+                        }
+                    }, 60000); // Check every minute
+
+                    return;
+                }
+            }
+
+            // Status is 'live' OR 'upcoming' with time passed - start auto-refresh
+            console.log('▶️ Event is LIVE - starting auto-refresh');
+            this.startAutoRefresh();
+        },
+
+        showUpcomingMessage: function(message, showEmptyTable) {
+            // Show message above results area
+            const container = $('.chronotrack-results-container');
+            const messageHtml = '<div class="chronotrack-upcoming-message" style="' +
+                'padding: 20px; ' +
+                'margin: 20px 0; ' +
+                'background: #fff3cd; ' +
+                'border: 1px solid #ffc107; ' +
+                'border-radius: 4px; ' +
+                'text-align: center; ' +
+                'font-size: 16px; ' +
+                'font-weight: 600; ' +
+                'color: #856404;">' +
+                message +
+                '</div>';
+
+            container.find('.chronotrack-controls').after(messageHtml);
+
+            if (!showEmptyTable) {
+                // Hide distance filters and category filter for completed events
+                container.find('.chronotrack-distance-filters').hide();
+                container.find('.chronotrack-filters').hide();
+            }
         },
 
         startAutoRefresh: function() {
