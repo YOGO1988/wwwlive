@@ -636,7 +636,10 @@
             const categorySelect = $('#chronotrack-category-filter');
             const currentValue = categorySelect.val();
 
-            categorySelect.find('option:not(:first)').remove();
+            // Remove all options (no "Wszystkie kategorie" option)
+            categorySelect.find('option').remove();
+
+            // Add categories sorted alphabetically
             Array.from(brackets).sort().forEach((bracket) => {
                 categorySelect.append(
                     $('<option>').val(bracket).text(bracket)
@@ -645,10 +648,11 @@
 
             // Only restore value if it still exists in new list
             const optionExists = Array.from(categorySelect.find('option')).some(opt => opt.value === currentValue);
-            if (optionExists) {
+            if (optionExists && currentValue) {
                 categorySelect.val(currentValue);
-            } else {
-                categorySelect.val('');  // Reset if old category not available
+            } else if (brackets.size > 0) {
+                // Auto-select first category if no previous selection
+                categorySelect.val(categorySelect.find('option:first').val());
             }
         },
 
@@ -754,6 +758,18 @@
                         html += '</tr>';
                     }
                 });
+
+                // Add META (finish line) at the end with finish time and overall position
+                html += '<tr>';
+                html += '<th>Meta:</th>';
+                html += '<td>';
+                html += '<span class="chronotrack-time">' + this.escapeHtml(participant.finish_time) + '</span>';
+                if (participant.position && participant.position > 0) {
+                    html += ' <span class="chronotrack-split-position">(mce: ' + participant.position + ')</span>';
+                }
+                html += '</td>';
+                html += '</tr>';
+
                 html += '</table>';
                 html += '</div>';
             }

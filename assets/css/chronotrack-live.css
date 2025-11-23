@@ -126,7 +126,7 @@ body.chronotrack-page .container {
     margin-left: auto;
     display: flex;
     flex-direction: column;
-    align-items: center;
+    align-items: flex-end;
     gap: 4px;
 }
 
@@ -163,7 +163,7 @@ body.chronotrack-page .container {
 .chronotrack-last-update {
     color: #666;
     font-size: 12px;
-    text-align: center;
+    text-align: right;
 }
 
 /* Distance Filter Buttons */

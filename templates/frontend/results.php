@@ -83,7 +83,6 @@ $columns = $db->get_event_columns($event->event_id, true);
                placeholder="Szukaj po nazwisku lub numerze...">
 
         <select id="chronotrack-category-filter" class="chronotrack-filter">
-            <option value="">Wszystkie kategorie</option>
         </select>
     </div>
 
