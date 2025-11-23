@@ -127,8 +127,16 @@ class ChronoTrack_Ajax {
             wp_send_json_error(array('message' => __('Participant not found.', 'chronotrack-live')));
         }
 
+        // Get event info for modal header
+        $event = $db->get_event($event_id);
+
         wp_send_json_success(array(
             'participant' => $this->format_participant_details($result),
+            'event' => array(
+                'name' => $event->event_name ?? '',
+                'date' => $event->event_date ?? '',
+                'location' => $event->event_location ?? '',
+            ),
         ));
     }
 

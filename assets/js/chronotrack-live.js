@@ -673,7 +673,7 @@
                 },
                 success: (response) => {
                     if (response.success) {
-                        this.renderParticipantDetails(response.data.participant);
+                        this.renderParticipantDetails(response.data.participant, response.data.event);
                         this.openModal();
                     } else {
                         alert(response.data.message);
@@ -686,10 +686,27 @@
             });
         },
 
-        renderParticipantDetails: function(participant) {
+        renderParticipantDetails: function(participant, event) {
             // Polish translations for participant details
             let html = '<div class="chronotrack-participant-details">';
             html += '<h2>' + this.escapeHtml(participant.full_name) + '</h2>';
+
+            // Event info header
+            if (event) {
+                html += '<div class="chronotrack-event-info-header">';
+                if (event.name) {
+                    html += '<div class="event-info-item"><strong>Bieg:</strong> ' + this.escapeHtml(event.name) + '</div>';
+                }
+                if (event.date) {
+                    const eventDate = new Date(event.date);
+                    const formattedDate = eventDate.toLocaleDateString('pl-PL', { year: 'numeric', month: 'long', day: 'numeric' });
+                    html += '<div class="event-info-item"><strong>Data:</strong> ' + formattedDate + '</div>';
+                }
+                if (participant.distance) {
+                    html += '<div class="event-info-item"><strong>Dystans:</strong> ' + this.escapeHtml(participant.distance) + '</div>';
+                }
+                html += '</div>';
+            }
 
             // CHANGED: 2-column layout with split times below
             html += '<div class="chronotrack-details-grid-2col">';
@@ -748,7 +765,14 @@
             // Split Times BELOW the 2-column layout (full width)
             if (participant.split_times && participant.split_times.length > 0) {
                 html += '<div class="chronotrack-details-section chronotrack-splits-full-width">';
-                html += '<h3>Międzyczasy</h3>';
+                html += '<h3>Międzyczasy';
+                // Add pace info with unit
+                if (participant.pace) {
+                    // Determine unit (min/km or min/mi) - ChronoTrack usually uses min/km for metric
+                    const paceUnit = 'min/km'; // Default assumption
+                    html += ' <span style="font-weight:normal; font-size:0.9em; color:#666;">(Tempo: ' + this.escapeHtml(participant.pace) + ' ' + paceUnit + ')</span>';
+                }
+                html += '</h3>';
                 html += '<table class="chronotrack-details-table">';
                 participant.split_times.forEach((split) => {
                     if (split.interval_name && split.formatted_time) {
