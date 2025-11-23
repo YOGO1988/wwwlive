@@ -611,6 +611,10 @@
         },
 
         renderParticipantDetails: function(participant) {
+            // DEBUG: Log bracket positions to console
+            console.log('🔍 DEBUG - Participant bracket_positions:', participant.bracket_positions);
+            console.log('🔍 DEBUG - Participant full data:', participant);
+
             // Polish translations for participant details
             let html = '<div class="chronotrack-participant-details">';
             html += '<h2>' + this.escapeHtml(participant.full_name) + '</h2>';
@@ -641,12 +645,20 @@
                 const sortedBrackets = Object.keys(participant.bracket_positions).sort();
                 sortedBrackets.forEach((bracketName) => {
                     const position = participant.bracket_positions[bracketName];
+
+                    // CRITICAL FIX: Show ALL brackets, even if position is 0 or null
+                    html += '<div class="chronotrack-bracket-item">';
+
                     if (position && position > 0) {
                         // Format: "M20 - 3" (bracket name - position)
-                        html += '<div class="chronotrack-bracket-item">';
                         html += this.escapeHtml(bracketName) + ' - ' + position;
-                        html += '</div>';
+                    } else {
+                        // Show bracket membership without position (for non-ranked categories)
+                        html += this.escapeHtml(bracketName) + ' - Uczestnik';
+                        console.log('⚠️ Bracket "' + bracketName + '" has no position (value: ' + position + ')');
                     }
+
+                    html += '</div>';
                 });
 
                 html += '</div>';
