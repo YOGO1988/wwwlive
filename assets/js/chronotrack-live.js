@@ -578,8 +578,16 @@
         populateFilters: function(results) {
             const brackets = new Set();
 
-            // Collect all unique brackets from bracket_positions
+            // CRITICAL FIX: Filter brackets by selected distance
+            const currentDistance = this.selectedDistance;
+
+            // Collect unique brackets from bracket_positions for SELECTED DISTANCE ONLY
             results.forEach((result) => {
+                // Skip if distance doesn't match current filter
+                if (currentDistance && result.distance !== currentDistance) {
+                    return;
+                }
+
                 if (result.bracket_positions && typeof result.bracket_positions === 'object') {
                     Object.keys(result.bracket_positions).forEach((bracketName) => {
                         brackets.add(bracketName);
@@ -601,7 +609,13 @@
                 );
             });
 
-            categorySelect.val(currentValue);
+            // Only restore value if it still exists in new list
+            const optionExists = Array.from(categorySelect.find('option')).some(opt => opt.value === currentValue);
+            if (optionExists) {
+                categorySelect.val(currentValue);
+            } else {
+                categorySelect.val('');  // Reset if old category not available
+            }
         },
 
         showParticipantDetails: function(participantId) {
@@ -630,10 +644,6 @@
         },
 
         renderParticipantDetails: function(participant) {
-            // DEBUG: Log bracket positions to console
-            console.log('🔍 DEBUG - Participant bracket_positions:', participant.bracket_positions);
-            console.log('🔍 DEBUG - Participant full data:', participant);
-
             // Polish translations for participant details
             let html = '<div class="chronotrack-participant-details">';
             html += '<h2>' + this.escapeHtml(participant.full_name) + '</h2>';
@@ -641,7 +651,7 @@
             // CHANGED: 2-column layout with split times below
             html += '<div class="chronotrack-details-grid-2col">';
 
-            // Column 1: Basic info + Bracket positions
+            // Column 1: Basic info
             html += '<div class="chronotrack-details-column">';
 
             // Basic info - Podstawowe informacje
@@ -656,39 +666,9 @@
             html += '</table>';
             html += '</div>';
 
-            // Bracket Positions - Pozycje w kategoriach
-            if (participant.bracket_positions && Object.keys(participant.bracket_positions).length > 0) {
-                html += '<div class="chronotrack-details-section">';
-                html += '<h3>Pozycje w kategoriach</h3>';
-                html += '<div class="chronotrack-bracket-list">';
-
-                // Sort brackets alphabetically
-                const sortedBrackets = Object.keys(participant.bracket_positions).sort();
-                sortedBrackets.forEach((bracketName) => {
-                    const position = participant.bracket_positions[bracketName];
-
-                    // CRITICAL FIX: Show ALL brackets, even if position is 0 or null
-                    html += '<div class="chronotrack-bracket-item">';
-
-                    if (position && position > 0) {
-                        // Format: "M20 - 3" (bracket name - position)
-                        html += this.escapeHtml(bracketName) + ' - ' + position;
-                    } else {
-                        // Show bracket membership without position (for non-ranked categories)
-                        html += this.escapeHtml(bracketName) + ' - Uczestnik';
-                        console.log('⚠️ Bracket "' + bracketName + '" has no position (value: ' + position + ')');
-                    }
-
-                    html += '</div>';
-                });
-
-                html += '</div>';
-                html += '</div>';
-            }
-
             html += '</div>'; // End column 1
 
-            // Column 2: Results
+            // Column 2: Results + Bracket positions (ONLY with position > 0)
             html += '<div class="chronotrack-details-column">';
             html += '<div class="chronotrack-details-section">';
             html += '<h3>Wyniki</h3>';
@@ -696,6 +676,19 @@
             html += '<tr><th>Miejsce Open:</th><td class="chronotrack-position">' + this.formatPosition(participant.position) + '</td></tr>';
             html += '<tr><th>Miejsce w kategorii:</th><td class="chronotrack-position">' + this.formatPosition(participant.category_position) + '</td></tr>';
             html += '<tr><th>Miejsce M/K:</th><td class="chronotrack-position">' + this.formatPosition(participant.gender_position) + '</td></tr>';
+
+            // CRITICAL FIX: Add bracket positions HERE (in Results section), ONLY if position > 0
+            if (participant.bracket_positions && Object.keys(participant.bracket_positions).length > 0) {
+                const sortedBrackets = Object.keys(participant.bracket_positions).sort();
+                sortedBrackets.forEach((bracketName) => {
+                    const position = participant.bracket_positions[bracketName];
+                    // ONLY show brackets with actual position (> 0)
+                    if (position && position > 0) {
+                        html += '<tr><th>' + this.escapeHtml(bracketName) + ':</th><td class="chronotrack-position">' + position + '</td></tr>';
+                    }
+                });
+            }
+
             html += '<tr><th>Czas brutto:</th><td class="chronotrack-time">' + this.escapeHtml(participant.finish_time) + '</td></tr>';
             html += '<tr><th>Czas netto:</th><td class="chronotrack-time">' + this.escapeHtml(participant.net_time) + '</td></tr>';
             html += '</table>';
@@ -781,6 +774,33 @@
             $('.chronotrack-distance-filter-btn').removeClass('active');
             $('.chronotrack-distance-filter-btn[data-distance="' + distance + '"]').addClass('active');
 
+            // CRITICAL FIX: Update category filter to show only categories for this distance
+            // Get all results from table to repopulate filters
+            const tbody = this.currentView === 'meta' ?
+                $('#chronotrack-meta-body') :
+                $('#chronotrack-results-body');
+
+            const results = [];
+            tbody.find('tr[data-bib]').each(function() {
+                const row = $(this);
+                const result = {
+                    distance: row.attr('data-distance'),
+                    category: row.find('.col-category').text(),
+                    bracket_positions: {}
+                };
+                try {
+                    const bracketData = row.attr('data-bracket-positions');
+                    if (bracketData) {
+                        result.bracket_positions = JSON.parse(bracketData);
+                    }
+                } catch (e) {
+                    // Ignore
+                }
+                results.push(result);
+            });
+
+            this.populateFilters(results);  // Update category filter for selected distance
+
             // Filter results
             this.filterResults();
         },
@@ -792,13 +812,13 @@
 
             console.log('▶️ Starting auto-refresh with interval:', interval + 'ms (60s API fetch)');
 
+            // CRITICAL FIX: Initial load from CACHE (fast), then API fetch every 60s
+            this.loadResults(this.currentView);  // Fast load from database
+
             // Fetch fresh data from API every 60 seconds
             this.refreshInterval = setInterval(() => {
                 this.refreshFromAPI();  // Fetch from API
             }, interval);
-
-            // Initial fetch
-            this.refreshFromAPI();
         },
 
         stopAutoRefresh: function() {

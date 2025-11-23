@@ -632,6 +632,23 @@ class ChronoTrack_API {
         // Distance - prefer entry data
         $distance = $entry['distance'] ?? $result['results_race_name'] ?? $result['race_distance'] ?? '';
 
+        // CRITICAL FIX: Get category position from bracket_positions if AGE bracket failed
+        $category_position = $age_data['category_position'] ?? 0;
+        $category_name = $age_data['category'] ?? $result['results_primary_bracket_name'] ?? '';
+
+        // If AGE bracket didn't provide position, use first bracket with position > 0
+        if ($category_position == 0 && !empty($bracket_positions)) {
+            foreach ($bracket_positions as $bracket_name => $position) {
+                if ($position > 0) {
+                    $category_position = $position;
+                    if (empty($category_name)) {
+                        $category_name = $bracket_name;
+                    }
+                    break;  // Use first bracket with valid position
+                }
+            }
+        }
+
         return array(
             'participant_id' => $participant_id,
             'bib_number' => $result['results_bib'] ?? '',
@@ -650,15 +667,15 @@ class ChronoTrack_API {
             'distance' => $distance,
             'race_name' => $distance,  // Alternative field name
             'race_distance' => $distance,  // Alternative field name
-            'category' => $age_data['category'] ?? $result['results_primary_bracket_name'] ?? '',
-            'bracket_name' => $age_data['category'] ?? $result['results_primary_bracket_name'] ?? '',  // Alternative
-            'results_primary_bracket_name' => $age_data['category'] ?? $result['results_primary_bracket_name'] ?? '',  // Alternative
+            'category' => $category_name,
+            'bracket_name' => $category_name,  // Alternative
+            'results_primary_bracket_name' => $category_name,  // Alternative
             'position' => $result['results_rank'] ?? 0,
             'overall_place' => $result['results_rank'] ?? 0,  // Alternative
             'results_rank' => $result['results_rank'] ?? 0,  // Alternative
-            'category_position' => $age_data['category_position'] ?? 0,
-            'division_place' => $age_data['category_position'] ?? 0,  // Alternative
-            'results_division_rank' => $age_data['category_position'] ?? 0,  // Alternative
+            'category_position' => $category_position,
+            'division_place' => $category_position,  // Alternative
+            'results_division_rank' => $category_position,  // Alternative
             'gender_position' => $sex_data['gender_position'] ?? 0,
             'sex_place' => $sex_data['gender_position'] ?? 0,  // Alternative
             'results_sex_rank' => $sex_data['gender_position'] ?? 0,  // Alternative
