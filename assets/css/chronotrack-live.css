@@ -326,7 +326,7 @@ body.chronotrack-page .container {
 .chronotrack-modal {
     display: none;
     position: fixed;
-    z-index: 99999999;
+    z-index: 99999999 !important;
     left: 0;
     top: 0;
     width: 100%;

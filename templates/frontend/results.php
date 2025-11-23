@@ -85,12 +85,6 @@ $columns = $db->get_event_columns($event->event_id, true);
         <select id="chronotrack-category-filter" class="chronotrack-filter">
             <option value="">Wszystkie kategorie</option>
         </select>
-
-        <select id="chronotrack-gender-filter" class="chronotrack-filter">
-            <option value="">Wszyscy (M/K)</option>
-            <option value="M">Mężczyźni (M)</option>
-            <option value="K">Kobiety (K)</option>
-        </select>
     </div>
 
     <!-- Results Table - Standings View -->

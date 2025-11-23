@@ -636,15 +636,39 @@ class ChronoTrack_API {
         $category_position = $age_data['category_position'] ?? 0;
         $category_name = $age_data['category'] ?? $result['results_primary_bracket_name'] ?? '';
 
-        // If AGE bracket didn't provide position, use first bracket with position > 0
+        // If AGE bracket didn't provide position, use bracket_positions as fallback
         if ($category_position == 0 && !empty($bracket_positions)) {
-            foreach ($bracket_positions as $bracket_name => $position) {
-                if ($position > 0) {
-                    $category_position = $position;
-                    if (empty($category_name)) {
-                        $category_name = $bracket_name;
+            // PRIORITY 1: If we have category_name (e.g., "M50"), look for matching bracket position
+            if (!empty($category_name) && isset($bracket_positions[$category_name]) && $bracket_positions[$category_name] > 0) {
+                $category_position = $bracket_positions[$category_name];
+            } else {
+                // PRIORITY 2: Use first bracket with position > 0 (but skip SEX bracket if possible)
+                $fallback_position = 0;
+                $fallback_name = '';
+
+                foreach ($bracket_positions as $bracket_name => $position) {
+                    if ($position > 0) {
+                        // Skip SEX brackets (M, K, F) if we can find other brackets
+                        if (!in_array($bracket_name, array('M', 'K', 'F', 'Male', 'Female'))) {
+                            $category_position = $position;
+                            if (empty($category_name)) {
+                                $category_name = $bracket_name;
+                            }
+                            break;  // Found non-SEX bracket, use it
+                        } else if ($fallback_position == 0) {
+                            // Store SEX bracket as fallback
+                            $fallback_position = $position;
+                            $fallback_name = $bracket_name;
+                        }
                     }
-                    break;  // Use first bracket with valid position
+                }
+
+                // If no non-SEX bracket found, use SEX bracket as last resort
+                if ($category_position == 0 && $fallback_position > 0) {
+                    $category_position = $fallback_position;
+                    if (empty($category_name)) {
+                        $category_name = $fallback_name;
+                    }
                 }
             }
         }

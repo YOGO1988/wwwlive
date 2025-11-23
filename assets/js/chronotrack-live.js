@@ -437,12 +437,32 @@
 
                         // If category_position is 0 or empty, try to get from bracket_positions
                         if ((!catPosition || catPosition == 0) && result.bracket_positions && typeof result.bracket_positions === 'object') {
+                            // PRIORITY 1: If we have category name (e.g., "M50"), look for matching bracket position
+                            const categoryName = result.category || result.bracket_name || result.results_primary_bracket_name || '';
+                            if (categoryName && result.bracket_positions[categoryName] && result.bracket_positions[categoryName] > 0) {
+                                return result.bracket_positions[categoryName];
+                            }
+
+                            // PRIORITY 2: Use first NON-SEX bracket with position > 0
                             const brackets = Object.keys(result.bracket_positions);
+                            let fallbackPosition = 0;
+
                             for (let j = 0; j < brackets.length; j++) {
-                                const position = result.bracket_positions[brackets[j]];
+                                const bracketName = brackets[j];
+                                const position = result.bracket_positions[bracketName];
                                 if (position && position > 0) {
-                                    return position;
+                                    // Skip SEX brackets (M, K, F) if we can find other brackets
+                                    if (!['M', 'K', 'F', 'Male', 'Female'].includes(bracketName)) {
+                                        return position;  // Found non-SEX bracket
+                                    } else if (fallbackPosition === 0) {
+                                        fallbackPosition = position;  // Store SEX as fallback
+                                    }
                                 }
+                            }
+
+                            // PRIORITY 3: Use SEX bracket as last resort
+                            if (fallbackPosition > 0) {
+                                return fallbackPosition;
                             }
                         }
 
@@ -519,7 +539,6 @@
         filterResults: function() {
             const searchTerm = $('#chronotrack-search').val().toLowerCase();
             const category = $('#chronotrack-category-filter').val();
-            const gender = $('#chronotrack-gender-filter').val();
             const distance = this.selectedDistance;
 
             const tbody = this.currentView === 'meta' ?
@@ -531,7 +550,6 @@
                 const name = row.find('.col-name, .col-full_name').text().toLowerCase();
                 const bib = row.find('.col-bib, .col-entry_bib').text().toLowerCase();
                 const rowCategory = row.find('.col-category').text();
-                const rowGender = row.find('.col-gender').text();
                 const rowDistance = row.attr('data-distance') || '';
 
                 // Get bracket positions from data attribute
@@ -561,11 +579,6 @@
                     if (!belongsToBracket && !matchesCategory) {
                         show = false;
                     }
-                }
-
-                // Gender filter
-                if (gender && rowGender !== gender) {
-                    show = false;
                 }
 
                 // Distance filter
