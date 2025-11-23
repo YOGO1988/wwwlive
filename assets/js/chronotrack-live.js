@@ -431,7 +431,28 @@
                         }
                     }
 
-                    // Try direct attribute - accept 0 as valid value
+                    // CRITICAL FIX: Handle category_position with bracket_positions fallback
+                    if ((attr === 'category_position' || attr === 'division_place' || attr === 'results_division_rank')) {
+                        let catPosition = result[attr];
+
+                        // If category_position is 0 or empty, try to get from bracket_positions
+                        if ((!catPosition || catPosition == 0) && result.bracket_positions && typeof result.bracket_positions === 'object') {
+                            const brackets = Object.keys(result.bracket_positions);
+                            for (let j = 0; j < brackets.length; j++) {
+                                const position = result.bracket_positions[brackets[j]];
+                                if (position && position > 0) {
+                                    return position;
+                                }
+                            }
+                        }
+
+                        // Return category_position if it exists and > 0
+                        if (catPosition && catPosition > 0) {
+                            return catPosition;
+                        }
+                    }
+
+                    // Try direct attribute - accept 0 as valid value (except for category_position handled above)
                     if (result.hasOwnProperty(attr) && result[attr] !== null && result[attr] !== undefined && result[attr] !== '') {
                         return result[attr];
                     }
