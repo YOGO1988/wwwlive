@@ -459,6 +459,10 @@ class ChronoTrack_API {
             $all_brackets = $this->fetch_event_brackets($event_id);
             error_log("BRACKETS COMPLETE: Found " . count($all_brackets) . " total brackets");
 
+            if (!empty($all_brackets)) {
+                error_log("BRACKET NAMES: " . implode(', ', array_column($all_brackets, 'name')));
+            }
+
             // Fetch results for each bracket to get category positions
             $bracket_results = array();  // bib => [bracket_name => position]
             foreach ($all_brackets as $bracket) {
@@ -466,6 +470,7 @@ class ChronoTrack_API {
                 error_log("Fetching results for bracket: {$bracket_name}");
 
                 $bracket_positions = $this->fetch_bracket_results($event_id, $bracket_name);
+                error_log("  -> Got " . count($bracket_positions) . " positions for bracket: {$bracket_name}");
 
                 foreach ($bracket_positions as $bib => $position) {
                     if (!isset($bracket_results[$bib])) {
@@ -475,6 +480,12 @@ class ChronoTrack_API {
                 }
             }
             error_log("BRACKET RESULTS COMPLETE: Got positions for " . count($bracket_results) . " athletes across all brackets");
+
+            // Debug first athlete's bracket positions
+            if (!empty($bracket_results)) {
+                $first_bib = array_key_first($bracket_results);
+                error_log("FIRST ATHLETE BIB {$first_bib} brackets: " . print_r($bracket_results[$first_bib], true));
+            }
         } else {
             error_log("⚠️ Bracket merge DISABLED - using simple mode");
             $bracket_results = array();

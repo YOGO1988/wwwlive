@@ -723,8 +723,10 @@
             container.empty();
 
             // Auto-select first distance if nothing selected
+            const wasEmpty = !this.selectedDistance;
             if (!this.selectedDistance && this.distances.length > 0) {
                 this.selectedDistance = this.distances[0];
+                console.log('📏 Auto-selected first distance:', this.selectedDistance);
             }
 
             // Add buttons for each distance (no "Wszystkie" button)
@@ -736,6 +738,12 @@
                     .text(distance);
                 container.append(btn);
             });
+
+            // If we just auto-selected, apply the filter immediately
+            if (wasEmpty && this.selectedDistance) {
+                console.log('🔄 Applying initial distance filter');
+                this.filterResults();
+            }
         },
 
         selectDistance: function(distance) {

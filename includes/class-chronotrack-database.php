@@ -427,9 +427,22 @@ class ChronoTrack_Database {
         $table = $wpdb->prefix . 'chronotrack_results';
 
         $distances = $wpdb->get_col($wpdb->prepare(
-            "SELECT DISTINCT distance FROM $table WHERE event_id = %s AND distance != '' ORDER BY distance",
+            "SELECT DISTINCT distance FROM $table WHERE event_id = %s AND distance != ''",
             $event_id
         ));
+
+        // Sort by numeric value (longest first)
+        usort($distances, function($a, $b) {
+            // Extract numbers from distance strings (e.g., "10km" -> 10, "5 km" -> 5)
+            preg_match('/(\d+(?:\.\d+)?)/', $a, $matches_a);
+            preg_match('/(\d+(?:\.\d+)?)/', $b, $matches_b);
+
+            $num_a = isset($matches_a[1]) ? floatval($matches_a[1]) : 0;
+            $num_b = isset($matches_b[1]) ? floatval($matches_b[1]) : 0;
+
+            // Sort descending (longest first)
+            return $num_b - $num_a;
+        });
 
         return $distances;
     }
