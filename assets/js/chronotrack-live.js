@@ -662,7 +662,6 @@
             html += '<tr><th>Płeć:</th><td>' + this.escapeHtml(this.cleanValue(participant.gender)) + '</td></tr>';
             html += '<tr><th>Miejscowość:</th><td>' + this.escapeHtml(this.cleanValue(participant.city)) + '</td></tr>';
             html += '<tr><th>Klub:</th><td>' + this.escapeHtml(this.cleanValue(participant.club)) + '</td></tr>';
-            html += '<tr><th>Kategoria:</th><td>' + this.escapeHtml(this.cleanValue(participant.category)) + '</td></tr>';
             html += '</table>';
             html += '</div>';
 
@@ -674,7 +673,6 @@
             html += '<h3>Wyniki</h3>';
             html += '<table class="chronotrack-details-table">';
             html += '<tr><th>Miejsce Open:</th><td class="chronotrack-position">' + this.formatPosition(participant.position) + '</td></tr>';
-            html += '<tr><th>Miejsce w kategorii:</th><td class="chronotrack-position">' + this.formatPosition(participant.category_position) + '</td></tr>';
             html += '<tr><th>Miejsce M/K:</th><td class="chronotrack-position">' + this.formatPosition(participant.gender_position) + '</td></tr>';
 
             // CRITICAL FIX: Add bracket positions HERE (in Results section), ONLY if position > 0
