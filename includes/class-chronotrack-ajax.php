@@ -22,6 +22,9 @@ class ChronoTrack_Ajax {
 
         add_action('wp_ajax_chronotrack_refresh_results', array($this, 'refresh_results'));
         add_action('wp_ajax_nopriv_chronotrack_refresh_results', array($this, 'refresh_results'));
+
+        // Admin-only AJAX action for PDF generation
+        add_action('wp_ajax_chronotrack_generate_pdf', array($this, 'generate_pdf'));
     }
 
     /**
@@ -261,5 +264,49 @@ class ChronoTrack_Ajax {
             'finish_timestamp' => $result->finish_timestamp,
             'raw_data' => $result->raw_data ?? array(),
         );
+    }
+
+    /**
+     * Generate PDF for specific distance (Admin-only)
+     */
+    public function generate_pdf() {
+        // Check user capabilities
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(array('message' => __('Brak uprawnień.', 'chronotrack-live')));
+            return;
+        }
+
+        // Verify nonce
+        if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'chronotrack_admin_nonce')) {
+            wp_send_json_error(array('message' => __('Nieprawidłowy nonce.', 'chronotrack-live')));
+            return;
+        }
+
+        $event_id = sanitize_text_field($_POST['event_id'] ?? '');
+        $distance = sanitize_text_field($_POST['distance'] ?? '');
+
+        if (empty($event_id) || empty($distance)) {
+            wp_send_json_error(array('message' => __('Brak wymaganych parametrów.', 'chronotrack-live')));
+            return;
+        }
+
+        // Generate PDF
+        $pdf = chronotrack_live_results()->pdf;
+        $result = $pdf->generate_pdf($event_id, $distance);
+
+        if (is_wp_error($result)) {
+            wp_send_json_error(array('message' => $result->get_error_message()));
+            return;
+        }
+
+        // Return download URL
+        $upload_dir = wp_upload_dir();
+        $pdf_url = str_replace($upload_dir['basedir'], $upload_dir['baseurl'], $result);
+
+        wp_send_json_success(array(
+            'message' => __('PDF wygenerowany pomyślnie.', 'chronotrack-live'),
+            'download_url' => $pdf_url,
+            'filename' => basename($result)
+        ));
     }
 }
