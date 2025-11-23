@@ -340,6 +340,9 @@
                 row.remove();
             });
 
+            // Recolor rows after rendering
+            this.recolorRows(tbody);
+
             console.log('✅ Rendered', results.length, 'results (background update, preserved filters)');
         },
 
@@ -476,6 +479,7 @@
         filterResults: function() {
             const searchTerm = $('#chronotrack-search').val().toLowerCase();
             const category = $('#chronotrack-category-filter').val();
+            const gender = $('#chronotrack-gender-filter').val();
             const distance = this.selectedDistance;
 
             const tbody = this.currentView === 'meta' ?
@@ -487,6 +491,7 @@
                 const name = row.find('.col-name, .col-full_name').text().toLowerCase();
                 const bib = row.find('.col-bib, .col-entry_bib').text().toLowerCase();
                 const rowCategory = row.find('.col-category').text();
+                const rowGender = row.find('.col-gender').text();
                 const rowDistance = row.attr('data-distance') || '';
 
                 // Get bracket positions from data attribute
@@ -518,12 +523,36 @@
                     }
                 }
 
+                // Gender filter
+                if (gender && rowGender !== gender) {
+                    show = false;
+                }
+
                 // Distance filter
                 if (distance && rowDistance !== distance) {
                     show = false;
                 }
 
                 row.toggle(show);
+            });
+
+            // Recolor visible rows alternately
+            this.recolorRows(tbody);
+        },
+
+        recolorRows: function(tbody) {
+            // Remove old classes
+            tbody.find('tr').removeClass('row-even row-odd');
+
+            // Add classes to visible rows only
+            let visibleIndex = 0;
+            tbody.find('tr:visible').each(function() {
+                if (visibleIndex % 2 === 0) {
+                    $(this).addClass('row-even');
+                } else {
+                    $(this).addClass('row-odd');
+                }
+                visibleIndex++;
             });
         },
 
@@ -606,21 +635,21 @@
             if (participant.bracket_positions && Object.keys(participant.bracket_positions).length > 0) {
                 html += '<div class="chronotrack-details-section">';
                 html += '<h3>Pozycje w kategoriach</h3>';
-                html += '<table class="chronotrack-details-table">';
+                html += '<div class="chronotrack-bracket-list">';
 
                 // Sort brackets alphabetically
                 const sortedBrackets = Object.keys(participant.bracket_positions).sort();
                 sortedBrackets.forEach((bracketName) => {
                     const position = participant.bracket_positions[bracketName];
                     if (position && position > 0) {
-                        html += '<tr>';
-                        html += '<th>' + this.escapeHtml(bracketName) + ':</th>';
-                        html += '<td class="chronotrack-position">' + position + '</td>';
-                        html += '</tr>';
+                        // Format: "M20 - 3" (bracket name - position)
+                        html += '<div class="chronotrack-bracket-item">';
+                        html += this.escapeHtml(bracketName) + ' - ' + position;
+                        html += '</div>';
                     }
                 });
 
-                html += '</table>';
+                html += '</div>';
                 html += '</div>';
             }
 
@@ -693,15 +722,12 @@
 
             container.empty();
 
-            // Add "Wszystkie" (All) button
-            const allBtn = $('<button>')
-                .addClass('chronotrack-distance-filter-btn')
-                .addClass(this.selectedDistance === '' ? 'active' : '')
-                .attr('data-distance', '')
-                .text('Wszystkie');
-            container.append(allBtn);
+            // Auto-select first distance if nothing selected
+            if (!this.selectedDistance && this.distances.length > 0) {
+                this.selectedDistance = this.distances[0];
+            }
 
-            // Add buttons for each distance
+            // Add buttons for each distance (no "Wszystkie" button)
             this.distances.forEach((distance) => {
                 const btn = $('<button>')
                     .addClass('chronotrack-distance-filter-btn')
