@@ -142,11 +142,13 @@ class ChronoTrack_Live_Results {
         wp_localize_script('chronotrack-live', 'chronotrackData', array(
             'ajaxUrl' => admin_url('admin-ajax.php'),
             'nonce' => wp_create_nonce('chronotrack_nonce'),
+            'adminNonce' => wp_create_nonce('chronotrack_admin_nonce'),
             'eventId' => get_the_ID(),
             'refreshInterval' => get_option('chronotrack_refresh_interval', 5000),
             'eventStatus' => $event_status,
             'eventDate' => $event_date,
             'wpTimezone' => wp_timezone_string(), // WordPress timezone setting
+            'userCanGeneratePDF' => current_user_can('manage_options'), // Only admins can generate PDF
             'strings' => array(
                 'loading' => __('Loading results...', 'chronotrack-live'),
                 'error' => __('Error loading results', 'chronotrack-live'),

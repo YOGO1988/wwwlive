@@ -112,6 +112,12 @@
                     $(e.currentTarget).text('Wyłącz auto-odświeżanie');
                 }
             });
+
+            // Generate PDF button
+            $(document).on('click', '.chronotrack-generate-pdf-btn', (e) => {
+                e.preventDefault();
+                this.generatePDF();
+            });
         },
 
         loadResults: function(view) {
@@ -872,6 +878,25 @@
                 container.append(btn);
             });
 
+            // Add "Generuj PDF" button if there's a selected distance
+            if (this.selectedDistance && chronotrackData.userCanGeneratePDF) {
+                const pdfBtn = $('<button>')
+                    .addClass('chronotrack-generate-pdf-btn')
+                    .html('📄 Generuj PDF')
+                    .attr('data-distance', this.selectedDistance)
+                    .css({
+                        'margin-left': '20px',
+                        'background': '#28a745',
+                        'color': '#fff',
+                        'border': '1px solid #28a745',
+                        'padding': '8px 16px',
+                        'border-radius': '4px',
+                        'cursor': 'pointer',
+                        'font-size': '14px'
+                    });
+                container.append(pdfBtn);
+            }
+
             // NOTE: Don't call filterResults() here - it will be called in renderResults()
             // after rows are actually added to the table
         },
@@ -1097,6 +1122,66 @@
          */
         formatClub: function(value) {
             return this.cleanValue(value);
+        },
+
+        /**
+         * Generate PDF for currently selected distance
+         */
+        generatePDF: function() {
+            if (!this.selectedDistance) {
+                alert('Proszę wybrać dystans przed generowaniem PDF.');
+                return;
+            }
+
+            const btn = $('.chronotrack-generate-pdf-btn');
+            const originalHtml = btn.html();
+
+            // Show loading state
+            btn.prop('disabled', true).html('⏳ Generowanie PDF...');
+
+            console.log('📄 Generating PDF for distance:', this.selectedDistance);
+
+            $.ajax({
+                url: chronotrackData.ajaxUrl,
+                method: 'POST',
+                data: {
+                    action: 'chronotrack_generate_pdf',
+                    nonce: chronotrackData.adminNonce,
+                    event_id: chronotrackData.eventId,
+                    distance: this.selectedDistance
+                },
+                success: (response) => {
+                    console.log('✅ PDF generation response:', response);
+
+                    if (response.success) {
+                        // Create download link
+                        const downloadLink = $('<a>')
+                            .attr('href', response.data.download_url)
+                            .attr('download', response.data.filename)
+                            .css('display', 'none')
+                            .appendTo('body');
+
+                        // Trigger download
+                        downloadLink[0].click();
+
+                        // Clean up
+                        setTimeout(() => downloadLink.remove(), 100);
+
+                        // Show success message
+                        alert('PDF wygenerowany pomyślnie! Pobieranie rozpoczęte.');
+                    } else {
+                        alert('Błąd: ' + (response.data.message || 'Nie udało się wygenerować PDF.'));
+                    }
+                },
+                error: (xhr, status, error) => {
+                    console.error('❌ PDF generation failed:', error, xhr.responseText);
+                    alert('Błąd podczas generowania PDF. Sprawdź czy TCPDF jest zainstalowany.');
+                },
+                complete: () => {
+                    // Restore button state
+                    btn.prop('disabled', false).html(originalHtml);
+                }
+            });
         },
 
         escapeHtml: function(text) {
