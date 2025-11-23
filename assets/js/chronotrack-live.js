@@ -618,7 +618,9 @@
             // Polish translations for participant details
             let html = '<div class="chronotrack-participant-details">';
             html += '<h2>' + this.escapeHtml(participant.full_name) + '</h2>';
-            html += '<div class="chronotrack-details-grid-3col">';
+
+            // CHANGED: 2-column layout with split times below
+            html += '<div class="chronotrack-details-grid-2col">';
 
             // Column 1: Basic info + Bracket positions
             html += '<div class="chronotrack-details-column">';
@@ -681,12 +683,11 @@
             html += '</div>';
             html += '</div>'; // End column 2
 
-            // Column 3: Split Times
-            html += '<div class="chronotrack-details-column">';
+            html += '</div>'; // End grid-2col
 
-            // Split Times - Międzyczasy
+            // Split Times BELOW the 2-column layout (full width)
             if (participant.split_times && participant.split_times.length > 0) {
-                html += '<div class="chronotrack-details-section">';
+                html += '<div class="chronotrack-details-section chronotrack-splits-full-width">';
                 html += '<h3>Międzyczasy</h3>';
                 html += '<table class="chronotrack-details-table">';
                 participant.split_times.forEach((split) => {
@@ -713,8 +714,6 @@
                 html += '</div>';
             }
 
-            html += '</div>'; // End column 3
-            html += '</div>'; // End grid-3col
             html += '</div>'; // End participant-details
 
             $('#chronotrack-modal-body').html(html);

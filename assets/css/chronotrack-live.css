@@ -381,10 +381,10 @@ body.chronotrack-page .container {
     margin-top: 10px;
 }
 
-/* 3-column layout for participant details */
-.chronotrack-details-grid-3col {
+/* 2-column layout for participant details (split times go below) */
+.chronotrack-details-grid-2col {
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-columns: 1fr 1fr;
     gap: 10px;
     margin-top: 10px;
 }
@@ -395,9 +395,15 @@ body.chronotrack-page .container {
     gap: 10px;
 }
 
+/* Full-width section for split times (below 2-column grid) */
+.chronotrack-splits-full-width {
+    margin-top: 10px;
+    width: 100%;
+}
+
 /* Responsive: stack on small screens */
-@media (max-width: 900px) {
-    .chronotrack-details-grid-3col {
+@media (max-width: 768px) {
+    .chronotrack-details-grid-2col {
         grid-template-columns: 1fr;
     }
 }

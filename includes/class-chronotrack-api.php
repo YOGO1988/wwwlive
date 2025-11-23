@@ -789,10 +789,12 @@ class ChronoTrack_API {
                     $bib = $result['results_bib'] ?? '';
                     $position = $result['results_rank'] ?? 0;
 
-                    if (!empty($bib) && $position > 0) {
+                    // CRITICAL FIX: Store ALL bracket memberships, even when position = 0
+                    // This allows showing informational categories (Policja, Straż) without rankings
+                    if (!empty($bib)) {
                         // Only store if not already stored (first position wins)
                         if (!isset($bracket_results[$bib])) {
-                            $bracket_results[$bib] = $position;
+                            $bracket_results[$bib] = $position;  // Can be 0 for non-ranked categories
                         }
                     }
                 }
