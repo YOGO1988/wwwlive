@@ -1,0 +1,2405 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YO&GO Events - System Spikera</title>
+    <style>
+        :root {
+            --primary-color: #FF8C00;
+            --secondary-color: #FF7000;
+            --success-color: #28a745;
+            --error-color: #dc3545;
+            --warning-color: #ffc107;
+            --light-bg: #f8f9fa;
+            --border-color: #ddd;
+            --text-color: #333;
+            
+            /* Kolory dystansów */
+            --distance-5k: #FF6B6B;
+            --distance-10k: #4ECDC4;
+            --distance-21k: #45B7D1;
+            --distance-42k: #96CEB4;
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.4;
+            color: var(--text-color);
+            background-color: #f5f5f5;
+            padding: 8px;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        .container {
+            width: 100%;
+            max-width: 1600px;
+            margin: 0 auto;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            height: calc(100vh - 16px);
+            display: flex;
+            flex-direction: column;
+        }
+        
+        /* Header */
+        header {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 12px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        header h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+        
+        .header-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .header-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 18px;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+        
+        .header-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+        
+        .config-toggle:hover {
+            transform: rotate(90deg);
+        }
+        
+        /* Status bar */
+        .status-bar {
+            background-color: var(--light-bg);
+            border-bottom: 1px solid var(--border-color);
+            padding: 8px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 13px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .status-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: var(--error-color);
+        }
+        
+        .status-indicator.connected {
+            background-color: var(--success-color);
+        }
+        
+        /* Tabs */
+        .tab-container {
+            background-color: var(--light-bg);
+            border-bottom: 1px solid var(--border-color);
+            padding: 0 20px;
+        }
+        
+        .tabs {
+            display: flex;
+            gap: 5px;
+        }
+        
+        .tab {
+            background: transparent;
+            border: none;
+            padding: 12px 20px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            color: #666;
+            border-bottom: 3px solid transparent;
+            transition: all 0.2s;
+        }
+        
+        .tab:hover {
+            color: var(--primary-color);
+            background: rgba(255, 140, 0, 0.1);
+        }
+        
+        .tab.active {
+            color: var(--primary-color);
+            border-bottom-color: var(--primary-color);
+        }
+        
+        /* Main content */
+        .main-content {
+            flex: 1;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .tab-content {
+            display: none;
+            height: 100%;
+            padding: 15px;
+            overflow-y: auto;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        /* Panel */
+        .panel {
+            background-color: white;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+        
+        .panel h2 {
+            margin: 0 0 15px 0;
+            font-size: 20px;
+            color: var(--primary-color);
+            border-bottom: 2px solid var(--primary-color);
+            padding-bottom: 8px;
+        }
+        
+        /* Search */
+        .search-section {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .search-input {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 18px;
+        }
+        
+        .search-input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(255, 140, 0, 0.2);
+        }
+        
+        .search-btn {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 12px 24px;
+            font-size: 18px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .search-btn:hover {
+            background: var(--secondary-color);
+        }
+        
+        /* Athlete display */
+        .athlete-display {
+            background: white;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            min-height: 120px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .athlete-row {
+            background: white;
+            border-radius: 8px;
+            padding: 15px 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            display: grid;
+            grid-template-columns: 80px 3fr 2fr 120px 150px 100px;
+            gap: 20px;
+            align-items: center;
+            min-height: 70px;
+            border-left: 4px solid var(--primary-color);
+            transform: translateX(-100%);
+            opacity: 0;
+            animation: slideInFromLeft 0.5s ease forwards;
+            transition: all 0.3s ease;
+            margin-bottom: 10px;
+        }
+        
+        .athlete-row:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        
+        .athlete-row.distance-5k {
+            border-left-color: var(--distance-5k);
+            border-left-width: 6px;
+        }
+        
+        .athlete-row.distance-10k {
+            border-left-color: var(--distance-10k);
+            border-left-width: 6px;
+        }
+        
+        .athlete-row.distance-21k {
+            border-left-color: var(--distance-21k);
+            border-left-width: 6px;
+        }
+        
+        .athlete-row.distance-42k {
+            border-left-color: var(--distance-42k);
+            border-left-width: 6px;
+        }
+        
+        .athlete-row.finish-time {
+            background: linear-gradient(135deg, #fff 0%, #f0fff4 100%);
+            border-left-color: var(--success-color);
+            border-left-width: 6px;
+            box-shadow: 0 0 15px rgba(40, 167, 69, 0.3);
+        }
+        
+        @keyframes slideInFromLeft {
+            from {
+                transform: translateX(-100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        .row-bib {
+            font-size: 32px;
+            font-weight: bold;
+            color: var(--primary-color);
+            text-align: center;
+        }
+        
+        .row-info {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        
+        .row-name {
+            font-size: 22px;
+            font-weight: 600;
+            color: #333;
+            line-height: 1.2;
+        }
+        
+        .row-city {
+            font-size: 14px;
+            color: #666;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .distance-badge {
+            padding: 4px 8px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: bold;
+            color: white;
+            background: #666;
+        }
+        
+        .row-custom {
+            font-size: 16px;
+            color: #333;
+            font-weight: 500;
+            text-align: center;
+            background: #f8f9fa;
+            padding: 8px 12px;
+            border-radius: 6px;
+        }
+        
+        .row-category {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 8px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            text-align: center;
+        }
+        
+        .row-time-result {
+            text-align: center;
+            padding: 10px;
+            border-radius: 8px;
+            background: #f8f9fa;
+        }
+        
+        .row-time-result.finish-time {
+            background: var(--success-color);
+            color: white;
+            font-weight: bold;
+            animation: finishFlash 0.5s ease;
+        }
+        
+        .time-display {
+            font-family: 'Courier New', monospace;
+            font-size: 16px;
+            font-weight: bold;
+        }
+        
+        .place-display {
+            font-size: 11px;
+            margin-top: 3px;
+        }
+        
+        @keyframes finishFlash {
+            0% { transform: scale(1); background: var(--warning-color); }
+            50% { transform: scale(1.05); background: var(--warning-color); }
+            100% { transform: scale(1); background: var(--success-color); }
+        }
+        
+        .row-timestamp {
+            font-size: 11px;
+            color: #999;
+            text-align: center;
+            font-weight: 500;
+        }
+        
+        .waiting-state {
+            text-align: center;
+            color: rgba(0, 0, 0, 0.5);
+            padding: 50px;
+        }
+        
+        .waiting-state h3 {
+            font-size: 24px;
+            margin-bottom: 15px;
+            font-weight: 300;
+        }
+        
+        .waiting-state p {
+            font-size: 16px;
+            opacity: 0.7;
+        }
+        
+        /* Results view */
+        .results-view {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            gap: 15px;
+        }
+        
+        .results-controls {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .distance-tabs, .checkpoint-tabs, .category-tabs {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        
+        .distance-tab, .checkpoint-tab, .category-tab {
+            background: var(--light-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 10px 16px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .distance-tab.active {
+            background: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+        
+        .checkpoint-tab.active {
+            background: var(--secondary-color);
+            color: white;
+            border-color: var(--secondary-color);
+        }
+        
+        .category-tab.active {
+            background: #28a745;
+            color: white;
+            border-color: #28a745;
+        }
+        
+        .checkpoint-info {
+            background: var(--light-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 10px 15px;
+            margin-bottom: 15px;
+            font-size: 14px;
+            color: #666;
+            text-align: center;
+        }
+        
+        .checkpoint-distance {
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+        
+        .results-table-container {
+            flex: 1;
+            overflow: auto;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+        }
+        
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+        
+        .results-table th,
+        .results-table td {
+            padding: 12px 8px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .results-table th {
+            background: var(--light-bg);
+            font-weight: bold;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        
+        .results-table tr:hover {
+            background: var(--light-bg);
+        }
+        
+        .results-table tr {
+            cursor: pointer;
+        }
+        
+        /* Config panel */
+        .config-panel {
+            position: absolute;
+            top: 0;
+            right: -350px;
+            width: 350px;
+            height: 100%;
+            background: white;
+            border-left: 1px solid var(--border-color);
+            box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
+            transition: right 0.3s ease;
+            z-index: 100;
+            overflow-y: auto;
+        }
+        
+        .config-panel.open {
+            right: 0;
+        }
+        
+        .config-header {
+            background: var(--primary-color);
+            color: white;
+            padding: 15px;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        
+        .config-content {
+            padding: 20px;
+        }
+        
+        .config-section {
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .config-section:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+        
+        .config-section h3 {
+            color: var(--primary-color);
+            margin-bottom: 15px;
+            font-size: 16px;
+        }
+        
+        .config-form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        
+        label {
+            font-weight: 500;
+            font-size: 14px;
+            color: var(--text-color);
+        }
+        
+        input, select {
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        
+        input:focus, select:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 2px rgba(255, 140, 0, 0.2);
+        }
+        
+        button {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 12px 16px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            font-weight: 500;
+        }
+        
+        button:hover {
+            background: var(--secondary-color);
+        }
+        
+        button.secondary {
+            background: #6c757d;
+        }
+        
+        button.secondary:hover {
+            background: #5a6268;
+        }
+        
+        .status-message {
+            padding: 12px;
+            border-radius: 6px;
+            margin: 10px 0;
+            font-size: 14px;
+        }
+        
+        .status-message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .status-message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .status-message.warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        
+        .hidden {
+            display: none !important;
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 140, 0, 0.3);
+            border-radius: 50%;
+            border-top-color: var(--primary-color);
+            animation: spin 1s linear infinite;
+            margin-right: 8px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Responsive design */
+        @media (max-width: 1400px) {
+            .athlete-row {
+                grid-template-columns: 70px 2.5fr 1.5fr 100px 130px 90px;
+                gap: 15px;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .status-bar {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 8px;
+            }
+            
+            .tabs {
+                flex-wrap: wrap;
+            }
+            
+            .tab {
+                padding: 10px 15px;
+                font-size: 14px;
+            }
+            
+            .config-panel {
+                width: 100%;
+                right: -100%;
+            }
+            
+            .athlete-row {
+                grid-template-columns: 1fr;
+                gap: 8px;
+                text-align: center;
+                padding: 12px;
+            }
+            
+            .row-name {
+                font-size: 18px;
+            }
+            
+            .row-custom {
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🏃 YO&GO Events - System Spikera</h1>
+            <div class="header-controls">
+                <button id="fullscreen-toggle" class="header-btn" title="Pełny ekran">⛶</button>
+                <button id="config-toggle" class="header-btn config-toggle" title="Konfiguracja">⚙</button>
+            </div>
+        </header>
+        
+        <div class="status-bar">
+            <div class="status-item">
+                <div id="bridge-indicator" class="status-indicator"></div>
+                <span id="bridge-status">Bridge: Rozłączony</span>
+            </div>
+            <div class="status-item">
+                <div id="api-indicator" class="status-indicator"></div>
+                <span id="api-status">API: Rozłączony</span>
+            </div>
+            <div class="status-item">
+                <div id="refresh-indicator" class="status-indicator"></div>
+                <span id="refresh-status">Auto-odświeżanie: Wyłączone</span>
+            </div>
+            <div class="status-item">
+                <span id="event-info">Brak wydarzenia</span>
+            </div>
+            <div class="status-item">
+                <span id="athlete-count">Zawodnicy: 0</span>
+            </div>
+        </div>
+        
+        <div class="tab-container">
+            <div class="tabs">
+                <button id="speaker-tab" class="tab active">🎤 Spiker</button>
+                <button id="results-tab" class="tab">🏆 Wyniki</button>
+            </div>
+        </div>
+        
+        <div class="main-content">
+            <!-- Panel spikera -->
+            <div id="speaker-content" class="tab-content active">
+                <div class="panel">
+                    <h2>🔍 Wyszukiwanie i Wyświetlanie</h2>
+                    <div class="search-section">
+                        <input type="text" id="search-input" class="search-input" 
+                               placeholder="Wprowadź numer startowy lub nazwisko..." autocomplete="off">
+                        <button id="search-btn" class="search-btn">Szukaj</button>
+                    </div>
+                    
+                    <div id="athlete-display" class="athlete-display">
+                        <div id="athletes-feed">
+                            <div class="waiting-state" id="waiting-state">
+                                <h3>📱 Oczekiwanie na dane</h3>
+                                <p>Wpisz numer BIB lub pobierz dane z API</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="search-status" class="status-message hidden"></div>
+                </div>
+            </div>
+            
+            <!-- Panel wyników -->
+            <div id="results-content" class="tab-content">
+                <div class="results-view">
+                    <div class="results-controls">
+                        <div>
+                            <label style="margin-right: 10px;">Dystanse:</label>
+                            <div class="distance-tabs" id="distance-tabs">
+                                <!-- Zakładki dystansów będą tutaj -->
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label style="margin-right: 10px;">Kategorie:</label>
+                            <div class="category-tabs" id="category-tabs">
+                                <!-- Zakładki kategorii będą tutaj -->
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label style="margin-right: 10px;">Punkty kontrolne:</label>
+                            <div class="checkpoint-tabs" id="checkpoint-tabs">
+                                <!-- Zakładki punktów kontrolnych będą tutaj -->
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <button id="manual-refresh" class="search-btn" style="padding: 8px 16px; font-size: 14px;">🔄 Odśwież</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Informacja o kilometrażu punktu kontrolnego -->
+                    <div id="checkpoint-info" class="checkpoint-info hidden">
+                        Punkt kontrolny na <span class="checkpoint-distance">km ?</span> trasy
+                    </div>
+                    
+                    <div class="results-table-container">
+                        <table class="results-table" id="results-table">
+                            <thead>
+                                <tr>
+                                    <th>Miejsce</th>
+                                    <th>Nr</th>
+                                    <th>Zawodnik</th>
+                                    <th>Kategoria</th>
+                                    <th>Miasto</th>
+                                    <th>Klub</th>
+                                    <th>Dystans</th>
+                                    <th>Czas</th>
+                                    <th>Punkty kontrolne</th>
+                                </tr>
+                            </thead>
+                            <tbody id="results-tbody">
+                                <tr>
+                                    <td colspan="9" style="text-align: center; color: #666; padding: 40px;">
+                                        Pobierz dane aby wyświetlić wyniki
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Panel konfiguracji -->
+            <div id="config-panel" class="config-panel">
+                <div class="config-header">
+                    ⚙️ Konfiguracja Systemu
+                </div>
+                <div class="config-content">
+                    <div class="config-section">
+                        <h3>🎯 Wydarzenie</h3>
+                        <div class="config-form">
+                            <div class="form-group">
+                                <label for="event-id">ID Wydarzenia ChronoTrack:</label>
+                                <input type="text" id="event-id" placeholder="Wprowadź ID wydarzenia">
+                            </div>
+                            <button id="load-data">Pobierz Dane Wydarzenia</button>
+                            <div id="data-status" class="status-message hidden"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="config-section">
+                        <h3>🌐 Połączenie Bridge</h3>
+                        <div class="config-form">
+                            <div class="form-group">
+                                <label for="bridge-ip">IP Address Bridge:</label>
+                                <input type="text" id="bridge-ip" value="192.168.1.100" placeholder="192.168.1.100">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="bridge-port">Port WebSocket:</label>
+                                <input type="text" id="bridge-port" value="8081" placeholder="8081">
+                            </div>
+                            
+                            <button id="connect-bridge">Połącz z Bridge</button>
+                            <div id="bridge-status-msg" class="status-message hidden"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="config-section">
+                        <h3>⏱️ Ustawienia</h3>
+                        <div class="config-form">
+                            <div class="form-group">
+                                <label for="block-time">Blokada czasowa (minuty):</label>
+                                <input type="number" id="block-time" value="5" min="1" max="60">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="refresh-interval">Odświeżanie danych (sekundy):</label>
+                                <input type="number" id="refresh-interval" value="30" min="10" max="300">
+                            </div>
+                            
+                            <button id="clear-blocked" class="secondary">Odblokuj Wszystkich</button>
+                            <button id="save-config" class="secondary">Zapisz Ustawienia</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Konfiguracja aplikacji
+        const config = {
+            api: {
+                clientId: '727dae7f',
+                userId: 'lukasz@yogoevents.pl',
+                userPass: 'f2b2f3082a9d2ae5091eb5920bee538dc01bb413',
+                baseUrl: 'https://api.chronotrack.com',
+                eventId: localStorage.getItem('spiker-event-id') || ''
+            },
+            bridge: {
+                ip: localStorage.getItem('bridge-ip') || '192.168.1.100',
+                port: localStorage.getItem('bridge-port') || '8081',
+                connected: false,
+                socket: null
+            },
+            settings: {
+                blockTimeMinutes: 0, // Wyłączone blokowanie - pokaże wszystkie odczyty
+                refreshInterval: parseInt(localStorage.getItem('refresh-interval')) || 30
+            }
+        };
+
+        // Stan aktualnie wybranych filtrów
+        let currentFilters = {
+            distance: null,
+            checkpoint: null,
+            category: null
+        };
+
+        // Cache danych
+        const cache = {
+            athletes: new Map(),
+            results: new Map(),
+            distances: [],
+            categories: [],
+            checkpoints: [],
+            courseData: new Map(),
+            eventInfo: null,
+            recentReads: [],
+            blockedAthletes: new Map(),
+            totalReads: 0,
+            uniqueAthletes: new Set(),
+            displayedAthletes: [],
+            removeTimers: new Map(),
+            lastResultsUpdate: 0,
+            pendingIndividualUpdates: new Set(),
+            refreshTimers: {
+                results: null,
+                individual: new Map()
+            }
+        };
+
+        // Elementy UI
+        const ui = {
+            configToggle: document.getElementById('config-toggle'),
+            configPanel: document.getElementById('config-panel'),
+            fullscreenToggle: document.getElementById('fullscreen-toggle'),
+            
+            bridgeIndicator: document.getElementById('bridge-indicator'),
+            bridgeStatus: document.getElementById('bridge-status'),
+            apiIndicator: document.getElementById('api-indicator'),
+            apiStatus: document.getElementById('api-status'),
+            refreshIndicator: document.getElementById('refresh-indicator'),
+            refreshStatus: document.getElementById('refresh-status'),
+            eventInfo: document.getElementById('event-info'),
+            athleteCount: document.getElementById('athlete-count'),
+            
+            speakerTab: document.getElementById('speaker-tab'),
+            resultsTab: document.getElementById('results-tab'),
+            speakerContent: document.getElementById('speaker-content'),
+            resultsContent: document.getElementById('results-content'),
+            
+            searchInput: document.getElementById('search-input'),
+            searchBtn: document.getElementById('search-btn'),
+            athleteDisplay: document.getElementById('athlete-display'),
+            athletesFeed: document.getElementById('athletes-feed'),
+            waitingState: document.getElementById('waiting-state'),
+            searchStatus: document.getElementById('search-status'),
+            
+            eventId: document.getElementById('event-id'),
+            bridgeIp: document.getElementById('bridge-ip'),
+            bridgePort: document.getElementById('bridge-port'),
+            blockTime: document.getElementById('block-time'),
+            refreshInterval: document.getElementById('refresh-interval'),
+            connectBridge: document.getElementById('connect-bridge'),
+            loadData: document.getElementById('load-data'),
+            clearBlocked: document.getElementById('clear-blocked'),
+            saveConfig: document.getElementById('save-config'),
+            dataStatus: document.getElementById('data-status'),
+            bridgeStatusMsg: document.getElementById('bridge-status-msg'),
+            
+            distanceTabs: document.getElementById('distance-tabs'),
+            categoryTabs: document.getElementById('category-tabs'),
+            checkpointTabs: document.getElementById('checkpoint-tabs'),
+            resultsTable: document.getElementById('results-table'),
+            resultsTbody: document.getElementById('results-tbody'),
+            checkpointInfo: document.getElementById('checkpoint-info'),
+            manualRefresh: document.getElementById('manual-refresh')
+        };
+
+        // Funkcje API ChronoTrack
+        function buildApiUrl(endpoint, params = {}) {
+            const authParams = {
+                format: 'json',
+                client_id: config.api.clientId,
+                user_id: config.api.userId,
+                user_pass: config.api.userPass,
+                ...params
+            };
+            
+            const queryString = Object.entries(authParams)
+                .map(([key, value]) => `${key}=${encodeURIComponent(value)}`)
+                .join('&');
+            
+            return `${config.api.baseUrl}${endpoint}?${queryString}`;
+        }
+
+        async function makeApiRequest(endpoint, params = {}) {
+            try {
+                const url = buildApiUrl(endpoint, params);
+                console.log(`API Request: ${url.substring(0, 100)}...`);
+                
+                // Timeout po 3 sekundach - szybka odpowiedź lub błąd
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 3000);
+                
+                const response = await fetch(url, { signal: controller.signal });
+                clearTimeout(timeoutId);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP Error: ${response.status}`);
+                }
+                
+                return await response.json();
+            } catch (error) {
+                if (error.name === 'AbortError') {
+                    console.error('API Request timeout after 3 seconds');
+                } else {
+                    console.error(`API Error: ${error.message}`);
+                }
+                throw error;
+            }
+        }
+
+        // Pobieranie informacji o wydarzeniu
+        async function fetchEventInfo() {
+            try {
+                const response = await makeApiRequest(`/api/event/${config.api.eventId}`);
+                if (response && response.event) {
+                    cache.eventInfo = {
+                        id: response.event.event_id,
+                        name: response.event.event_name,
+                        date: formatEventDate(response.event.event_start_time),
+                        location: response.event.location_city || ''
+                    };
+                    updateEventInfo();
+                    return cache.eventInfo;
+                }
+                throw new Error('Invalid event data');
+            } catch (error) {
+                console.error(`Error fetching event info: ${error.message}`);
+                throw error;
+            }
+        }
+
+        // Pobieranie punktów kontrolnych z course API
+        async function fetchCourseData() {
+            try {
+                const response = await makeApiRequest(`/api/event/${config.api.eventId}/course`);
+                if (response && response.event_course) {
+                    cache.courseData.clear();
+                    
+                    console.log('Course API response:', response.event_course);
+                    
+                    response.event_course.forEach(course => {
+                        console.log(`Processing course: ${course.race_name || 'Unknown'}`);
+                        
+                        if (course.timing_points && Array.isArray(course.timing_points)) {
+                            console.log(`Found ${course.timing_points.length} timing points`);
+                            
+                            course.timing_points.forEach(point => {
+                                if (point.timing_point_name && point.timing_point_distance_from_start) {
+                                    const distanceMeters = parseInt(point.timing_point_distance_from_start);
+                                    const distanceKm = distanceMeters / 1000;
+                                    
+                                    cache.courseData.set(point.timing_point_name, {
+                                        original_name: point.timing_point_name,
+                                        distance_km: distanceKm,
+                                        distance_meters: distanceMeters,
+                                        race_name: course.race_name || '',
+                                        display_name: `${distanceKm} km`
+                                    });
+                                    
+                                    console.log(`Timing point: "${point.timing_point_name}" -> ${distanceKm}km (${distanceMeters}m)`);
+                                }
+                            });
+                        } else {
+                            console.log('No timing_points found in course');
+                        }
+                    });
+                    
+                    console.log(`Loaded ${cache.courseData.size} timing points from course data`);
+                    
+                    if (cache.courseData.size === 0) {
+                        console.warn('Course API returned no timing points - will use checkpoint names from results API');
+                    }
+                    
+                    return cache.courseData;
+                }
+                console.warn('No course data found in API response');
+                return new Map();
+            } catch (error) {
+                console.error(`Error fetching course data: ${error.message}`);
+                return new Map();
+            }
+        }
+
+        // Pobieranie zawodników
+        async function fetchAllEntries() {
+            try {
+                let page = 1;
+                let hasMore = true;
+                const entries = new Map();
+
+                while (hasMore && page <= 50) {
+                    const params = {
+                        page: page,
+                        size: 50,
+                        include_test_entries: true,
+                        contact_details: true,
+                        include_all_fields: true
+                    };
+
+                    const response = await makeApiRequest(`/api/event/${config.api.eventId}/entry`, params);
+                    
+                    if (response && response.event_entry && response.event_entry.length > 0) {
+                        response.event_entry.forEach(entry => {
+                            if (entry.entry_bib) {
+                                const athlete = {
+                                    bib: entry.entry_bib,
+                                    firstName: entry.athlete_first_name || '',
+                                    lastName: entry.athlete_last_name || '',
+                                    city: entry.location_city || '',
+                                    club: findClubField(entry) || '',
+                                    distance: entry.race_distance || entry.race_name || '',
+                                    category: entry.bracket_name || '',
+                                    age: entry.entry_race_age || '',
+                                    tag: entry.entry_tag || entry.entry_bib,
+                                    sex: entry.athlete_sex || ''
+                                };
+                                entries.set(athlete.bib, athlete);
+                            }
+                        });
+
+                        hasMore = response.event_entry.length >= 50;
+                        page++;
+                    } else {
+                        hasMore = false;
+                    }
+                }
+
+                cache.athletes = entries;
+                console.log(`Loaded ${entries.size} athletes`);
+                updateAthleteCount();
+                return entries;
+            } catch (error) {
+                console.error(`Error fetching entries: ${error.message}`);
+                throw error;
+            }
+        }
+
+        // Znajdowanie pola klubu w custom fields
+        function findClubField(entry) {
+            for (const [key, value] of Object.entries(entry)) {
+                if (key.startsWith('custom_element260') && value && value !== '' && value !== 'Tak') {
+                    return value;
+                }
+            }
+            
+            for (const [key, value] of Object.entries(entry)) {
+                if (key.startsWith('custom_element') && value && value !== '' && value !== 'Tak') {
+                    const lowerValue = value.toLowerCase();
+                    if (lowerValue.includes('klub') || lowerValue.includes('team') || 
+                        lowerValue.includes('running') || lowerValue.includes('sport') ||
+                        value.length > 3) {
+                        return value;
+                    }
+                }
+            }
+            
+            return '';
+        }
+
+        // Pobieranie wyników z hybrydowym systemem odświeżania
+        async function fetchResults(mode = 'full') {
+            try {
+                const results = new Map();
+                let page = 1;
+                let hasMore = true;
+                let totalCheckpointsFound = 0;
+                let newResultsCount = 0;
+                let updatedResultsCount = 0;
+
+                // Określ strategię pobierania na podstawie trybu i wielkości zawodów
+                let maxPages = 100; // domyślnie bez limitu
+                let updateStrategy = 'replace'; // 'replace' lub 'merge'
+                
+                if (mode === 'quick') {
+                    // Szybkie odświeżanie - sprawdź pierwszych 15 stron (1500 zawodników)
+                    // To powinno pokryć większość nowych wyników w trakcie zawodów
+                    maxPages = 15;
+                    updateStrategy = 'merge';
+                } else if (mode === 'full') {
+                    // Pełne pobieranie - wszystkie wyniki
+                    maxPages = 100;
+                    updateStrategy = 'replace';
+                }
+
+                console.log(`Starting results fetch - Mode: ${mode}, Max pages: ${maxPages}, Strategy: ${updateStrategy}`);
+
+                while (hasMore && page <= maxPages) {
+                    const params = {
+                        page: page,
+                        size: 100,
+                        interval: 'ALL'
+                    };
+
+                    const response = await makeApiRequest(`/api/event/${config.api.eventId}/results`, params);
+                    
+                    if (response && response.event_results && response.event_results.length > 0) {
+                        response.event_results.forEach(result => {
+                            const bib = result.results_bib;
+                            const existingResult = cache.results.get(bib);
+                            
+                            if (!results.has(bib)) {
+                                const newResult = {
+                                    bib: bib,
+                                    firstName: result.results_first_name,
+                                    lastName: result.results_last_name,
+                                    overallPlace: result.results_rank,
+                                    categoryPlace: result.results_bracket_rank || result.results_division_rank || '',
+                                    genderPlace: result.results_sex_rank || '',
+                                    netTime: formatTime(result.results_time),
+                                    gunTime: formatTime(result.results_gun_time),
+                                    pace: result.results_pace,
+                                    distance: result.results_race_name,
+                                    category: result.results_primary_bracket_name,
+                                    city: result.results_hometown || '',
+                                    club: '',
+                                    checkpoints: [],
+                                    lastUpdated: Date.now()
+                                };
+
+                                results.set(bib, newResult);
+                                
+                                if (!existingResult) {
+                                    newResultsCount++;
+                                } else {
+                                    // Porównaj czy są zmiany w kluczowych polach
+                                    if (existingResult.netTime !== newResult.netTime || 
+                                        existingResult.overallPlace !== newResult.overallPlace ||
+                                        existingResult.checkpoints.length !== newResult.checkpoints.length) {
+                                        updatedResultsCount++;
+                                    }
+                                }
+                            }
+
+                            const intervalName = result.results_interval_name;
+                            if (intervalName && intervalName !== 'Full Course' && intervalName !== 'Finish') {
+                                const coursePoint = cache.courseData.get(intervalName);
+                                const checkpoint = {
+                                    name: intervalName,
+                                    time: formatTime(result.results_time),
+                                    place: result.results_rank,
+                                    distance_km: coursePoint ? coursePoint.distance_km : null
+                                };
+                                
+                                results.get(bib).checkpoints.push(checkpoint);
+                                totalCheckpointsFound++;
+                            }
+                        });
+
+                        hasMore = response.event_results.length >= 100;
+                        page++;
+                    } else {
+                        hasMore = false;
+                    }
+                }
+
+                // Aktualizuj cache według strategii
+                if (updateStrategy === 'replace') {
+                    // Zastąp wszystkie wyniki (pełne odświeżanie)
+                    cache.results = results;
+                } else {
+                    // Merge - dodaj/zaktualizuj tylko nowe wyniki (szybkie odświeżanie)
+                    results.forEach((result, bib) => {
+                        cache.results.set(bib, result);
+                    });
+                }
+
+                cache.lastResultsUpdate = Date.now();
+                
+                console.log(`Results update completed - Mode: ${mode}, Pages fetched: ${page-1}, New: ${newResultsCount}, Updated: ${updatedResultsCount}, Total checkpoints: ${totalCheckpointsFound}, Total cached results: ${cache.results.size}`);
+                
+                if (mode === 'full') {
+                    extractDistancesAndCheckpoints();
+                }
+                
+                return results;
+            } catch (error) {
+                console.error(`Error fetching results: ${error.message}`);
+                throw error;
+            }
+        }
+
+        // Pobieranie indywidualnego wyniku zawodnika
+        async function fetchIndividualResult(bib) {
+            try {
+                console.log(`Fetching individual result for BIB ${bib}`);
+                
+                const params = {
+                    bib_number: bib,
+                    interval: 'ALL'
+                };
+
+                const response = await makeApiRequest(`/api/event/${config.api.eventId}/results`, params);
+                
+                if (response && response.event_results && response.event_results.length > 0) {
+                    const resultData = response.event_results[0];
+                    
+                    const result = {
+                        bib: bib,
+                        firstName: resultData.results_first_name,
+                        lastName: resultData.results_last_name,
+                        overallPlace: resultData.results_rank,
+                        categoryPlace: resultData.results_bracket_rank || resultData.results_division_rank || '',
+                        genderPlace: resultData.results_sex_rank || '',
+                        netTime: formatTime(resultData.results_time),
+                        gunTime: formatTime(resultData.results_gun_time),
+                        pace: resultData.results_pace,
+                        distance: resultData.results_race_name,
+                        category: resultData.results_primary_bracket_name,
+                        city: resultData.results_hometown || '',
+                        club: '',
+                        checkpoints: [],
+                        lastUpdated: Date.now()
+                    };
+
+                    // Dodaj checkpointy
+                    response.event_results.forEach(res => {
+                        const intervalName = res.results_interval_name;
+                        if (intervalName && intervalName !== 'Full Course' && intervalName !== 'Finish') {
+                            const coursePoint = cache.courseData.get(intervalName);
+                            const checkpoint = {
+                                name: intervalName,
+                                time: formatTime(res.results_time),
+                                place: res.results_rank,
+                                distance_km: coursePoint ? coursePoint.distance_km : null
+                            };
+                            result.checkpoints.push(checkpoint);
+                        }
+                    });
+
+                    // Aktualizuj cache
+                    const oldResult = cache.results.get(bib);
+                    cache.results.set(bib, result);
+                    
+                    console.log(`Updated individual result for BIB ${bib}: ${result.netTime}`);
+                    
+                    // Aktualizuj wyświetlony wiersz jeśli zawodnik jest aktualnie pokazany
+                    updateDisplayedAthleteResult(bib, result);
+                    
+                    return result;
+                } else {
+                    console.log(`No result found for BIB ${bib}`);
+                    return null;
+                }
+            } catch (error) {
+                console.error(`Error fetching individual result for BIB ${bib}: ${error.message}`);
+                return null;
+            }
+        }
+
+        // Aktualizacja wyniku zawodnika na wyświetlaczu spikera
+        function updateDisplayedAthleteResult(bib, newResult) {
+            cache.displayedAthletes.forEach(displayedAthlete => {
+                const row = displayedAthlete.element;
+                const bibElement = row.querySelector('.row-bib');
+                
+                if (bibElement && bibElement.textContent === bib) {
+                    const timeResultElement = row.querySelector('.row-time-result');
+                    
+                    if (newResult.netTime && newResult.netTime !== '-') {
+                        // Zawodnik ma już wynik - aktualizuj
+                        timeResultElement.className = 'row-time-result finish-time';
+                        timeResultElement.innerHTML = `
+                            <div class="time-display">${newResult.netTime}</div>
+                            <div class="place-display">🏁 META • Miejsce: ${newResult.overallPlace}</div>
+                        `;
+                        
+                        // Dodaj animację
+                        row.classList.add('finish-time');
+                        
+                        console.log(`Updated displayed result for BIB ${bib}: ${newResult.netTime}`);
+                    }
+                }
+            });
+        }
+
+        // Automatyczne odświeżanie wyników z inteligentnym systemem
+        function startAutoRefresh() {
+            // Zatrzymaj istniejące timery
+            stopAutoRefresh();
+            
+            let quickRefreshCount = 0;
+            const maxQuickRefreshes = 4; // Po 4 szybkich odświeżaniach rób pełne
+            
+            // Timer dla hybrydowego odświeżania
+            cache.refreshTimers.results = setInterval(async () => {
+                if (cache.results.size > 0) {
+                    try {
+                        // Strategia odświeżania:
+                        // - Pierwsze 4 cykle: szybkie odświeżanie (pierwsze 15 stron)
+                        // - Co 5. cykl: pełne odświeżanie wszystkich wyników
+                        // - Czas: co 30 sekund dla szybkiego, co 2.5 minuty pełne
+                        
+                        const useQuickRefresh = quickRefreshCount < maxQuickRefreshes;
+                        const mode = useQuickRefresh ? 'quick' : 'full';
+                        
+                        console.log(`Auto-refresh cycle ${quickRefreshCount + 1}/${maxQuickRefreshes + 1} - Mode: ${mode}`);
+                        
+                        await fetchResults(mode);
+                        updateResultsTable();
+                        updateRefreshStatus(true, mode);
+                        
+                        if (useQuickRefresh) {
+                            quickRefreshCount++;
+                        } else {
+                            quickRefreshCount = 0; // Reset counter po pełnym odświeżaniu
+                        }
+                        
+                    } catch (error) {
+                        console.error('Auto-refresh error:', error);
+                        updateRefreshStatus(false);
+                    }
+                }
+            }, 30000); // Co 30 sekund
+            
+            updateRefreshStatus(true, 'hybrid');
+            console.log('Auto-refresh started: hybrid mode (quick every 30s, full every 2.5min)');
+        }
+
+        function stopAutoRefresh() {
+            if (cache.refreshTimers.results) {
+                clearInterval(cache.refreshTimers.results);
+                cache.refreshTimers.results = null;
+            }
+            
+            // Zatrzymaj wszystkie timery indywidualnych aktualizacji
+            cache.refreshTimers.individual.forEach(timer => {
+                clearTimeout(timer);
+            });
+            cache.refreshTimers.individual.clear();
+            
+            updateRefreshStatus(false);
+            console.log('Auto-refresh stopped');
+        }
+
+        function updateRefreshStatus(active = false, mode = 'hybrid') {
+            if (active) {
+                ui.refreshIndicator.classList.add('connected');
+                if (mode === 'quick') {
+                    ui.refreshStatus.textContent = 'Auto-odświeżanie: Szybkie (15 stron)';
+                } else if (mode === 'full') {
+                    ui.refreshStatus.textContent = 'Auto-odświeżanie: Pełne (wszystkie)';
+                } else {
+                    ui.refreshStatus.textContent = 'Auto-odświeżanie: Hybrydowe (30s)';
+                }
+            } else {
+                ui.refreshIndicator.classList.remove('connected');
+                ui.refreshStatus.textContent = 'Auto-odświeżanie: Wyłączone';
+            }
+        }
+
+        // Zaplanowanie indywidualnej aktualizacji zawodnika
+        function scheduleIndividualUpdate(bib, delaySeconds = 0) {
+            // Anuluj poprzedni timer dla tego zawodnika jeśli istnieje
+            if (cache.refreshTimers.individual.has(bib)) {
+                clearTimeout(cache.refreshTimers.individual.get(bib));
+            }
+            
+            // Dodaj do listy oczekujących
+            cache.pendingIndividualUpdates.add(bib);
+            
+            // Ustaw nowy timer
+            const timer = setTimeout(async () => {
+                if (cache.pendingIndividualUpdates.has(bib)) {
+                    console.log(`Scheduled individual update for BIB ${bib}`);
+                    await fetchIndividualResult(bib);
+                    cache.pendingIndividualUpdates.delete(bib);
+                    cache.refreshTimers.individual.delete(bib);
+                }
+            }, delaySeconds * 1000);
+            
+            cache.refreshTimers.individual.set(bib, timer);
+            console.log(`Scheduled individual update for BIB ${bib} in ${delaySeconds}s`);
+        }
+
+        // Wyciągnięcie dystansów i punktów kontrolnych
+        function extractDistancesAndCheckpoints() {
+            const distances = new Set();
+            const checkpointsMap = new Map();
+            const categories = new Set();
+
+            cache.results.forEach(result => {
+                if (result.distance) {
+                    distances.add(result.distance);
+                }
+                if (result.category) {
+                    categories.add(result.category);
+                }
+                result.checkpoints.forEach(cp => {
+                    const coursePoint = cache.courseData.get(cp.name);
+                    
+                    if (coursePoint) {
+                        checkpointsMap.set(cp.name, {
+                            name: cp.name,
+                            distance_km: coursePoint.distance_km,
+                            display_name: `${coursePoint.distance_km} km`,
+                            has_distance: true
+                        });
+                    } else {
+                        if (!checkpointsMap.has(cp.name)) {
+                            checkpointsMap.set(cp.name, {
+                                name: cp.name,
+                                distance_km: null,
+                                display_name: cp.name,
+                                has_distance: false
+                            });
+                        }
+                    }
+                });
+            });
+
+            cache.distances = Array.from(distances);
+            cache.categories = Array.from(categories).sort();
+            
+            const checkpointsWithDistance = Array.from(checkpointsMap.values())
+                .filter(cp => cp.has_distance)
+                .sort((a, b) => a.distance_km - b.distance_km);
+            
+            const checkpointsWithoutDistance = Array.from(checkpointsMap.values())
+                .filter(cp => !cp.has_distance)
+                .sort((a, b) => a.name.localeCompare(b.name));
+            
+            cache.checkpoints = [
+                ...checkpointsWithDistance.map(cp => cp.name),
+                ...checkpointsWithoutDistance.map(cp => cp.name)
+            ];
+            
+            console.log('Extracted distances:', cache.distances);
+            console.log('Extracted categories:', cache.categories);
+            console.log('Extracted checkpoints:', cache.checkpoints);
+            console.log(`Course data available: ${cache.courseData.size > 0 ? 'YES' : 'NO'}`);
+            
+            updateDistanceTabs();
+            updateCategoryTabs();
+            updateCheckpointTabs();
+        }
+
+        // Formatowanie czasu
+        function formatTime(timeString) {
+            if (!timeString) return '-';
+            
+            if (timeString.includes(':')) {
+                const parts = timeString.split(':');
+                const hours = parseInt(parts[0]);
+                const minutes = parseInt(parts[1]);
+                const seconds = parts[2] ? parseInt(parts[2].split('.')[0]) : 0;
+                
+                return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            }
+            
+            return timeString;
+        }
+
+        // Formatowanie daty wydarzenia
+        function formatEventDate(timestamp) {
+            if (!timestamp) return '-';
+            try {
+                const date = new Date(parseInt(timestamp) * 1000);
+                return `${date.getDate().toString().padStart(2, '0')}.${(date.getMonth() + 1).toString().padStart(2, '0')}.${date.getFullYear()}`;
+            } catch (error) {
+                return timestamp;
+            }
+        }
+
+        // Funkcje wyświetlania zawodników
+        function getDistanceClass(distance) {
+            if (!distance) return '';
+            const normalized = distance.toLowerCase().replace(/[^a-z0-9]/g, '');
+            if (normalized.includes('5k') || normalized.includes('5')) return 'distance-5k';
+            if (normalized.includes('10k') || normalized.includes('10')) return 'distance-10k';
+            if (normalized.includes('21k') || normalized.includes('21') || normalized.includes('polmaraton')) return 'distance-21k';
+            if (normalized.includes('42k') || normalized.includes('42') || normalized.includes('maraton')) return 'distance-42k';
+            return 'distance-other';
+        }
+
+        function getDistanceColor(distance) {
+            const distanceClass = getDistanceClass(distance);
+            switch(distanceClass) {
+                case 'distance-5k': return '#FF6B6B';
+                case 'distance-10k': return '#4ECDC4';
+                case 'distance-21k': return '#45B7D1';
+                case 'distance-42k': return '#96CEB4';
+                default: return '#FF8C00';
+            }
+        }
+
+        function createAthleteRow(athlete, result = null) {
+            const row = document.createElement('div');
+            const distanceClass = getDistanceClass(athlete.distance);
+            row.className = `athlete-row ${distanceClass}`;
+            
+            const currentTime = new Date().toLocaleTimeString();
+            
+            // SUPER UPROSZCZONA WERSJA - tylko podstawowe dane, BEZ wyników
+            // Wyniki można sprawdzić w zakładce "Wyniki"
+            row.innerHTML = `
+                <div class="row-bib">${athlete.bib}</div>
+                <div class="row-info">
+                    <div class="row-name">${athlete.firstName} ${athlete.lastName}</div>
+                    <div class="row-city">
+                        ${athlete.city || ''} 
+                        <span class="distance-badge ${distanceClass}" style="background: ${getDistanceColor(athlete.distance)};">${athlete.distance}</span>
+                    </div>
+                </div>
+                <div class="row-custom">${athlete.club || ''}</div>
+                <div class="row-category">${athlete.category || 'OPEN'}</div>
+                <div class="row-time-result">
+                    <div style="color: #999; font-size: 14px;"></div>
+                </div>
+                <div class="row-timestamp">${currentTime}</div>
+            `;
+            
+            return row;
+        }
+
+        function addAthleteRow(athleteRow) {
+            ui.waitingState.style.display = 'none';
+            
+            cache.displayedAthletes.unshift({
+                element: athleteRow,
+                timestamp: Date.now()
+            });
+            
+            ui.athletesFeed.insertBefore(athleteRow, ui.athletesFeed.firstChild);
+            
+            const maxRows = 15;
+            while (cache.displayedAthletes.length > maxRows) {
+                removeOldestRow();
+            }
+        }
+
+        function removeOldestRow() {
+            if (cache.displayedAthletes.length === 0) return;
+            const oldest = cache.displayedAthletes[cache.displayedAthletes.length - 1];
+            removeAthleteRow(oldest.element);
+        }
+
+        function removeAthleteRow(rowElement) {
+            const index = cache.displayedAthletes.findIndex(item => item.element === rowElement);
+            if (index === -1) return;
+            
+            cache.displayedAthletes.splice(index, 1);
+            
+            if (cache.removeTimers.has(rowElement)) {
+                clearTimeout(cache.removeTimers.get(rowElement));
+                cache.removeTimers.delete(rowElement);
+            }
+            
+            if (rowElement.parentNode) {
+                rowElement.parentNode.removeChild(rowElement);
+            }
+            
+            if (cache.displayedAthletes.length === 0) {
+                ui.waitingState.style.display = 'block';
+            }
+        }
+
+        // Połączenie z Bridge przez WebSocket
+        function connectToBridge() {
+            try {
+                const wsUrl = `ws://${config.bridge.ip}:${config.bridge.port}`;
+                console.log(`Connecting to bridge: ${wsUrl}`);
+                
+                config.bridge.socket = new WebSocket(wsUrl);
+                
+                // Optymalizacja WebSocket - bez buforowania
+                config.bridge.socket.binaryType = 'arraybuffer';
+                
+                config.bridge.socket.onopen = () => {
+                    config.bridge.connected = true;
+                    updateBridgeStatus();
+                    showStatus('bridge-status-msg', 'Połączono z Bridge', 'success');
+                    console.log('Connected to bridge - REAL-TIME MODE');
+                };
+                
+                config.bridge.socket.onmessage = (event) => {
+                    // NATYCHMIASTOWE przetwarzanie - bez setTimeout, bez kolejki
+                    const startTime = performance.now();
+                    try {
+                        const data = JSON.parse(event.data);
+                        handleBridgeMessage(data);
+                        const processingTime = performance.now() - startTime;
+                        console.log(`Message processed in ${processingTime.toFixed(2)}ms`);
+                    } catch (error) {
+                        console.error('Error parsing bridge message:', error);
+                    }
+                };
+                
+                config.bridge.socket.onclose = () => {
+                    config.bridge.connected = false;
+                    updateBridgeStatus();
+                    showStatus('bridge-status-msg', 'Rozłączono z Bridge', 'error');
+                    console.log('Disconnected from bridge');
+                    
+                    setTimeout(() => {
+                        if (!config.bridge.connected) {
+                            connectToBridge();
+                        }
+                    }, 2000); // Szybsze ponowne połączenie - 2 sekundy
+                };
+                
+                config.bridge.socket.onerror = (error) => {
+                    console.error('Bridge connection error:', error);
+                    showStatus('bridge-status-msg', 'Błąd połączenia z Bridge', 'error');
+                };
+                
+            } catch (error) {
+                console.error('Error connecting to bridge:', error);
+                showStatus('bridge-status-msg', `Błąd połączenia: ${error.message}`, 'error');
+            }
+        }
+
+        function handleBridgeMessage(data) {
+            const msgReceiveTime = performance.now();
+            console.log(`[${msgReceiveTime.toFixed(2)}ms] Bridge message received:`, data);
+            
+            if (data.type === 'ccs_reading' && data.tag) {
+                handleTagRead(data.tag, data.time, msgReceiveTime);
+            }
+        }
+
+        function handleTagRead(tag, time, receiveTime) {
+            const startTime = performance.now();
+            console.log(`[${startTime.toFixed(2)}ms] Tag read START: ${tag} at ${time}`);
+            console.log(`  Delay from receive: ${(startTime - receiveTime).toFixed(2)}ms`);
+            
+            const athlete = findAthleteByTag(tag);
+            
+            if (athlete) {
+                if (isAthleteBlocked(athlete.bib)) {
+                    console.log(`Athlete ${athlete.bib} is blocked`);
+                    return;
+                }
+                
+                const beforeBlock = performance.now();
+                addRecentRead(athlete, time);
+                blockAthlete(athlete.bib);
+                console.log(`  Blocking took: ${(performance.now() - beforeBlock).toFixed(2)}ms`);
+                
+                // Pobierz aktualny wynik z cache
+                const beforeCache = performance.now();
+                const result = cache.results.get(athlete.bib);
+                console.log(`  Cache lookup took: ${(performance.now() - beforeCache).toFixed(2)}ms`);
+                
+                const beforeCreate = performance.now();
+                const athleteRow = createAthleteRow(athlete, result);
+                console.log(`  Row creation took: ${(performance.now() - beforeCreate).toFixed(2)}ms`);
+                
+                // NATYCHMIASTOWE wyświetlenie - bez czekania na API
+                const beforeAdd = performance.now();
+                addAthleteRow(athleteRow);
+                console.log(`  Row display took: ${(performance.now() - beforeAdd).toFixed(2)}ms`);
+                
+                cache.totalReads++;
+                cache.uniqueAthletes.add(athlete.bib);
+                
+                const totalTime = performance.now() - startTime;
+                console.log(`[${performance.now().toFixed(2)}ms] Tag read COMPLETE: Total time ${totalTime.toFixed(2)}ms`);
+                console.log(`✅ ZAWODNIK WYŚWIETLONY NATYCHMIAST - API aktualizuje się w tle przez auto-refresh`);
+                
+                // USUNIĘTE: Nie robimy indywidualnego API request
+                // API aktualizuje się automatycznie co 30 sekund przez auto-refresh
+                // To zapewnia MAKSYMALNĄ szybkość wyświetlania
+                
+            } else {
+                console.log(`Athlete not found for tag: ${tag}`);
+                showStatus('search-status', `Nie znaleziono zawodnika dla tagu: ${tag}`, 'warning');
+            }
+        }
+
+        function findAthleteByTag(tag) {
+            for (const [bib, athlete] of cache.athletes) {
+                if (athlete.tag === tag || athlete.bib === tag) {
+                    return athlete;
+                }
+            }
+            return null;
+        }
+
+        function isAthleteBlocked(bib) {
+            const blockEnd = cache.blockedAthletes.get(bib);
+            if (blockEnd && new Date() < blockEnd) {
+                return true;
+            }
+            
+            if (blockEnd) {
+                cache.blockedAthletes.delete(bib);
+            }
+            
+            return false;
+        }
+
+        function blockAthlete(bib) {
+            const blockEnd = new Date();
+            blockEnd.setMinutes(blockEnd.getMinutes() + config.settings.blockTimeMinutes);
+            cache.blockedAthletes.set(bib, blockEnd);
+        }
+
+        function addRecentRead(athlete, time) {
+            const read = {
+                ...athlete,
+                readTime: time,
+                timestamp: new Date()
+            };
+            
+            cache.recentReads.unshift(read);
+            
+            if (cache.recentReads.length > 50) {
+                cache.recentReads = cache.recentReads.slice(0, 50);
+            }
+        }
+
+        function searchAthlete(query) {
+            if (!query) return null;
+            
+            if (cache.athletes.has(query)) {
+                return cache.athletes.get(query);
+            }
+            
+            for (const [bib, athlete] of cache.athletes) {
+                const fullName = `${athlete.firstName} ${athlete.lastName}`.toLowerCase();
+                if (fullName.includes(query.toLowerCase())) {
+                    return athlete;
+                }
+            }
+            
+            return null;
+        }
+
+        // Przełączanie zakładek
+        function switchTab(tabName) {
+            ui.speakerContent.classList.remove('active');
+            ui.resultsContent.classList.remove('active');
+            
+            ui.speakerTab.classList.remove('active');
+            ui.resultsTab.classList.remove('active');
+            
+            if (tabName === 'speaker') {
+                ui.speakerContent.classList.add('active');
+                ui.speakerTab.classList.add('active');
+            } else if (tabName === 'results') {
+                ui.resultsContent.classList.add('active');
+                ui.resultsTab.classList.add('active');
+            }
+        }
+
+        // Aktualizacja statusów
+        function updateBridgeStatus() {
+            if (config.bridge.connected) {
+                ui.bridgeIndicator.classList.add('connected');
+                ui.bridgeStatus.textContent = `Bridge: Połączony (${config.bridge.ip}:${config.bridge.port})`;
+            } else {
+                ui.bridgeIndicator.classList.remove('connected');
+                ui.bridgeStatus.textContent = 'Bridge: Rozłączony';
+            }
+        }
+
+        function updateApiStatus(connected = false) {
+            if (connected) {
+                ui.apiIndicator.classList.add('connected');
+                ui.apiStatus.textContent = 'API: Połączony';
+            } else {
+                ui.apiIndicator.classList.remove('connected');
+                ui.apiStatus.textContent = 'API: Rozłączony';
+            }
+        }
+
+        function updateEventInfo() {
+            if (cache.eventInfo) {
+                ui.eventInfo.textContent = `${cache.eventInfo.name} - ${cache.eventInfo.date}`;
+            } else {
+                ui.eventInfo.textContent = 'Brak wydarzenia';
+            }
+        }
+
+        function updateAthleteCount() {
+            ui.athleteCount.textContent = `Zawodnicy: ${cache.athletes.size}`;
+        }
+
+        // Aktualizacja zakładek dystansów
+        function updateDistanceTabs() {
+            ui.distanceTabs.innerHTML = '';
+            
+            const allTab = document.createElement('div');
+            allTab.className = 'distance-tab';
+            if (!currentFilters.distance) allTab.classList.add('active');
+            allTab.textContent = 'Wszystkie';
+            allTab.addEventListener('click', () => {
+                document.querySelectorAll('.distance-tab').forEach(t => t.classList.remove('active'));
+                allTab.classList.add('active');
+                currentFilters.distance = null;
+                updateResultsTable();
+            });
+            ui.distanceTabs.appendChild(allTab);
+            
+            cache.distances.forEach(distance => {
+                const tab = document.createElement('div');
+                tab.className = 'distance-tab';
+                if (currentFilters.distance === distance) tab.classList.add('active');
+                tab.textContent = distance;
+                tab.addEventListener('click', () => {
+                    document.querySelectorAll('.distance-tab').forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+                    currentFilters.distance = distance;
+                    updateResultsTable();
+                });
+                ui.distanceTabs.appendChild(tab);
+            });
+        }
+
+        // Aktualizacja zakładek kategorii
+        function updateCategoryTabs() {
+            ui.categoryTabs.innerHTML = '';
+            
+            const allTab = document.createElement('div');
+            allTab.className = 'category-tab';
+            if (!currentFilters.category) allTab.classList.add('active');
+            allTab.textContent = 'Wszystkie';
+            allTab.addEventListener('click', () => {
+                document.querySelectorAll('.category-tab').forEach(t => t.classList.remove('active'));
+                allTab.classList.add('active');
+                currentFilters.category = null;
+                updateResultsTable();
+            });
+            ui.categoryTabs.appendChild(allTab);
+            
+            cache.categories.forEach(category => {
+                const tab = document.createElement('div');
+                tab.className = 'category-tab';
+                if (currentFilters.category === category) tab.classList.add('active');
+                tab.textContent = category;
+                tab.addEventListener('click', () => {
+                    document.querySelectorAll('.category-tab').forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+                    currentFilters.category = category;
+                    updateResultsTable();
+                });
+                ui.categoryTabs.appendChild(tab);
+            });
+        }
+
+        // Aktualizacja zakładek punktów kontrolnych
+        function updateCheckpointTabs() {
+            ui.checkpointTabs.innerHTML = '';
+            
+            const finishTab = document.createElement('div');
+            finishTab.className = 'checkpoint-tab';
+            if (!currentFilters.checkpoint) finishTab.classList.add('active');
+            finishTab.textContent = 'Meta';
+            finishTab.addEventListener('click', () => {
+                document.querySelectorAll('.checkpoint-tab').forEach(t => t.classList.remove('active'));
+                finishTab.classList.add('active');
+                currentFilters.checkpoint = null;
+                updateResultsTable();
+                hideCheckpointInfo();
+            });
+            ui.checkpointTabs.appendChild(finishTab);
+            
+            cache.checkpoints.forEach(checkpointName => {
+                const tab = document.createElement('div');
+                tab.className = 'checkpoint-tab';
+                if (currentFilters.checkpoint === checkpointName) tab.classList.add('active');
+                
+                const coursePoint = cache.courseData.get(checkpointName);
+                let displayName;
+                let distanceInfo;
+                
+                if (coursePoint && coursePoint.distance_km) {
+                    displayName = `${coursePoint.distance_km} km`;
+                    distanceInfo = coursePoint.distance_km;
+                } else {
+                    displayName = checkpointName;
+                    distanceInfo = '?';
+                }
+                
+                tab.textContent = displayName;
+                
+                tab.addEventListener('click', () => {
+                    document.querySelectorAll('.checkpoint-tab').forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+                    currentFilters.checkpoint = checkpointName;
+                    updateResultsTable();
+                    
+                    showCheckpointInfo(checkpointName, distanceInfo);
+                });
+                ui.checkpointTabs.appendChild(tab);
+            });
+            
+            console.log(`Updated checkpoint tabs: ${cache.checkpoints.length} checkpoints`);
+        }
+
+        function showCheckpointInfo(checkpointName, distanceInfo) {
+            if (distanceInfo !== '?' && distanceInfo !== null && distanceInfo !== undefined) {
+                const checkpointDistance = ui.checkpointInfo.querySelector('.checkpoint-distance');
+                checkpointDistance.textContent = `${distanceInfo} km`;
+                ui.checkpointInfo.classList.remove('hidden');
+            } else {
+                ui.checkpointInfo.classList.add('hidden');
+            }
+        }
+
+        function hideCheckpointInfo() {
+            ui.checkpointInfo.classList.add('hidden');
+        }
+
+        // Aktualizacja tabeli wyników
+        function updateResultsTable() {
+            ui.resultsTbody.innerHTML = '';
+            
+            const results = Array.from(cache.results.values());
+            
+            let filteredResults = results;
+            if (currentFilters.distance) {
+                filteredResults = filteredResults.filter(r => r.distance === currentFilters.distance);
+            }
+            if (currentFilters.category) {
+                filteredResults = filteredResults.filter(r => r.category === currentFilters.category);
+            }
+            
+            filteredResults.sort((a, b) => {
+                const placeA = parseInt(a.overallPlace) || 9999;
+                const placeB = parseInt(b.overallPlace) || 9999;
+                return placeA - placeB;
+            });
+            
+            filteredResults.forEach(result => {
+                const row = document.createElement('tr');
+                
+                let displayTime = result.netTime;
+                let displayPlace = result.overallPlace;
+                
+                if (currentFilters.checkpoint) {
+                    const checkpoint = result.checkpoints.find(cp => cp.name === currentFilters.checkpoint);
+                    if (checkpoint) {
+                        displayTime = checkpoint.time;
+                        displayPlace = checkpoint.place;
+                    } else {
+                        return;
+                    }
+                }
+                
+                const athlete = cache.athletes.get(result.bib);
+                const city = athlete ? athlete.city : (result.city || '-');
+                const club = athlete ? athlete.club : (result.club || '-');
+                
+                let checkpointsInfo = '-';
+                if (result.checkpoints && result.checkpoints.length > 0) {
+                    checkpointsInfo = result.checkpoints
+                        .map(cp => {
+                            const coursePoint = cache.courseData.get(cp.name);
+                            
+                            if (coursePoint && coursePoint.distance_km) {
+                                return {
+                                    ...cp,
+                                    display_distance: coursePoint.distance_km,
+                                    display_name: `${coursePoint.distance_km} km`
+                                };
+                            } else {
+                                return {
+                                    ...cp,
+                                    display_distance: 999,
+                                    display_name: cp.name
+                                };
+                            }
+                        })
+                        .sort((a, b) => {
+                            if (a.display_distance === 999 && b.display_distance === 999) {
+                                return a.display_name.localeCompare(b.display_name);
+                            }
+                            return a.display_distance - b.display_distance;
+                        })
+                        .map(cp => `${cp.display_name}: ${cp.time}`)
+                        .join('<br>');
+                }
+                
+                row.innerHTML = `
+                    <td>${displayPlace || '-'}</td>
+                    <td>${result.bib}</td>
+                    <td>${result.firstName} ${result.lastName}</td>
+                    <td>${result.category || '-'}</td>
+                    <td>${city}</td>
+                    <td>${club}</td>
+                    <td><strong>${result.distance || '-'}</strong></td>
+                    <td><strong>${displayTime || '-'}</strong></td>
+                    <td style="font-size: 11px; line-height: 1.3;">${checkpointsInfo}</td>
+                `;
+                
+                row.addEventListener('click', () => {
+                    if (athlete) {
+                        const athleteRow = createAthleteRow(athlete, result);
+                        addAthleteRow(athleteRow);
+                        switchTab('speaker');
+                    }
+                });
+                
+                ui.resultsTbody.appendChild(row);
+            });
+            
+            if (ui.resultsTbody.children.length === 0) {
+                const row = document.createElement('tr');
+                row.innerHTML = '<td colspan="9" style="text-align: center; color: #666; padding: 40px;">Brak wyników</td>';
+                ui.resultsTbody.appendChild(row);
+            }
+        }
+
+        // Pełny ekran
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(err => {
+                    console.log(`Error attempting to enable fullscreen: ${err.message}`);
+                });
+            } else {
+                document.exitFullscreen();
+            }
+        }
+
+        // Zabezpieczenie przed zamknięciem
+        function setupExitProtection() {
+            let isProtected = false;
+            
+            window.addEventListener('beforeunload', (e) => {
+                if (isProtected) {
+                    e.preventDefault();
+                    e.returnValue = 'Czy na pewno chcesz opuścić aplikację spikera?';
+                    return e.returnValue;
+                }
+            });
+            
+            document.addEventListener('dataLoaded', () => {
+                isProtected = true;
+            });
+        }
+
+        // Pokazywanie statusu
+        function showStatus(elementId, message, type = '') {
+            const element = document.getElementById(elementId);
+            if (!element) return;
+            
+            element.textContent = message;
+            element.className = `status-message ${type}`;
+            
+            if (message) {
+                element.classList.remove('hidden');
+                
+                if (type === 'success') {
+                    setTimeout(() => {
+                        element.classList.add('hidden');
+                    }, 5000);
+                }
+            } else {
+                element.classList.add('hidden');
+            }
+        }
+
+        // Ładowanie konfiguracji
+        function loadConfig() {
+            ui.eventId.value = config.api.eventId;
+            ui.bridgeIp.value = config.bridge.ip;
+            ui.bridgePort.value = config.bridge.port;
+            ui.blockTime.value = config.settings.blockTimeMinutes;
+            ui.refreshInterval.value = config.settings.refreshInterval;
+        }
+
+        // Zapisywanie konfiguracji
+        function saveConfig() {
+            config.api.eventId = ui.eventId.value.trim();
+            config.bridge.ip = ui.bridgeIp.value.trim();
+            config.bridge.port = ui.bridgePort.value.trim();
+            config.settings.blockTimeMinutes = parseInt(ui.blockTime.value);
+            config.settings.refreshInterval = parseInt(ui.refreshInterval.value);
+            
+            localStorage.setItem('spiker-event-id', config.api.eventId);
+            localStorage.setItem('bridge-ip', config.bridge.ip);
+            localStorage.setItem('bridge-port', config.bridge.port);
+            localStorage.setItem('block-time', config.settings.blockTimeMinutes);
+            localStorage.setItem('refresh-interval', config.settings.refreshInterval);
+            
+            showStatus('data-status', 'Ustawienia zapisane', 'success');
+        }
+
+        // Event listenery
+        ui.configToggle.addEventListener('click', () => {
+            ui.configPanel.classList.toggle('open');
+        });
+
+        ui.speakerTab.addEventListener('click', () => {
+            switchTab('speaker');
+        });
+
+        ui.resultsTab.addEventListener('click', () => {
+            switchTab('results');
+        });
+        
+        ui.fullscreenToggle.addEventListener('click', () => {
+            toggleFullscreen();
+        });
+
+        ui.searchBtn.addEventListener('click', () => {
+            const query = ui.searchInput.value.trim();
+            if (!query) return;
+            
+            const athlete = searchAthlete(query);
+            if (athlete) {
+                const result = cache.results.get(athlete.bib);
+                const athleteRow = createAthleteRow(athlete, result);
+                addAthleteRow(athleteRow);
+                showStatus('search-status', 'Znaleziono zawodnika', 'success');
+                ui.searchInput.value = '';
+            } else {
+                showStatus('search-status', 'Nie znaleziono zawodnika', 'error');
+            }
+        });
+
+        ui.searchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                ui.searchBtn.click();
+            }
+        });
+
+        ui.connectBridge.addEventListener('click', () => {
+            saveConfig();
+            connectToBridge();
+        });
+
+        ui.loadData.addEventListener('click', async () => {
+            const eventId = ui.eventId.value.trim();
+            if (!eventId) {
+                showStatus('data-status', 'Wprowadź ID wydarzenia', 'error');
+                return;
+            }
+            
+            config.api.eventId = eventId;
+            localStorage.setItem('spiker-event-id', eventId);
+            
+            // Zatrzymaj poprzednie auto-odświeżanie
+            stopAutoRefresh();
+            
+            showStatus('data-status', 'Pobieranie danych...', 'warning');
+            
+            try {
+                updateApiStatus(false);
+                
+                showStatus('data-status', 'Pobieranie informacji o wydarzeniu...', 'warning');
+                await fetchEventInfo();
+                
+                showStatus('data-status', 'Pobieranie punktów kontrolnych z course API...', 'warning');
+                await fetchCourseData();
+                
+                showStatus('data-status', 'Pobieranie zawodników...', 'warning');
+                await fetchAllEntries();
+                
+                showStatus('data-status', 'Pobieranie wyników...', 'warning');
+                await fetchResults('full'); // Pełne pobieranie przy inicjalizacji
+                
+                updateApiStatus(true);
+                showStatus('data-status', 'Dane pobrane pomyślnie - uruchomiono auto-odświeżanie', 'success');
+                
+                currentFilters.distance = null;
+                currentFilters.checkpoint = null;
+                currentFilters.category = null;
+                
+                updateResultsTable();
+                
+                // Uruchom automatyczne odświeżanie
+                startAutoRefresh();
+                
+                document.dispatchEvent(new Event('dataLoaded'));
+                
+                console.log('=== LOADING SUMMARY ===');
+                console.log(`Athletes: ${cache.athletes.size}`);
+                console.log(`Results: ${cache.results.size}`);
+                console.log(`Distances: ${cache.distances.length}`);
+                console.log(`Checkpoints: ${cache.checkpoints.length}`);
+                console.log(`Course timing points: ${cache.courseData.size}`);
+                console.log('Auto-refresh: ENABLED');
+                
+            } catch (error) {
+                updateApiStatus(false);
+                showStatus('data-status', `Błąd pobierania danych: ${error.message}`, 'error');
+                console.error('Loading error:', error);
+            }
+        });
+
+        ui.clearBlocked.addEventListener('click', () => {
+            cache.blockedAthletes.clear();
+            showStatus('data-status', 'Odblokowano wszystkich zawodników', 'success');
+        });
+
+        ui.saveConfig.addEventListener('click', () => {
+            saveConfig();
+        });
+
+        ui.manualRefresh.addEventListener('click', async () => {
+            if (cache.results.size === 0) {
+                showStatus('search-status', 'Najpierw pobierz dane wydarzenia', 'warning');
+                return;
+            }
+            
+            ui.manualRefresh.disabled = true;
+            ui.manualRefresh.innerHTML = '<div class="loading"></div>Odświeżanie...';
+            
+            try {
+                await fetchResults('quick'); // Szybkie odświeżanie
+                updateResultsTable();
+                showStatus('search-status', 'Wyniki odświeżone', 'success');
+            } catch (error) {
+                showStatus('search-status', `Błąd odświeżania: ${error.message}`, 'error');
+            } finally {
+                ui.manualRefresh.disabled = false;
+                ui.manualRefresh.innerHTML = '🔄 Odśwież';
+            }
+        });
+
+        // Inicjalizacja
+        function init() {
+            loadConfig();
+            updateBridgeStatus();
+            updateApiStatus();
+            updateRefreshStatus(false);
+            updateEventInfo();
+            updateAthleteCount();
+            
+            setupExitProtection();
+            
+            // Cleanup przy zamknięciu strony
+            window.addEventListener('beforeunload', () => {
+                stopAutoRefresh();
+            });
+            
+            if (config.bridge.ip && config.bridge.port) {
+                setTimeout(() => {
+                    connectToBridge();
+                }, 1000);
+            }
+            
+            // Timer czyszczenia zablokowanych zawodników
+            setInterval(() => {
+                const now = new Date();
+                for (const [bib, blockEnd] of cache.blockedAthletes) {
+                    if (now >= blockEnd) {
+                        cache.blockedAthletes.delete(bib);
+                    }
+                }
+            }, 60000);
+            
+            console.log('Spiker App initialized');
+        }
+
+        // Uruchomienie aplikacji
+        init();
+        
+        // Obsługa klawiatury
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'F11') {
+                e.preventDefault();
+                toggleFullscreen();
+            }
+            
+            if (e.key === 'Escape') {
+                ui.configPanel.classList.remove('open');
+            }
+            
+            if (e.ctrlKey) {
+                switch(e.key) {
+                    case '1':
+                        e.preventDefault();
+                        switchTab('speaker');
+                        break;
+                    case '2':
+                        e.preventDefault();
+                        switchTab('results');
+                        break;
+                }
+            }
+        });
+    </script>
+</body>
+</html>
