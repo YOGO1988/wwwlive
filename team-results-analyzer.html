@@ -461,8 +461,8 @@
                 </div>
                 <div class="info-box">
                     <strong>Przykłady:</strong><br>
-                    • 5 osób, min. 1: drużyna może być 4M+1K, 3M+2K, 2M+3K, 1M+4K<br>
-                    • 5 osób, min. 2: drużyna może być 3M+2K, 2M+3K<br>
+                    • 5 osób, min. 1: <strong>każda płeć</strong> musi mieć min. 1 osobę → możliwe 4M+1K, 3M+2K, 2M+3K, 1M+4K<br>
+                    • 5 osób, min. 2: <strong>każda płeć</strong> musi mieć min. 2 osoby → możliwe 3M+2K, 2M+3K<br>
                     • 6 osób, min. 0: dowolny skład (6M, 5M+1K, 4M+2K, itd.)
                 </div>
             </div>
@@ -831,10 +831,8 @@
 
                     // Sprawdź czy kombinacja spełnia wymagania minimum
                     if (minGender > 0) {
-                        // Obie płcie muszą mieć co najmniej minGender lub suma = teamSize
-                        if (m < minGender && w < minGender) continue;
-                        if (m > 0 && m < minGender && w !== teamSize) continue;
-                        if (w > 0 && w < minGender && m !== teamSize) continue;
+                        // Obie płcie muszą mieć co najmniej minGender osób
+                        if (m < minGender || w < minGender) continue;
                     }
 
                     const selectedMen = men.slice(0, m);
