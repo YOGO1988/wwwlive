@@ -552,15 +552,17 @@ class ChronoTrackApiClient:
         while has_more_pages and page <= max_pages:
             print(f"Pobieranie strony {page} wyników OPEN...")
             
-            # MINIMALNE parametry zgodne z systemem PHP (linia 240-244 class-chronotrack-api.php)
-            # PHP używa TYLKO: format, page, per_page
-            # Dodatkowe parametry mogą powodować że API nie zwraca results_division_rank!
+            # Parametry zgodne z systemem PHP + uwierzytelnienie (linia 240-244 class-chronotrack-api.php)
             params = {
                 'page': page,
                 'per_page': 100,  # PHP używa per_page zamiast size!
-                'format': 'json'
+                'format': 'json',
+                # KRYTYCZNE: uwierzytelnienie (bez tego 401 Unauthorized!)
+                'client_id': self.config['clientId'],
+                'user_id': self.config['userId'],
+                'user_pass': self.config['userPass']
             }
-            
+
             if reg_choice_id:
                 params['reg_choice'] = reg_choice_id
             
