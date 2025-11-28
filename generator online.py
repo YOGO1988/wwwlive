@@ -672,12 +672,17 @@ class ChronoTrackApiClient:
                 'status': main_result.get('results_status', 'OK'),
                 'penalties': main_result.get('results_penalties', ''),
                 # Formatowane wersje czasów
-                'formatted_net_time': self.format_time(main_result.get('results_time', '')), 
+                'formatted_net_time': self.format_time(main_result.get('results_time', '')),
                 'formatted_gun_time': self.format_time(main_result.get('results_gun_time', '')),
                 'formatted_pace': self.format_pace(main_result.get('results_pace', ''))
             }
-            
-            
+
+            # 🔍 LOGOWANIE KATEGORII I MIEJSC (zgodnie z systemem PHP)
+            print(f"BIB {bib}: kategoria='{mapped_result['bracket_name']}', "
+                  f"division_place='{mapped_result['division_place']}', "
+                  f"overall_place='{mapped_result['overall_place']}', "
+                  f"gender_place='{mapped_result['gender_place']}'")
+
             # ⭐ OBSŁUGA WIELU PUNKTÓW KONTROLNYCH - POPRAWIONA WERSJA
             if data['split_times']:
                 # Najpierw sprawdź czy rzeczywiście są split times
@@ -783,12 +788,19 @@ class ChronoTrackApiClient:
                 else:
                     mapped_result['athlete_city'] = hometown
             
-            # Custom elements
+            # Custom elements - przetwarzaj zgodnie z process_custom_elements (odrzucaj "Tak")
             for key, value in main_result.items():
                 if key not in mapped_result and key.startswith('custom_element'):
-                    mapped_result[key] = value
-                    if key.startswith('custom_element') and value:
-                        mapped_result['club'] = value
+                    # Pomiń puste wartości i odpowiedzi "Tak" (tak jak w system PHP live)
+                    if value is not None and value != '' and value != 'Tak':
+                        mapped_result[key] = value
+                        # Użyj jako klub tylko jeśli jeszcze nie mamy klubu i wartość nie jest "Tak"
+                        if ('club' not in mapped_result or not mapped_result['club']) and value:
+                            mapped_result['club'] = value
+                            print(f"BIB {bib}: ustawiono klub z {key}: {value}")
+                    # Jeśli odpowiedź to "Tak", zapisz w custom_2 (zgodnie z process_custom_elements)
+                    elif value == 'Tak':
+                        mapped_result['custom_2'] = value
             
             mapped_results.append(mapped_result)
         
@@ -893,8 +905,11 @@ class ChronoTrackApiClient:
                     for athlete in mapped_results:
                         if athlete['entry_bib']:
                             if athlete['entry_bib'] in self.cache['athletes']:
-                                # Aktualizuj tylko miejsce w kategorii płci
-                                self.cache['athletes'][athlete['entry_bib']]['gender_place'] = athlete['gender_place']
+                                # Aktualizuj tylko miejsce w kategorii płci, TYLKO jeśli nowa wartość nie jest pusta
+                                if athlete.get('gender_place'):
+                                    old_value = self.cache['athletes'][athlete['entry_bib']].get('gender_place', '')
+                                    self.cache['athletes'][athlete['entry_bib']]['gender_place'] = athlete['gender_place']
+                                    print(f"BIB {athlete['entry_bib']}: zaktualizowano gender_place z '{old_value}' na '{athlete['gender_place']}'")
                             else:
                                 # Dodaj nowego zawodnika do cache
                                 self.cache['athletes'][athlete['entry_bib']] = athlete
@@ -976,10 +991,27 @@ class ChronoTrackApiClient:
                     if athlete['entry_bib']:
                         # Zaktualizuj dane zawodnika w cache
                         if athlete['entry_bib'] in self.cache['athletes']:
-                            self.cache['athletes'][athlete['entry_bib']]['division_place'] = athlete['division_place']
+                            # KRYTYCZNA ZMIANA: Aktualizuj division_place TYLKO jeśli:
+                            # 1. Nowa wartość nie jest pusta
+                            # 2. Albo stara wartość była pusta
+                            # To zapewnia że custom kategorie (np. "Policja") zachowają swoje miejsca z fetch_open_results()
+                            new_place = athlete.get('division_place', '')
+                            old_place = self.cache['athletes'][athlete['entry_bib']].get('division_place', '')
+                            old_category = self.cache['athletes'][athlete['entry_bib']].get('bracket_name', '')
+                            new_category = athlete.get('bracket_name', '')
+
+                            if new_place:  # Jeśli mamy nową wartość
+                                # Aktualizuj miejsce
+                                self.cache['athletes'][athlete['entry_bib']]['division_place'] = new_place
+                                print(f"BIB {athlete['entry_bib']}: zaktualizowano division_place z '{old_place}' na '{new_place}' (kategoria: {old_category} → {new_category})")
+                            else:
+                                # Zachowaj starą wartość (może to być custom kategoria)
+                                print(f"BIB {athlete['entry_bib']}: zachowano division_place='{old_place}' dla kategorii '{old_category}' (bracket=AGE nie znalazł tego zawodnika)")
                         else:
+                            # Dodaj nowego zawodnika do cache
                             self.cache['athletes'][athlete['entry_bib']] = athlete
-                    
+                            print(f"BIB {athlete['entry_bib']}: dodano do cache z division_place='{athlete.get('division_place', '')}', kategoria='{athlete.get('bracket_name', '')}'")
+
                     if athlete['bracket_name']:
                         if athlete['bracket_name'] not in age_categories:
                             age_categories[athlete['bracket_name']] = []
