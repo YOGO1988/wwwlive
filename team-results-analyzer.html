@@ -452,8 +452,8 @@
                         <input type="number" id="flexibleTeamSize" min="1" max="20" value="5">
                     </div>
                     <div class="schema-input">
-                        <label>Minimalna liczba z jednej płci</label>
-                        <input type="number" id="flexibleMinGender" min="0" max="10" value="1">
+                        <label>Minimalna liczba z każdej płci</label>
+                        <input type="number" id="flexibleMinGender" min="1" max="10" value="1">
                     </div>
                     <button class="btn btn-primary" onclick="calculateResults()" disabled>
                         🧮 Oblicz ranking
@@ -463,7 +463,8 @@
                     <strong>Przykłady:</strong><br>
                     • 5 osób, min. 1: <strong>każda płeć</strong> musi mieć min. 1 osobę → możliwe 4M+1K, 3M+2K, 2M+3K, 1M+4K<br>
                     • 5 osób, min. 2: <strong>każda płeć</strong> musi mieć min. 2 osoby → możliwe 3M+2K, 2M+3K<br>
-                    • 6 osób, min. 0: dowolny skład (6M, 5M+1K, 4M+2K, itd.)
+                    • 6 osób, min. 3: <strong>każda płeć</strong> musi mieć min. 3 osoby → możliwe tylko 3M+3K<br>
+                    <strong>💡 Dla dowolnego składu użyj trybu "Bez podziału"</strong>
                 </div>
             </div>
 
