@@ -552,19 +552,13 @@ class ChronoTrackApiClient:
         while has_more_pages and page <= max_pages:
             print(f"Pobieranie strony {page} wyników OPEN...")
             
+            # MINIMALNE parametry zgodne z systemem PHP (linia 240-244 class-chronotrack-api.php)
+            # PHP używa TYLKO: format, page, per_page
+            # Dodatkowe parametry mogą powodować że API nie zwraca results_division_rank!
             params = {
-                'page': page, 
-                'size': 100,
-                'format': 'json',
-                'client_id': self.config['clientId'],
-                'user_id': self.config['userId'],
-                'user_pass': self.config['userPass'],
-                'elide_json': False,
-                'contact_details': True,
-                'include_all_fields': True,
-                'need_athlete_birthdate': True,
-                'need_transaction_account': True,
-                'interval': 'ALL'  # ⭐ KLUCZOWY PARAMETR dla czasów międzyczasowych
+                'page': page,
+                'per_page': 100,  # PHP używa per_page zamiast size!
+                'format': 'json'
             }
             
             if reg_choice_id:
@@ -677,11 +671,28 @@ class ChronoTrackApiClient:
                 'formatted_pace': self.format_pace(main_result.get('results_pace', ''))
             }
 
-            # 🔍 LOGOWANIE KATEGORII I MIEJSC (zgodnie z systemem PHP)
-            print(f"BIB {bib}: kategoria='{mapped_result['bracket_name']}', "
-                  f"division_place='{mapped_result['division_place']}', "
-                  f"overall_place='{mapped_result['overall_place']}', "
-                  f"gender_place='{mapped_result['gender_place']}'")
+            # 🔍 SZCZEGÓŁOWE LOGOWANIE - sprawdź co API FAKTYCZNIE zwraca
+            if mapped_result['bracket_name'] not in ['M20-29', 'M30-39', 'M40-49', 'M50-59', 'M60+',
+                                                       'K20-29', 'K30-39', 'K40-49', 'K50-59', 'K60+', '']:
+                # To custom kategoria (np. Policja, Strażacy)
+                print(f"\n{'='*80}")
+                print(f"🚨 CUSTOM KATEGORIA - BIB {bib}: '{mapped_result['bracket_name']}'")
+                print(f"   RAW API results_division_rank: '{main_result.get('results_division_rank', 'BRAK KLUCZA')}'")
+                print(f"   RAW API results_rank: '{main_result.get('results_rank', 'BRAK KLUCZA')}'")
+                print(f"   RAW API results_sex_rank: '{main_result.get('results_sex_rank', 'BRAK KLUCZA')}'")
+                print(f"   RAW API results_bracket_rank: '{main_result.get('results_bracket_rank', 'BRAK KLUCZA')}'")
+                print(f"   RAW API results_category_rank: '{main_result.get('results_category_rank', 'BRAK KLUCZA')}'")
+                print(f"   Zmapowane division_place: '{mapped_result['division_place']}'")
+                print(f"   Zmapowane overall_place: '{mapped_result['overall_place']}'")
+                print(f"   Zmapowane gender_place: '{mapped_result['gender_place']}'")
+                print(f"{'='*80}\n")
+
+            # Dodaj aliasy dla różnych nazw pól (zgodnie z systemem PHP)
+            # PHP używa category_position jako podstawowego pola
+            mapped_result['category_position'] = mapped_result['division_place']
+            mapped_result['category_place'] = mapped_result['division_place']
+            mapped_result['bracket_place'] = mapped_result['division_place']
+            mapped_result['results_division_rank'] = mapped_result['division_place']
 
             # ⭐ OBSŁUGA WIELU PUNKTÓW KONTROLNYCH - POPRAWIONA WERSJA
             if data['split_times']:
@@ -805,13 +816,18 @@ class ChronoTrackApiClient:
             mapped_results.append(mapped_result)
         
         # ⭐ STATYSTYKI PUNKTÓW KONTROLNYCH
-        print(f"STATYSTYKI SPLIT TIMES:")
+        print(f"\n{'='*80}")
+        print(f"STATYSTYKI SPLIT TIMES (międzyczasów):")
         print(f"- Zawodnicy z punktami kontrolnymi: {split_stats['with_splits']}")
         print(f"- Zawodnicy bez punktów kontrolnych: {split_stats['without_splits']}")
         print(f"- Łączna liczba punktów kontrolnych: {split_stats['total_splits']}")
         if split_stats['with_splits'] > 0:
             avg_splits = split_stats['total_splits'] / split_stats['with_splits']
             print(f"- Średnio punktów kontrolnych na zawodnika: {avg_splits:.1f}")
+        else:
+            print(f"⚠️  UWAGA: Brak międzyczasów! Może to być problem z parametrami API.")
+            print(f"   Sprawdź czy API wymaga parametru 'interval=ALL' dla split times.")
+        print(f"{'='*80}\n")
         
         # Reszta kodu (reg_choice_name, cache itp.)
         for athlete in mapped_results:
