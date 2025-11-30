@@ -185,6 +185,67 @@ class ChronoTrack_API {
     }
 
     /**
+     * Fetch intervals (checkpoints) from ChronoTrack API
+     * This provides list of all checkpoints with distances
+     */
+    public function fetch_intervals($event_id) {
+        error_log("ChronoTrack API: Fetching intervals for event {$event_id}");
+
+        $all_intervals = array();
+        $page = 1;
+        $has_more_pages = true;
+
+        while ($has_more_pages) {
+            $params = array(
+                'format' => 'json',
+                'page' => $page,
+                'size' => 50,
+            );
+
+            $endpoint = "/api/event/{$event_id}/interval";
+            $response = $this->make_api_request($endpoint, $params);
+
+            if ($response && isset($response['intervals']) && !empty($response['intervals'])) {
+                error_log("ChronoTrack API: Page {$page}: found " . count($response['intervals']) . " intervals");
+
+                foreach ($response['intervals'] as $interval) {
+                    $interval_name = $interval['interval_name'] ?? '';
+                    if (!empty($interval_name)) {
+                        $distance_m = floatval($interval['interval_iv_distance_m'] ?? 0);
+                        $distance_km = $distance_m > 0 ? round($distance_m / 1000, 2) : 0;
+
+                        $all_intervals[] = array(
+                            'interval_name' => $interval_name,
+                            'interval_id' => $interval['interval_id'] ?? '',
+                            'distance_m' => $distance_m,
+                            'distance_km' => $distance_km,
+                            'race_name' => $interval['race_name'] ?? '',
+                        );
+                        error_log("ChronoTrack API: Found interval: {$interval_name} at {$distance_km} km in {$interval['race_name']}");
+                    }
+                }
+
+                // Check for more pages
+                if (isset($response['page']) && isset($response['page_count'])) {
+                    $has_more_pages = intval($response['page']) < intval($response['page_count']);
+                } elseif (count($response['intervals']) >= 50) {
+                    $has_more_pages = true;
+                } else {
+                    $has_more_pages = false;
+                }
+
+                $page++;
+            } else {
+                error_log('ChronoTrack API: No intervals on this page');
+                $has_more_pages = false;
+            }
+        }
+
+        error_log("ChronoTrack API: Fetched " . count($all_intervals) . " intervals total");
+        return $all_intervals;
+    }
+
+    /**
      * Fetch participant entries from ChronoTrack API
      * This provides additional data like city, club, custom fields
      */
@@ -279,7 +340,7 @@ class ChronoTrack_API {
     }
 
     /**
-     * Fetch results from ChronoTrack API with pagination and brackets
+     * Fetch results from ChronoTrack API with pagination, brackets, and intervals
      */
     public function fetch_results($event_id) {
         error_log("ChronoTrack API: Fetching results for event {$event_id}");
@@ -290,12 +351,15 @@ class ChronoTrack_API {
         // Step 2: Fetch all brackets (categories)
         $brackets = $this->fetch_brackets($event_id);
 
+        // Step 3: Fetch all intervals (checkpoints)
+        $intervals = $this->fetch_intervals($event_id);
+
         $all_results_by_bib = array();
 
-        // Step 3: Fetch results for each bracket to get proper division_rank
+        // Step 4: Fetch FINISH results for each bracket to get proper division_rank
         foreach ($brackets as $bracket) {
             $bracket_name = $bracket['bracket_name'];
-            error_log("ChronoTrack API: Fetching results for bracket: {$bracket_name}");
+            error_log("ChronoTrack API: Fetching FINISH results for bracket: {$bracket_name}");
 
             $page = 1;
             $has_more_pages = true;
@@ -314,7 +378,6 @@ class ChronoTrack_API {
                 if ($response && isset($response['event_results']) && !empty($response['event_results'])) {
                     error_log("ChronoTrack API: Bracket '{$bracket_name}' page {$page}: found " . count($response['event_results']) . " records");
 
-                    // Process results from this page
                     foreach ($response['event_results'] as $result) {
                         $bib = $result['results_bib'] ?? '';
                         if (empty($bib)) {
@@ -327,50 +390,25 @@ class ChronoTrack_API {
                                 'main_result' => null,
                                 'split_times' => array(),
                                 'bracket_positions' => array(),
+                                'interval_details' => array(),
                             );
                         }
 
                         $interval_name = $result['results_interval_name'] ?? '';
 
-                        // Check if this is main result or split time
+                        // Check if this is main result (finish)
                         if (in_array($interval_name, array('Full Course', 'Finish', '')) || empty($interval_name)) {
-                            // Main result
                             if ($all_results_by_bib[$bib]['main_result'] === null) {
                                 $all_results_by_bib[$bib]['main_result'] = $result;
                             }
 
-                            // Store bracket position (division_rank for this bracket)
                             $division_rank = $result['results_division_rank'] ?? 0;
                             if ($division_rank > 0) {
                                 $all_results_by_bib[$bib]['bracket_positions'][$bracket_name] = $division_rank;
-                                error_log("ChronoTrack API: BIB {$bib} in bracket '{$bracket_name}': position {$division_rank}");
-                            }
-                        } else {
-                            // Split time
-                            $split_data = array(
-                                'interval_name' => $interval_name,
-                                'time' => $result['results_time'] ?? '',
-                                'pace' => $result['results_pace'] ?? '',
-                                'formatted_time' => $this->format_time($result['results_time'] ?? ''),
-                                'formatted_pace' => $this->format_pace($result['results_pace'] ?? ''),
-                            );
-
-                            // Check if we already have this split for this bib
-                            $existing = false;
-                            foreach ($all_results_by_bib[$bib]['split_times'] as $existing_split) {
-                                if ($existing_split['interval_name'] === $interval_name) {
-                                    $existing = true;
-                                    break;
-                                }
-                            }
-
-                            if (!$existing) {
-                                $all_results_by_bib[$bib]['split_times'][] = $split_data;
                             }
                         }
                     }
 
-                    // Check for more pages
                     if (isset($response['page']) && isset($response['page_count'])) {
                         $has_more_pages = intval($response['page']) < intval($response['page_count']);
                     } elseif (count($response['event_results']) >= 50) {
@@ -381,8 +419,119 @@ class ChronoTrack_API {
 
                     $page++;
                 } else {
-                    error_log("ChronoTrack API: No results for bracket '{$bracket_name}' on page {$page}");
                     $has_more_pages = false;
+                }
+            }
+        }
+
+        // Step 5: Fetch interval results with detailed bracket positions
+        foreach ($intervals as $interval) {
+            $interval_name = $interval['interval_name'];
+            $interval_distance_km = $interval['distance_km'];
+
+            error_log("ChronoTrack API: Fetching interval results for: {$interval_name} ({$interval_distance_km} km)");
+
+            // 5a: Fetch overall positions at this interval
+            $page = 1;
+            $has_more_pages = true;
+
+            while ($has_more_pages) {
+                $params = array(
+                    'format' => 'json',
+                    'page' => $page,
+                    'size' => 50,
+                    'interval' => $interval_name,
+                );
+
+                $endpoint = "/api/event/{$event_id}/results";
+                $response = $this->make_api_request($endpoint, $params);
+
+                if ($response && isset($response['event_results']) && !empty($response['event_results'])) {
+                    foreach ($response['event_results'] as $result) {
+                        $bib = $result['results_bib'] ?? '';
+                        if (empty($bib)) {
+                            continue;
+                        }
+
+                        if (!isset($all_results_by_bib[$bib])) {
+                            $all_results_by_bib[$bib] = array(
+                                'main_result' => null,
+                                'split_times' => array(),
+                                'bracket_positions' => array(),
+                                'interval_details' => array(),
+                            );
+                        }
+
+                        // Initialize interval details
+                        if (!isset($all_results_by_bib[$bib]['interval_details'][$interval_name])) {
+                            $all_results_by_bib[$bib]['interval_details'][$interval_name] = array(
+                                'interval_name' => $interval_name,
+                                'distance_km' => $interval_distance_km,
+                                'time' => $this->format_time($result['results_time'] ?? ''),
+                                'pace' => $this->format_pace($result['results_pace'] ?? ''),
+                                'overall_position' => $result['results_rank'] ?? 0,
+                                'bracket_positions' => array(),
+                            );
+                        }
+                    }
+
+                    if (isset($response['page']) && isset($response['page_count'])) {
+                        $has_more_pages = intval($response['page']) < intval($response['page_count']);
+                    } elseif (count($response['event_results']) >= 50) {
+                        $has_more_pages = true;
+                    } else {
+                        $has_more_pages = false;
+                    }
+
+                    $page++;
+                } else {
+                    $has_more_pages = false;
+                }
+            }
+
+            // 5b: Fetch bracket positions at this interval
+            foreach ($brackets as $bracket) {
+                $bracket_name = $bracket['bracket_name'];
+
+                $page = 1;
+                $has_more_pages = true;
+
+                while ($has_more_pages) {
+                    $params = array(
+                        'format' => 'json',
+                        'page' => $page,
+                        'size' => 50,
+                        'interval' => $interval_name,
+                        'bracket' => $bracket_name,
+                    );
+
+                    $endpoint = "/api/event/{$event_id}/results";
+                    $response = $this->make_api_request($endpoint, $params);
+
+                    if ($response && isset($response['event_results']) && !empty($response['event_results'])) {
+                        foreach ($response['event_results'] as $result) {
+                            $bib = $result['results_bib'] ?? '';
+                            $division_rank = $result['results_division_rank'] ?? 0;
+
+                            if (!empty($bib) && $division_rank > 0) {
+                                if (isset($all_results_by_bib[$bib]['interval_details'][$interval_name])) {
+                                    $all_results_by_bib[$bib]['interval_details'][$interval_name]['bracket_positions'][$bracket_name] = $division_rank;
+                                }
+                            }
+                        }
+
+                        if (isset($response['page']) && isset($response['page_count'])) {
+                            $has_more_pages = intval($response['page']) < intval($response['page_count']);
+                        } elseif (count($response['event_results']) >= 50) {
+                            $has_more_pages = true;
+                        } else {
+                            $has_more_pages = false;
+                        }
+
+                        $page++;
+                    } else {
+                        $has_more_pages = false;
+                    }
                 }
             }
         }
@@ -400,8 +549,8 @@ class ChronoTrack_API {
             $result = $data['main_result'];
             $entry = $entries_by_bib[$bib] ?? array();
 
-            // Pass bracket positions to process_single_result
-            $processed_result = $this->process_single_result($result, $data['split_times'], $entry, $data['bracket_positions']);
+            // Pass all data to process_single_result
+            $processed_result = $this->process_single_result($result, $data['split_times'], $entry, $data['bracket_positions'], $data['interval_details']);
             if ($processed_result) {
                 $processed_results[] = $processed_result;
             }
@@ -421,7 +570,7 @@ class ChronoTrack_API {
      * Process single result from API
      * Merges result data with entry data (for city, club, etc.)
      */
-    private function process_single_result($result, $split_times = array(), $entry = array(), $bracket_positions = array()) {
+    private function process_single_result($result, $split_times = array(), $entry = array(), $bracket_positions = array(), $interval_details = array()) {
         // Sort split times by time (shortest first)
         usort($split_times, function($a, $b) {
             return $this->parse_time_to_seconds($a['formatted_time']) - $this->parse_time_to_seconds($b['formatted_time']);
@@ -457,6 +606,30 @@ class ChronoTrack_API {
         } else {
             // Fallback to results_division_rank
             $category_position = $result['results_division_rank'] ?? 0;
+        }
+
+        // Process interval details - filter out invalid positions
+        $filtered_interval_details = array();
+        foreach ($interval_details as $interval_name => $interval_data) {
+            // Filter bracket positions - tylko te gdzie zawodnik brał udział (miejsce > 0)
+            $valid_bracket_positions = array();
+            foreach ($interval_data['bracket_positions'] as $bracket_name => $position) {
+                if ($position > 0 && $position !== '-') {
+                    $valid_bracket_positions[$bracket_name] = $position;
+                }
+            }
+
+            // Include interval only if athlete participated (has overall position or bracket positions)
+            if ($interval_data['overall_position'] > 0 || !empty($valid_bracket_positions)) {
+                $filtered_interval_details[$interval_name] = array(
+                    'interval_name' => $interval_data['interval_name'],
+                    'distance_km' => $interval_data['distance_km'],
+                    'time' => $interval_data['time'],
+                    'pace' => $interval_data['pace'],
+                    'overall_position' => $interval_data['overall_position'],
+                    'bracket_positions' => $valid_bracket_positions,
+                );
+            }
         }
 
         return array(
@@ -500,6 +673,7 @@ class ChronoTrack_API {
             'pace' => $this->format_pace($result['results_pace'] ?? ''),
             'formatted_pace' => $this->format_pace($result['results_pace'] ?? ''),  // Alternative
             'split_times' => $split_times,
+            'interval_details' => $filtered_interval_details,
             'finish_timestamp' => current_time('mysql'),
             'status' => $result['results_status'] ?? 'OK',
         );
