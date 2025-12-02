@@ -24,6 +24,7 @@ class ChronoTrack_Database {
             event_id varchar(255) NOT NULL,
             event_name varchar(255) NOT NULL,
             event_date datetime NOT NULL,
+            location varchar(255),
             event_logo_url text,
             sponsor_logo_url text,
             event_status varchar(50) DEFAULT 'active',
@@ -128,6 +129,7 @@ class ChronoTrack_Database {
             'event_id' => sanitize_text_field($event_data['event_id']),
             'event_name' => sanitize_text_field($event_data['event_name']),
             'event_date' => sanitize_text_field($event_data['event_date']),
+            'location' => sanitize_text_field($event_data['location'] ?? ''),
             'event_logo_url' => esc_url_raw($event_data['event_logo_url'] ?? ''),
             'sponsor_logo_url' => esc_url_raw($event_data['sponsor_logo_url'] ?? ''),
             'event_status' => sanitize_text_field($event_data['event_status'] ?? 'active'),
@@ -146,7 +148,7 @@ class ChronoTrack_Database {
                 $table,
                 $data,
                 array('event_id' => $data['event_id']),
-                array('%s', '%s', '%s', '%s', '%s', '%s', '%d', '%s'),
+                array('%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%s'),
                 array('%s')
             );
             return $existing->id;

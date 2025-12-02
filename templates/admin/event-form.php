@@ -66,6 +66,22 @@ $is_edit = $event !== null;
 
             <tr>
                 <th scope="row">
+                    <label for="location"><?php _e('Location', 'chronotrack-live'); ?></label>
+                </th>
+                <td>
+                    <input type="text"
+                           id="location"
+                           name="location"
+                           value="<?php echo $is_edit ? esc_attr($event->location ?? '') : ''; ?>"
+                           class="regular-text">
+                    <p class="description">
+                        <?php _e('Event location/city (auto-filled from API)', 'chronotrack-live'); ?>
+                    </p>
+                </td>
+            </tr>
+
+            <tr>
+                <th scope="row">
                     <label for="event_status"><?php _e('Event Status', 'chronotrack-live'); ?></label>
                 </th>
                 <td>
