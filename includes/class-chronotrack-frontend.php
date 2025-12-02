@@ -172,6 +172,46 @@ class ChronoTrack_Frontend {
             body.chronotrack-page .hfeed {
                 padding: 20px !important;
             }
+
+            /* FORCE VISIBILITY - Block all overlays and loading screens */
+            body.chronotrack-page .chronotrack-results-container {
+                position: relative !important;
+                z-index: 1 !important;
+                background: #fff !important;
+                visibility: visible !important;
+                opacity: 1 !important;
+            }
+
+            /* Hide ALL overlay/loading elements from theme */
+            body.chronotrack-page .et_pb_section_video_bg,
+            body.chronotrack-page .et-pb-icon,
+            body.chronotrack-page .et_pb_preload,
+            body.chronotrack-page [class*="loading"],
+            body.chronotrack-page [class*="overlay"]:not(.chronotrack-modal),
+            body.chronotrack-page [id*="loading"]:not(.chronotrack-loading),
+            body.chronotrack-page [id*="overlay"]:not(.chronotrack-modal),
+            body.chronotrack-page::before,
+            body.chronotrack-page::after {
+                display: none !important;
+                visibility: hidden !important;
+                opacity: 0 !important;
+                z-index: -1 !important;
+            }
+
+            /* Ensure page background is white */
+            body.chronotrack-page {
+                background: #fff !important;
+            }
+
+            /* Prevent Divi from hiding content */
+            body.chronotrack-page .entry-content,
+            body.chronotrack-page .et_pb_section,
+            body.chronotrack-page #main-content,
+            body.chronotrack-page #et-main-area {
+                opacity: 1 !important;
+                visibility: visible !important;
+                display: block !important;
+            }
         </style>
         <?php
     }
