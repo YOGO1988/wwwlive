@@ -176,7 +176,7 @@ class ChronoTrack_Frontend {
             /* FORCE VISIBILITY - Block all overlays and loading screens */
             body.chronotrack-page .chronotrack-results-container {
                 position: relative !important;
-                z-index: 1 !important;
+                z-index: 10000 !important;
                 background: #fff !important;
                 visibility: visible !important;
                 opacity: 1 !important;
@@ -186,16 +186,28 @@ class ChronoTrack_Frontend {
             body.chronotrack-page .et_pb_section_video_bg,
             body.chronotrack-page .et-pb-icon,
             body.chronotrack-page .et_pb_preload,
-            body.chronotrack-page [class*="loading"],
+            body.chronotrack-page [class*="loading"]:not(.chronotrack-loading),
             body.chronotrack-page [class*="overlay"]:not(.chronotrack-modal),
             body.chronotrack-page [id*="loading"]:not(.chronotrack-loading),
-            body.chronotrack-page [id*="overlay"]:not(.chronotrack-modal),
-            body.chronotrack-page::before,
-            body.chronotrack-page::after {
+            body.chronotrack-page [id*="overlay"]:not(.chronotrack-modal) {
                 display: none !important;
                 visibility: hidden !important;
                 opacity: 0 !important;
-                z-index: -1 !important;
+                pointer-events: none !important;
+                z-index: -9999 !important;
+                position: absolute !important;
+                left: -9999px !important;
+            }
+
+            /* Kill ALL pseudo-elements that could create overlays */
+            body.chronotrack-page::before,
+            body.chronotrack-page::after,
+            body.chronotrack-page *:not(.chronotrack-results-container):not(.chronotrack-results-container *)::before,
+            body.chronotrack-page *:not(.chronotrack-results-container):not(.chronotrack-results-container *)::after {
+                display: none !important;
+                content: none !important;
+                visibility: hidden !important;
+                opacity: 0 !important;
             }
 
             /* Ensure page background is white */
@@ -213,6 +225,27 @@ class ChronoTrack_Frontend {
                 display: block !important;
             }
         </style>
+        <script type="text/javascript">
+            // KILL Divi JavaScript overlays
+            (function() {
+                // Remove overlays every 100ms
+                setInterval(function() {
+                    var overlays = document.querySelectorAll('[class*="loading"]:not(.chronotrack-loading), [class*="overlay"]:not(.chronotrack-modal), [id*="loading"]:not(.chronotrack-loading), [id*="overlay"]:not(.chronotrack-modal)');
+                    overlays.forEach(function(el) {
+                        if (!el.closest('.chronotrack-results-container') && !el.classList.contains('chronotrack-loading') && !el.classList.contains('chronotrack-modal')) {
+                            el.remove();
+                        }
+                    });
+                }, 100);
+
+                // Stop Divi animations on load
+                document.addEventListener('DOMContentLoaded', function() {
+                    if (typeof ET_PageBuilder !== 'undefined' && ET_PageBuilder.Modules && ET_PageBuilder.Modules.stop) {
+                        ET_PageBuilder.Modules.stop();
+                    }
+                });
+            })();
+        </script>
         <?php
     }
 
