@@ -3,7 +3,7 @@
  * Plugin Name: ChronoTrack Live Results
  * Plugin URI: https://yogoevents.pl
  * Description: Live race results from ChronoTrack with automatic page generation and multi-event support
- * Version: 3.9.4
+ * Version: 4.0.7
  * Author: YOGO Events
  * Author URI: https://yogoevents.pl
  * Text Domain: chronotrack-live
@@ -20,7 +20,7 @@ if (!defined('ABSPATH')) {
 }
 
 // Define plugin constants
-define('CHRONOTRACK_LIVE_VERSION', '3.9.4');
+define('CHRONOTRACK_LIVE_VERSION', '4.0.7');
 define('CHRONOTRACK_LIVE_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('CHRONOTRACK_LIVE_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('CHRONOTRACK_LIVE_PLUGIN_FILE', __FILE__);
@@ -31,6 +31,7 @@ require_once CHRONOTRACK_LIVE_PLUGIN_DIR . 'includes/class-chronotrack-admin.php
 require_once CHRONOTRACK_LIVE_PLUGIN_DIR . 'includes/class-chronotrack-frontend.php';
 require_once CHRONOTRACK_LIVE_PLUGIN_DIR . 'includes/class-chronotrack-ajax.php';
 require_once CHRONOTRACK_LIVE_PLUGIN_DIR . 'includes/class-chronotrack-api.php';
+require_once CHRONOTRACK_LIVE_PLUGIN_DIR . 'includes/class-chronotrack-pdf-generator.php';
 
 /**
  * Main ChronoTrack Live Results Class
@@ -44,6 +45,7 @@ class ChronoTrack_Live_Results {
     public $frontend;
     public $ajax;
     public $api;
+    public $pdf;
 
     /**
      * Get singleton instance
@@ -76,6 +78,7 @@ class ChronoTrack_Live_Results {
         $this->frontend = new ChronoTrack_Frontend();
         $this->ajax = new ChronoTrack_Ajax();
         $this->api = new ChronoTrack_API();
+        $this->pdf = new ChronoTrack_PDF_Generator();
 
         // Enqueue scripts and styles
         add_action('wp_enqueue_scripts', array($this, 'enqueue_frontend_assets'));
@@ -102,21 +105,50 @@ class ChronoTrack_Live_Results {
             CHRONOTRACK_LIVE_VERSION
         );
 
+        // Enqueue country flags helper (before main script)
+        wp_enqueue_script(
+            'chronotrack-country-flags',
+            CHRONOTRACK_LIVE_PLUGIN_URL . 'assets/js/country-flags.js',
+            array(),
+            CHRONOTRACK_LIVE_VERSION,
+            true
+        );
+
         // Enqueue JavaScript
         wp_enqueue_script(
             'chronotrack-live',
             CHRONOTRACK_LIVE_PLUGIN_URL . 'assets/js/chronotrack-live.js',
-            array('jquery'),
+            array('jquery', 'chronotrack-country-flags'),
             CHRONOTRACK_LIVE_VERSION,
             true
         );
+
+        // Get event data for auto-refresh logic
+        global $post;
+        $event = null;
+        $event_status = 'live'; // Default fallback
+        $event_date = '';
+
+        if ($post) {
+            $db = chronotrack_live_results()->db;
+            $event = $db->get_event_by_page($post->ID);
+            if ($event) {
+                $event_status = $event->event_status ?? 'live';
+                $event_date = $event->event_date ?? '';
+            }
+        }
 
         // Localize script with data
         wp_localize_script('chronotrack-live', 'chronotrackData', array(
             'ajaxUrl' => admin_url('admin-ajax.php'),
             'nonce' => wp_create_nonce('chronotrack_nonce'),
+            'adminNonce' => wp_create_nonce('chronotrack_admin_nonce'),
             'eventId' => get_the_ID(),
             'refreshInterval' => get_option('chronotrack_refresh_interval', 5000),
+            'eventStatus' => $event_status,
+            'eventDate' => $event_date,
+            'wpTimezone' => wp_timezone_string(), // WordPress timezone setting
+            'userCanGeneratePDF' => current_user_can('manage_options'), // Only admins can generate PDF
             'strings' => array(
                 'loading' => __('Loading results...', 'chronotrack-live'),
                 'error' => __('Error loading results', 'chronotrack-live'),

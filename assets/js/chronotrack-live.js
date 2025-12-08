@@ -46,49 +46,12 @@
 
             console.log('✅ chronotrackData loaded:', chronotrackData);
 
-            // Remove WordPress sidebar completely from DOM
-            this.removeSidebar();
-
             this.bindEvents();
 
-            // Start auto-refresh immediately (user wants this!)
-            this.startAutoRefresh();
+            // Check event status and start auto-refresh based on status and time
+            this.checkEventStatusAndStartRefresh();
 
             console.log('=== ChronoTrack Live Init END ===');
-        },
-
-        removeSidebar: function() {
-            // Aggressively remove all sidebar elements
-            const sidebarSelectors = [
-                '#secondary',
-                'aside.sidebar',
-                '.sidebar',
-                '.widget-area',
-                '#sidebar',
-                '[id*="sidebar"]',
-                '[class*="sidebar"]:not(.chronotrack-distance-filters)',
-                'aside:not(.chronotrack-results-container)'
-            ];
-
-            sidebarSelectors.forEach(selector => {
-                $(selector).remove();
-            });
-
-            // Force full width layout
-            $('.site-content, .hfeed, #content').css({
-                'display': 'block',
-                'width': '100%',
-                'max-width': '100%',
-                'grid-template-columns': 'none'
-            });
-
-            $('#primary, .content-area, article, main').css({
-                'width': '100%',
-                'max-width': '100%',
-                'flex': '0 0 100%'
-            });
-
-            console.log('✅ Sidebar removed from DOM');
         },
 
         bindEvents: function() {
@@ -131,11 +94,11 @@
                 }
             });
 
-            // Manual refresh button
-            $(document).on('click', '.chronotrack-manual-refresh', (e) => {
+            // Manual refresh button (both old button and new icon)
+            $(document).on('click', '.chronotrack-manual-refresh, .chronotrack-manual-refresh-icon', (e) => {
                 e.preventDefault();
-                console.log('🔄 Manual refresh triggered');
-                this.loadResults(this.currentView);
+                console.log('🔄 Manual refresh triggered - fetching from API');
+                this.refreshFromAPI();
             });
 
             // Toggle auto-refresh
@@ -148,6 +111,12 @@
                     this.startAutoRefresh();
                     $(e.currentTarget).text('Wyłącz auto-odświeżanie');
                 }
+            });
+
+            // Generate PDF button
+            $(document).on('click', '.chronotrack-generate-pdf-btn', (e) => {
+                e.preventDefault();
+                this.generatePDF();
             });
         },
 
@@ -247,6 +216,73 @@
             });
         },
 
+        refreshFromAPI: function() {
+            // Prevent concurrent requests
+            if (this.isLoading) {
+                console.log('⏳ Already loading, skipping...');
+                return;
+            }
+
+            this.isLoading = true;
+            this.showLoading();
+
+            console.log('📡 Refreshing from API for event:', this.eventId);
+
+            $.ajax({
+                url: chronotrackData.ajaxUrl,
+                type: 'POST',
+                data: {
+                    action: 'chronotrack_refresh_results',
+                    event_id: this.eventId,
+                    nonce: chronotrackData.nonce
+                },
+                timeout: 60000, // 60 seconds for API fetch
+                success: (response) => {
+                    if (response.success) {
+                        console.log('✅ API refresh successful:', response.data.count, 'results');
+                        this.consecutiveErrors = 0;
+
+                        // CRITICAL FIX: Update distances and columns from refresh response
+                        if (response.data.distances && response.data.distances.length > 0) {
+                            this.distances = response.data.distances;
+                            console.log('📏 Distances updated from refresh:', this.distances.length);
+                            this.renderDistanceButtons();
+                        }
+
+                        if (response.data.columns && response.data.columns.length > 0) {
+                            this.columns = response.data.columns;
+                            console.log('📋 Columns updated from refresh:', this.columns.length);
+                        }
+
+                        // After API refresh, reload from cache to get full data
+                        this.loadResults(this.currentView);
+                    } else {
+                        console.error('❌ API refresh failed:', response.data.message);
+                        this.showError(response.data.message || 'Błąd odświeżania');
+                        this.consecutiveErrors++;
+                    }
+                },
+                error: (xhr, status, error) => {
+                    console.error('❌ AJAX error during API refresh:', {status, error, xhr});
+                    this.consecutiveErrors++;
+
+                    let errorMsg = 'Błąd pobierania wyników z API';
+                    if (status === 'timeout') {
+                        errorMsg = 'Przekroczono limit czasu (60s) - API powolne lub nieaktywny event';
+                    } else if (xhr.status === 0) {
+                        errorMsg = 'Brak połączenia z serwerem';
+                    }
+
+                    this.showError(errorMsg);
+                },
+                complete: () => {
+                    console.log('✅ API refresh complete');
+                    this.isLoading = false;
+                    this.hideLoading();
+                }
+            });
+        },
+
         renderResults: function(results) {
             console.log('🎨 renderResults called, results:', results ? results.length : 'NULL');
             const tbody = $('#chronotrack-results-body');
@@ -256,6 +292,9 @@
                 tbody.html('<tr><td colspan="20" class="chronotrack-no-results">Brak wyników</td></tr>');
                 return;
             }
+
+            // Remove "Brak wyników" row if it exists
+            tbody.find('.chronotrack-no-results').closest('tr').remove();
 
             // Build a map of existing rows by bib_number (unique identifier)
             const existingRows = {};
@@ -272,12 +311,14 @@
                 console.log('🔍 First result data:', {
                     bib: results[0].bib_number,
                     name: results[0].full_name,
+                    gender: results[0].gender,
                     category_position: results[0].category_position,
                     gender_position: results[0].gender_position,
                     city: results[0].city,
                     club: results[0].club,
                     distance: results[0].distance
                 });
+                console.log('📊 All fields available:', Object.keys(results[0]));
             }
 
             // Update or add each result
@@ -317,6 +358,16 @@
                 row.remove();
             });
 
+            // CRITICAL FIX: Apply filters after rendering (for initial load)
+            // This ensures newly added rows are filtered if a distance is selected
+            if (this.selectedDistance) {
+                console.log('🔄 Applying distance filter after render:', this.selectedDistance);
+                this.filterResults();
+            } else {
+                // Just recolor if no filters active
+                this.recolorRows(tbody);
+            }
+
             console.log('✅ Rendered', results.length, 'results (background update, preserved filters)');
         },
 
@@ -324,7 +375,8 @@
             const row = $('<tr>')
                 .attr('data-result-id', result.id)
                 .attr('data-bib', result.bib_number)
-                .attr('data-distance', result.distance || '');
+                .attr('data-distance', result.distance || '')
+                .attr('data-bracket-positions', JSON.stringify(result.bracket_positions || {}));
 
             // Use dynamic columns if available
             if (this.columns && this.columns.length > 0) {
@@ -332,36 +384,53 @@
                     const value = this.getColumnValue(result, column);
                     const cell = $('<td>').addClass('col-' + column.id);
 
-                    // Special formatting for full_name - make it clickable
+                    // Special formatting for full_name - make it clickable with flag
                     if (column.id === 'full_name' || column.id.includes('name')) {
+                        // Add country flag before name if available
+                        let flagEmoji = '';
+                        if (result.country && typeof CountryFlags !== 'undefined') {
+                            flagEmoji = CountryFlags.getFlag(result.country);
+                            if (flagEmoji) {
+                                flagEmoji = flagEmoji + ' '; // Add space after flag
+                            }
+                        }
+
                         const nameLink = $('<a>')
                             .attr('href', '#')
                             .addClass('chronotrack-view-details')
                             .attr('data-participant-id', result.participant_id)
-                            .html('<strong>' + this.escapeHtml(value) + '</strong>');
+                            .html(flagEmoji + '<strong>' + this.escapeHtml(value) + '</strong>');
                         cell.append(nameLink);
                     } else {
-                        cell.text(value);
+                        cell.text(this.cleanValue(value));
                     }
 
                     row.append(cell);
                 });
             } else {
                 // Fallback to hardcoded columns
-                row.append($('<td>').addClass('col-position').text(result.position));
-                row.append($('<td>').addClass('col-bib').text(result.bib_number));
+                row.append($('<td>').addClass('col-position').text(this.cleanValue(result.position)));
+                row.append($('<td>').addClass('col-bib').text(this.cleanValue(result.bib_number)));
 
-                // Make name clickable in fallback mode too
+                // Make name clickable in fallback mode too (with flag)
+                let flagEmoji = '';
+                if (result.country && typeof CountryFlags !== 'undefined') {
+                    flagEmoji = CountryFlags.getFlag(result.country);
+                    if (flagEmoji) {
+                        flagEmoji = flagEmoji + ' '; // Add space after flag
+                    }
+                }
+
                 const nameLink = $('<a>')
                     .attr('href', '#')
                     .addClass('chronotrack-view-details')
                     .attr('data-participant-id', result.participant_id)
-                    .html('<strong>' + this.escapeHtml(result.full_name) + '</strong>');
+                    .html(flagEmoji + '<strong>' + this.escapeHtml(result.full_name) + '</strong>');
                 row.append($('<td>').addClass('col-name').append(nameLink));
 
-                row.append($('<td>').addClass('col-category').text(result.category));
-                row.append($('<td>').addClass('col-club').text(result.club));
-                row.append($('<td>').addClass('col-time').text(result.finish_time));
+                row.append($('<td>').addClass('col-category').text(this.cleanValue(result.category)));
+                row.append($('<td>').addClass('col-club').text(this.cleanValue(result.club)));
+                row.append($('<td>').addClass('col-time').text(this.cleanValue(result.finish_time)));
             }
 
             // No separate actions column - name is now clickable
@@ -385,8 +454,49 @@
                         }
                     }
 
-                    // Try direct attribute
-                    if (result.hasOwnProperty(attr) && result[attr] !== null && result[attr] !== '') {
+                    // CRITICAL FIX: Handle category_position with bracket_positions fallback
+                    if ((attr === 'category_position' || attr === 'division_place' || attr === 'results_division_rank')) {
+                        let catPosition = result[attr];
+
+                        // If category_position is 0 or empty, try to get from bracket_positions
+                        if ((!catPosition || catPosition == 0) && result.bracket_positions && typeof result.bracket_positions === 'object') {
+                            // PRIORITY 1: If we have category name (e.g., "M50"), look for matching bracket position
+                            const categoryName = result.category || result.bracket_name || result.results_primary_bracket_name || '';
+                            if (categoryName && result.bracket_positions[categoryName] && result.bracket_positions[categoryName] > 0) {
+                                return result.bracket_positions[categoryName];
+                            }
+
+                            // PRIORITY 2: Use first NON-SEX bracket with position > 0
+                            const brackets = Object.keys(result.bracket_positions);
+                            let fallbackPosition = 0;
+
+                            for (let j = 0; j < brackets.length; j++) {
+                                const bracketName = brackets[j];
+                                const position = result.bracket_positions[bracketName];
+                                if (position && position > 0) {
+                                    // Skip SEX brackets (M, K, F) if we can find other brackets
+                                    if (!['M', 'K', 'F', 'Male', 'Female'].includes(bracketName)) {
+                                        return position;  // Found non-SEX bracket
+                                    } else if (fallbackPosition === 0) {
+                                        fallbackPosition = position;  // Store SEX as fallback
+                                    }
+                                }
+                            }
+
+                            // PRIORITY 3: Use SEX bracket as last resort
+                            if (fallbackPosition > 0) {
+                                return fallbackPosition;
+                            }
+                        }
+
+                        // Return category_position if it exists and > 0
+                        if (catPosition && catPosition > 0) {
+                            return catPosition;
+                        }
+                    }
+
+                    // Try direct attribute - accept 0 as valid value (except for category_position handled above)
+                    if (result.hasOwnProperty(attr) && result[attr] !== null && result[attr] !== undefined && result[attr] !== '') {
                         return result[attr];
                     }
                 }
@@ -417,7 +527,7 @@
             const finishTime = new Date(result.finish_timestamp).toLocaleTimeString();
 
             row.append($('<td>').addClass('col-finish-time').text(finishTime));
-            row.append($('<td>').addClass('col-bib').text(result.bib_number));
+            row.append($('<td>').addClass('col-bib').text(this.cleanValue(result.bib_number)));
 
             // Make name clickable
             const nameLink = $('<a>')
@@ -427,10 +537,10 @@
                 .html('<strong>' + this.escapeHtml(result.full_name) + '</strong>');
             row.append($('<td>').addClass('col-name').append(nameLink));
 
-            row.append($('<td>').addClass('col-category').text(result.category));
-            row.append($('<td>').addClass('col-club').text(result.club));
-            row.append($('<td>').addClass('col-time').text(result.finish_time));
-            row.append($('<td>').addClass('col-position').text(result.position));
+            row.append($('<td>').addClass('col-category').text(this.cleanValue(result.category)));
+            row.append($('<td>').addClass('col-club').text(this.cleanValue(result.club)));
+            row.append($('<td>').addClass('col-time').text(this.cleanValue(result.finish_time)));
+            row.append($('<td>').addClass('col-position').text(this.cleanValue(result.position)));
 
             // No separate actions column - name is now clickable
 
@@ -452,7 +562,6 @@
         filterResults: function() {
             const searchTerm = $('#chronotrack-search').val().toLowerCase();
             const category = $('#chronotrack-category-filter').val();
-            const gender = $('#chronotrack-gender-filter').val();
             const distance = this.selectedDistance;
 
             const tbody = this.currentView === 'meta' ?
@@ -466,6 +575,17 @@
                 const rowCategory = row.find('.col-category').text();
                 const rowDistance = row.attr('data-distance') || '';
 
+                // Get bracket positions from data attribute
+                let bracketPositions = {};
+                try {
+                    const bracketData = row.attr('data-bracket-positions');
+                    if (bracketData) {
+                        bracketPositions = JSON.parse(bracketData);
+                    }
+                } catch (e) {
+                    // Ignore parse errors
+                }
+
                 let show = true;
 
                 // Search filter
@@ -473,9 +593,15 @@
                     show = false;
                 }
 
-                // Category filter
-                if (category && rowCategory !== category) {
-                    show = false;
+                // Category filter - check both category column AND bracket_positions
+                if (category) {
+                    // Check if participant belongs to this bracket
+                    const belongsToBracket = Object.keys(bracketPositions).includes(category);
+                    const matchesCategory = rowCategory === category;
+
+                    if (!belongsToBracket && !matchesCategory) {
+                        show = false;
+                    }
                 }
 
                 // Distance filter
@@ -485,28 +611,77 @@
 
                 row.toggle(show);
             });
+
+            // Recolor visible rows alternately
+            this.recolorRows(tbody);
+        },
+
+        recolorRows: function(tbody) {
+            // Remove old classes
+            tbody.find('tr').removeClass('row-even row-odd');
+
+            // Add classes to visible rows only
+            let visibleIndex = 0;
+            tbody.find('tr:visible').each(function() {
+                if (visibleIndex % 2 === 0) {
+                    $(this).addClass('row-even');
+                } else {
+                    $(this).addClass('row-odd');
+                }
+                visibleIndex++;
+            });
         },
 
         populateFilters: function(results) {
-            const categories = new Set();
+            const brackets = new Set();
 
+            // CRITICAL FIX: Filter brackets by selected distance
+            const currentDistance = this.selectedDistance;
+
+            // Collect unique brackets from bracket_positions for SELECTED DISTANCE ONLY
             results.forEach((result) => {
+                // Skip if distance doesn't match current filter
+                if (currentDistance && result.distance !== currentDistance) {
+                    return;
+                }
+
+                if (result.bracket_positions && typeof result.bracket_positions === 'object') {
+                    Object.keys(result.bracket_positions).forEach((bracketName) => {
+                        brackets.add(bracketName);
+                    });
+                }
+                // Fallback: also add category field if available
                 if (result.category) {
-                    categories.add(result.category);
+                    brackets.add(result.category);
                 }
             });
 
             const categorySelect = $('#chronotrack-category-filter');
             const currentValue = categorySelect.val();
 
-            categorySelect.find('option:not(:first)').remove();
-            Array.from(categories).sort().forEach((category) => {
+            // Remove all options
+            categorySelect.find('option').remove();
+
+            // Add "Open" option to show all results
+            categorySelect.append(
+                $('<option>').val('').text('Open (wszystkie)')
+            );
+
+            // Add categories sorted alphabetically
+            Array.from(brackets).sort().forEach((bracket) => {
                 categorySelect.append(
-                    $('<option>').val(category).text(category)
+                    $('<option>').val(bracket).text(bracket)
                 );
             });
 
-            categorySelect.val(currentValue);
+            // Restore previous value if it exists
+            const optionExists = Array.from(categorySelect.find('option')).some(opt => opt.value === currentValue);
+            if (optionExists) {
+                categorySelect.val(currentValue);
+            } else {
+                // Default to "Open" (show all)
+                categorySelect.val('');
+            }
         },
 
         showParticipantDetails: function(participantId) {
@@ -521,7 +696,7 @@
                 },
                 success: (response) => {
                     if (response.success) {
-                        this.renderParticipantDetails(response.data.participant);
+                        this.renderParticipantDetails(response.data.participant, response.data.event);
                         this.openModal();
                     } else {
                         alert(response.data.message);
@@ -534,39 +709,140 @@
             });
         },
 
-        renderParticipantDetails: function(participant) {
+        renderParticipantDetails: function(participant, event) {
             // Polish translations for participant details
             let html = '<div class="chronotrack-participant-details">';
-            html += '<h2>' + this.escapeHtml(participant.full_name) + '</h2>';
-            html += '<div class="chronotrack-details-grid">';
+
+            // Add country flag before name if available
+            let flagEmoji = '';
+            if (participant.country && typeof CountryFlags !== 'undefined') {
+                flagEmoji = CountryFlags.getFlag(participant.country);
+                if (flagEmoji) {
+                    flagEmoji = flagEmoji + ' '; // Add space after flag
+                }
+            }
+
+            html += '<h2>' + flagEmoji + this.escapeHtml(participant.full_name) + '</h2>';
+
+            // Event info header
+            if (event) {
+                html += '<div class="chronotrack-event-info-header">';
+                if (event.name) {
+                    html += '<div class="event-info-item"><strong>Bieg:</strong> ' + this.escapeHtml(event.name) + '</div>';
+                }
+                if (event.date) {
+                    const eventDate = new Date(event.date);
+                    const formattedDate = eventDate.toLocaleDateString('pl-PL', { year: 'numeric', month: 'long', day: 'numeric' });
+                    html += '<div class="event-info-item"><strong>Data:</strong> ' + formattedDate + '</div>';
+                }
+                if (participant.distance) {
+                    html += '<div class="event-info-item"><strong>Dystans:</strong> ' + this.escapeHtml(participant.distance) + '</div>';
+                }
+                html += '</div>';
+            }
+
+            // CHANGED: 2-column layout with split times below
+            html += '<div class="chronotrack-details-grid-2col">';
+
+            // Column 1: Basic info
+            html += '<div class="chronotrack-details-column">';
 
             // Basic info - Podstawowe informacje
             html += '<div class="chronotrack-details-section">';
             html += '<h3>Podstawowe informacje</h3>';
             html += '<table class="chronotrack-details-table">';
-            html += '<tr><th>Numer startowy:</th><td>' + this.escapeHtml(participant.bib_number) + '</td></tr>';
-            html += '<tr><th>Wiek:</th><td>' + participant.age + '</td></tr>';
-            html += '<tr><th>Płeć:</th><td>' + this.escapeHtml(participant.gender) + '</td></tr>';
-            html += '<tr><th>Miejscowość:</th><td>' + this.escapeHtml(participant.city) + '</td></tr>';
-            html += '<tr><th>Klub:</th><td>' + this.escapeHtml(participant.club) + '</td></tr>';
-            html += '<tr><th>Kategoria:</th><td>' + this.escapeHtml(participant.category) + '</td></tr>';
+            html += '<tr><th>Numer startowy:</th><td>' + this.escapeHtml(this.cleanValue(participant.bib_number)) + '</td></tr>';
+            html += '<tr><th>Płeć:</th><td>' + this.escapeHtml(this.cleanValue(participant.gender)) + '</td></tr>';
+            html += '<tr><th>Miejscowość:</th><td>' + this.escapeHtml(this.cleanValue(participant.city)) + '</td></tr>';
+            html += '<tr><th>Klub:</th><td>' + this.escapeHtml(this.cleanValue(participant.club)) + '</td></tr>';
             html += '</table>';
             html += '</div>';
 
-            // Results - Wyniki
+            html += '</div>'; // End column 1
+
+            // Column 2: Results + Bracket positions (ONLY with position > 0)
+            html += '<div class="chronotrack-details-column">';
             html += '<div class="chronotrack-details-section">';
             html += '<h3>Wyniki</h3>';
             html += '<table class="chronotrack-details-table">';
-            html += '<tr><th>Miejsce Open:</th><td class="chronotrack-position">' + participant.position + '</td></tr>';
-            html += '<tr><th>Miejsce w kategorii:</th><td class="chronotrack-position">' + participant.category_position + '</td></tr>';
-            html += '<tr><th>Miejsce M/K:</th><td class="chronotrack-position">' + participant.gender_position + '</td></tr>';
+            html += '<tr><th>Miejsce Open:</th><td class="chronotrack-position">' + this.formatPosition(participant.position) + '</td></tr>';
+            html += '<tr><th>Miejsce M/K:</th><td class="chronotrack-position">' + this.formatPosition(participant.gender_position) + '</td></tr>';
+
+            // CRITICAL FIX: Add bracket positions HERE (in Results section), ONLY if position > 0
+            if (participant.bracket_positions && Object.keys(participant.bracket_positions).length > 0) {
+                const sortedBrackets = Object.keys(participant.bracket_positions).sort();
+                sortedBrackets.forEach((bracketName) => {
+                    const position = participant.bracket_positions[bracketName];
+                    // ONLY show brackets with actual position (> 0)
+                    if (position && position > 0) {
+                        // CRITICAL FIX: Skip SEX brackets (M, K, F) if they duplicate gender_position
+                        // This prevents showing "Miejsce M/K: 6" and then "M: 6" (redundant)
+                        const isSexBracket = ['M', 'K', 'F', 'Male', 'Female', 'Mężczyźni', 'Kobiety'].includes(bracketName);
+                        if (isSexBracket && position == participant.gender_position) {
+                            return; // Skip this bracket - it's already shown as "Miejsce M/K"
+                        }
+
+                        html += '<tr><th>' + this.escapeHtml(bracketName) + ':</th><td class="chronotrack-position">' + position + '</td></tr>';
+                    }
+                });
+            }
+
             html += '<tr><th>Czas brutto:</th><td class="chronotrack-time">' + this.escapeHtml(participant.finish_time) + '</td></tr>';
             html += '<tr><th>Czas netto:</th><td class="chronotrack-time">' + this.escapeHtml(participant.net_time) + '</td></tr>';
+
             html += '</table>';
             html += '</div>';
+            html += '</div>'; // End column 2
 
-            html += '</div>';
-            html += '</div>';
+            html += '</div>'; // End grid-2col
+
+            // Split Times BELOW the 2-column layout (full width)
+            if (participant.split_times && participant.split_times.length > 0) {
+                html += '<div class="chronotrack-details-section chronotrack-splits-full-width">';
+                html += '<h3>Międzyczasy</h3>';
+                html += '<table class="chronotrack-details-table">';
+                participant.split_times.forEach((split) => {
+                    if (split.interval_name && split.formatted_time) {
+                        // Build interval name with distance in km if available
+                        let intervalLabel = this.escapeHtml(split.interval_name);
+                        if (split.distance_km) {
+                            intervalLabel += ' (' + this.escapeHtml(split.distance_km) + ')';
+                        }
+
+                        html += '<tr>';
+                        html += '<th>' + intervalLabel + ':</th>';
+                        html += '<td>';
+                        html += '<span class="chronotrack-time">' + this.escapeHtml(split.formatted_time) + '</span>';
+                        // Add position if available - AFTER the time
+                        if (split.position && split.position > 0) {
+                            html += ' <span class="chronotrack-split-position">(mce: ' + split.position + ')</span>';
+                        }
+                        html += '</td>';
+                        html += '</tr>';
+                    }
+                });
+
+                // Add META (finish line) at the end with finish time and overall position
+                html += '<tr>';
+                html += '<th>Meta:</th>';
+                html += '<td>';
+                html += '<span class="chronotrack-time">' + this.escapeHtml(participant.finish_time) + '</span>';
+                if (participant.position && participant.position > 0) {
+                    html += ' <span class="chronotrack-split-position">(mce: ' + participant.position + ')</span>';
+                }
+                // Add pace with unit if available
+                if (participant.pace) {
+                    const paceUnit = 'min/km'; // Default assumption for metric
+                    html += ' <span class="chronotrack-pace">(' + this.escapeHtml(participant.pace) + ' ' + paceUnit + ')</span>';
+                }
+                html += '</td>';
+                html += '</tr>';
+
+                html += '</table>';
+                html += '</div>';
+            }
+
+            html += '</div>'; // End participant-details
 
             $('#chronotrack-modal-body').html(html);
         },
@@ -585,15 +861,14 @@
 
             container.empty();
 
-            // Add "Wszystkie" (All) button
-            const allBtn = $('<button>')
-                .addClass('chronotrack-distance-filter-btn')
-                .addClass(this.selectedDistance === '' ? 'active' : '')
-                .attr('data-distance', '')
-                .text('Wszystkie');
-            container.append(allBtn);
+            // Auto-select first distance if nothing selected
+            const wasEmpty = !this.selectedDistance;
+            if (!this.selectedDistance && this.distances.length > 0) {
+                this.selectedDistance = this.distances[0];
+                console.log('📏 Auto-selected first distance:', this.selectedDistance);
+            }
 
-            // Add buttons for each distance
+            // Add buttons for each distance (no "Wszystkie" button)
             this.distances.forEach((distance) => {
                 const btn = $('<button>')
                     .addClass('chronotrack-distance-filter-btn')
@@ -602,6 +877,28 @@
                     .text(distance);
                 container.append(btn);
             });
+
+            // Add "Generuj PDF" button if there's a selected distance
+            if (this.selectedDistance && chronotrackData.userCanGeneratePDF) {
+                const pdfBtn = $('<button>')
+                    .addClass('chronotrack-generate-pdf-btn')
+                    .html('📄 Generuj PDF')
+                    .attr('data-distance', this.selectedDistance)
+                    .css({
+                        'margin-left': '20px',
+                        'background': '#28a745',
+                        'color': '#fff',
+                        'border': '1px solid #28a745',
+                        'padding': '8px 16px',
+                        'border-radius': '4px',
+                        'cursor': 'pointer',
+                        'font-size': '14px'
+                    });
+                container.append(pdfBtn);
+            }
+
+            // NOTE: Don't call filterResults() here - it will be called in renderResults()
+            // after rows are actually added to the table
         },
 
         selectDistance: function(distance) {
@@ -612,27 +909,142 @@
             $('.chronotrack-distance-filter-btn').removeClass('active');
             $('.chronotrack-distance-filter-btn[data-distance="' + distance + '"]').addClass('active');
 
+            // CRITICAL FIX: Update category filter to show only categories for this distance
+            // Get all results from table to repopulate filters
+            const tbody = this.currentView === 'meta' ?
+                $('#chronotrack-meta-body') :
+                $('#chronotrack-results-body');
+
+            const results = [];
+            tbody.find('tr[data-bib]').each(function() {
+                const row = $(this);
+                const result = {
+                    distance: row.attr('data-distance'),
+                    category: row.find('.col-category').text(),
+                    bracket_positions: {}
+                };
+                try {
+                    const bracketData = row.attr('data-bracket-positions');
+                    if (bracketData) {
+                        result.bracket_positions = JSON.parse(bracketData);
+                    }
+                } catch (e) {
+                    // Ignore
+                }
+                results.push(result);
+            });
+
+            this.populateFilters(results);  // Update category filter for selected distance
+
             // Filter results
             this.filterResults();
         },
 
+        checkEventStatusAndStartRefresh: function() {
+            const status = chronotrackData.eventStatus || 'live';
+            const eventDate = chronotrackData.eventDate;
+
+            console.log('📊 Event status:', status, 'Event date:', eventDate);
+
+            // Handle different event statuses
+            if (status === 'completed') {
+                // Event is completed - show final results, NO auto-refresh
+                console.log('🏁 Event completed - showing final results (no auto-refresh)');
+                this.loadResults(this.currentView);  // Load once from database
+                this.showUpcomingMessage('Zawody zakończone. Poniżej znajdują się wyniki finalne.', false);
+                return;
+            }
+
+            if (status === 'upcoming' && eventDate) {
+                // Event is upcoming - check if it's time to start
+                const now = new Date();
+                const startTime = new Date(eventDate);
+
+                console.log('⏰ Current time:', now);
+                console.log('⏰ Event start time:', startTime);
+
+                if (now < startTime) {
+                    // Still before event start - show countdown, NO auto-refresh yet
+                    const hours = Math.floor((startTime - now) / (1000 * 60 * 60));
+                    const minutes = Math.floor(((startTime - now) % (1000 * 60 * 60)) / (1000 * 60));
+
+                    const formattedDate = startTime.toLocaleDateString('pl-PL', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+
+                    let countdownMsg = 'Zawody rozpoczną się ' + formattedDate;
+                    if (hours > 0) {
+                        countdownMsg += ' (za ' + hours + 'h ' + minutes + 'min)';
+                    } else if (minutes > 0) {
+                        countdownMsg += ' (za ' + minutes + ' minut)';
+                    } else {
+                        countdownMsg += ' (już niebawem!)';
+                    }
+
+                    console.log('⏳ Event not started yet:', countdownMsg);
+                    this.showUpcomingMessage(countdownMsg, true);
+
+                    // Check every minute if it's time to start
+                    setInterval(() => {
+                        const nowCheck = new Date();
+                        if (nowCheck >= startTime) {
+                            console.log('🚀 Event time reached! Starting auto-refresh...');
+                            location.reload(); // Reload page to start auto-refresh
+                        }
+                    }, 60000); // Check every minute
+
+                    return;
+                }
+            }
+
+            // Status is 'live' OR 'upcoming' with time passed - start auto-refresh
+            console.log('▶️ Event is LIVE - starting auto-refresh');
+            this.startAutoRefresh();
+        },
+
+        showUpcomingMessage: function(message, showEmptyTable) {
+            // Show message above results area
+            const container = $('.chronotrack-results-container');
+            const messageHtml = '<div class="chronotrack-upcoming-message" style="' +
+                'padding: 20px; ' +
+                'margin: 20px 0; ' +
+                'background: #fff3cd; ' +
+                'border: 1px solid #ffc107; ' +
+                'border-radius: 4px; ' +
+                'text-align: center; ' +
+                'font-size: 16px; ' +
+                'font-weight: 600; ' +
+                'color: #856404;">' +
+                message +
+                '</div>';
+
+            container.find('.chronotrack-controls').after(messageHtml);
+
+            if (!showEmptyTable) {
+                // Hide distance filters and category filter for completed events
+                container.find('.chronotrack-distance-filters').hide();
+                container.find('.chronotrack-filters').hide();
+            }
+        },
+
         startAutoRefresh: function() {
-            // Max 10 seconds for incremental updates
-            const interval = 10000; // 10 seconds
+            // Fetch from API every 60 seconds for live updates
+            const interval = 60000; // 60 seconds
             this.currentInterval = interval;
 
-            console.log('▶️ Starting auto-refresh with interval:', interval + 'ms (10s incremental)');
+            console.log('▶️ Starting auto-refresh with interval:', interval + 'ms (60s API fetch)');
 
-            // Incremental updates every 10 seconds
+            // CRITICAL FIX: Initial load from CACHE (fast), then API fetch every 60s
+            this.loadResults(this.currentView);  // Fast load from database
+
+            // Fetch fresh data from API every 60 seconds
             this.refreshInterval = setInterval(() => {
-                this.loadResults(this.currentView);
+                this.refreshFromAPI();  // Fetch from API
             }, interval);
-
-            // Full check every 60 seconds
-            this.fullCheckInterval = setInterval(() => {
-                console.log('🔄 Full check (60s interval)');
-                this.loadResults(this.currentView);
-            }, 60000); // 60 seconds
         },
 
         stopAutoRefresh: function() {
@@ -656,13 +1068,13 @@
             this.stopAutoRefresh();
             const finalInterval = Math.min(newInterval, 10000); // Max 10 seconds
             this.refreshInterval = setInterval(() => {
-                this.loadResults(this.currentView);
+                this.refreshFromAPI();  // Fetch from API, not cache
             }, finalInterval);
 
             // Keep full check at 60 seconds
             this.fullCheckInterval = setInterval(() => {
                 console.log('🔄 Full check (60s interval)');
-                this.loadResults(this.currentView);
+                this.refreshFromAPI();  // Fetch from API, not cache
             }, 60000);
         },
 
@@ -677,15 +1089,99 @@
         },
 
         showLoading: function() {
-            $('.chronotrack-loading').show();
+            $('.chronotrack-loading-row').show();
         },
 
         hideLoading: function() {
-            $('.chronotrack-loading').hide();
+            $('.chronotrack-loading-row').hide();
         },
 
         showError: function(message) {
             console.error('ChronoTrack Error:', message);
+        },
+
+        /**
+         * Format any value - clean empty values (-, 0, null)
+         */
+        cleanValue: function(value) {
+            if (value === '-' || value === 0 || value === '0' || value === '' || value === null || value === undefined || value === 'null') {
+                return '';
+            }
+            return value;
+        },
+
+        /**
+         * Format position - show empty string if position is 0
+         */
+        formatPosition: function(value) {
+            return this.cleanValue(value);
+        },
+
+        /**
+         * Format club - show empty string if club is '-'
+         */
+        formatClub: function(value) {
+            return this.cleanValue(value);
+        },
+
+        /**
+         * Generate PDF for currently selected distance
+         */
+        generatePDF: function() {
+            if (!this.selectedDistance) {
+                alert('Proszę wybrać dystans przed generowaniem PDF.');
+                return;
+            }
+
+            const btn = $('.chronotrack-generate-pdf-btn');
+            const originalHtml = btn.html();
+
+            // Show loading state
+            btn.prop('disabled', true).html('⏳ Generowanie PDF...');
+
+            console.log('📄 Generating PDF for distance:', this.selectedDistance);
+
+            $.ajax({
+                url: chronotrackData.ajaxUrl,
+                method: 'POST',
+                data: {
+                    action: 'chronotrack_generate_pdf',
+                    nonce: chronotrackData.adminNonce,
+                    event_id: chronotrackData.eventId,
+                    distance: this.selectedDistance
+                },
+                success: (response) => {
+                    console.log('✅ PDF generation response:', response);
+
+                    if (response.success) {
+                        // Create download link
+                        const downloadLink = $('<a>')
+                            .attr('href', response.data.download_url)
+                            .attr('download', response.data.filename)
+                            .css('display', 'none')
+                            .appendTo('body');
+
+                        // Trigger download
+                        downloadLink[0].click();
+
+                        // Clean up
+                        setTimeout(() => downloadLink.remove(), 100);
+
+                        // Show success message
+                        alert('PDF wygenerowany pomyślnie! Pobieranie rozpoczęte.');
+                    } else {
+                        alert('Błąd: ' + (response.data.message || 'Nie udało się wygenerować PDF.'));
+                    }
+                },
+                error: (xhr, status, error) => {
+                    console.error('❌ PDF generation failed:', error, xhr.responseText);
+                    alert('Błąd podczas generowania PDF. Sprawdź czy TCPDF jest zainstalowany.');
+                },
+                complete: () => {
+                    // Restore button state
+                    btn.prop('disabled', false).html(originalHtml);
+                }
+            });
         },
 
         escapeHtml: function(text) {

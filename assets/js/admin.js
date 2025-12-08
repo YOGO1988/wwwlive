@@ -36,11 +36,7 @@
                             const formatted = date.toISOString().slice(0, 16);
                             $('#event_date').val(formatted);
                         }
-                        if (response.data.location) {
-                            $('#location').val(response.data.location);
-                            console.log('Miejscowość pobrana: ' + response.data.location);
-                        }
-                        alert('Dane pobrane z ChronoTrack API!\n\nNazwa: ' + response.data.event_name + '\nData: ' + response.data.event_date + '\nMiejscowość: ' + response.data.location);
+                        alert('Dane wydarzenia pobrane z ChronoTrack API!');
                     }
                 },
                 error: function() {

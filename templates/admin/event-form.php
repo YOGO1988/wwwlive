@@ -31,73 +31,55 @@ $is_edit = $event !== null;
                            class="regular-text"
                            required
                            <?php echo $is_edit ? 'readonly' : ''; ?>>
+                    <?php if (!$is_edit): ?>
+                        <button type="button" id="fetch-from-api" class="button" style="margin-left: 10px;">
+                            <?php _e('Pobierz z API', 'chronotrack-live'); ?>
+                        </button>
+                        <span id="api-fetch-status" style="margin-left: 10px;"></span>
+                    <?php endif; ?>
                     <p class="description">
-                        <?php _e('The event ID from ChronoTrack system (e.g., 89080)', 'chronotrack-live'); ?>
+                        <?php _e('Enter ChronoTrack Event ID (e.g., 89332) and click "Pobierz z API" to fetch event details.', 'chronotrack-live'); ?>
                     </p>
+
+                    <!-- Hidden fields for API data -->
+                    <input type="hidden" id="event_name" name="event_name" value="<?php echo $is_edit ? esc_attr($event->event_name) : ''; ?>">
+                    <input type="hidden" id="event_date" name="event_date" value="<?php echo $is_edit ? esc_attr($event->event_date) : ''; ?>">
+                    <input type="hidden" id="event_location" name="event_location" value="<?php echo $is_edit ? esc_attr($event->event_location ?? '') : ''; ?>">
+
+                    <div id="event-info-preview" style="margin-top: 10px; padding: 10px; background: #f0f0f1; border-left: 4px solid #2271b1; display: none;">
+                        <p style="margin: 0;"><strong><?php _e('Event Name:', 'chronotrack-live'); ?></strong> <span id="preview-name"></span></p>
+                        <p style="margin: 5px 0;"><strong><?php _e('Event Date:', 'chronotrack-live'); ?></strong> <span id="preview-date"></span></p>
+                        <p style="margin: 5px 0 0 0;"><strong><?php _e('Location:', 'chronotrack-live'); ?></strong> <span id="preview-location"></span></p>
+                    </div>
+
+                    <?php if ($is_edit): ?>
+                        <div style="margin-top: 10px; padding: 10px; background: #f0f0f1; border-left: 4px solid #2271b1;">
+                            <p style="margin: 0;"><strong><?php _e('Event Name:', 'chronotrack-live'); ?></strong> <?php echo esc_html($event->event_name); ?></p>
+                            <p style="margin: 5px 0;"><strong><?php _e('Event Date:', 'chronotrack-live'); ?></strong> <?php echo date_i18n(get_option('date_format') . ' ' . get_option('time_format'), strtotime($event->event_date)); ?></p>
+                            <p style="margin: 5px 0 0 0;"><strong><?php _e('Location:', 'chronotrack-live'); ?></strong> <?php echo esc_html($event->event_location ?? 'N/A'); ?></p>
+                        </div>
+                    <?php endif; ?>
                 </td>
             </tr>
 
             <tr>
                 <th scope="row">
-                    <label for="event_name"><?php _e('Event Name', 'chronotrack-live'); ?> *</label>
-                </th>
-                <td>
-                    <input type="text"
-                           id="event_name"
-                           name="event_name"
-                           value="<?php echo $is_edit ? esc_attr($event->event_name) : ''; ?>"
-                           class="regular-text"
-                           required>
-                </td>
-            </tr>
-
-            <tr>
-                <th scope="row">
-                    <label for="event_date"><?php _e('Event Date', 'chronotrack-live'); ?> *</label>
-                </th>
-                <td>
-                    <input type="datetime-local"
-                           id="event_date"
-                           name="event_date"
-                           value="<?php echo $is_edit ? esc_attr(date('Y-m-d\TH:i', strtotime($event->event_date))) : ''; ?>"
-                           required>
-                </td>
-            </tr>
-
-            <tr>
-                <th scope="row">
-                    <label for="location"><?php _e('Location', 'chronotrack-live'); ?></label>
-                </th>
-                <td>
-                    <input type="text"
-                           id="location"
-                           name="location"
-                           value="<?php echo $is_edit ? esc_attr($event->location ?? '') : ''; ?>"
-                           class="regular-text">
-                    <p class="description">
-                        <?php _e('Event location/city (auto-filled from API)', 'chronotrack-live'); ?>
-                    </p>
-                </td>
-            </tr>
-
-            <tr>
-                <th scope="row">
-                    <label for="event_status"><?php _e('Event Status', 'chronotrack-live'); ?></label>
+                    <label for="event_status"><?php _e('Status', 'chronotrack-live'); ?></label>
                 </th>
                 <td>
                     <select id="event_status" name="event_status">
-                        <option value="active" <?php echo ($is_edit && $event->event_status === 'active') ? 'selected' : ''; ?>>
-                            <?php _e('Active (auto-refresh results)', 'chronotrack-live'); ?>
+                        <option value="upcoming" <?php echo ($is_edit && $event->event_status === 'upcoming') ? 'selected' : ''; ?>>
+                            <?php _e('Nadchodzące (auto-refresh czeka na godzinę startu)', 'chronotrack-live'); ?>
+                        </option>
+                        <option value="live" <?php echo ($is_edit && ($event->event_status === 'live' || $event->event_status === 'active')) ? 'selected' : ''; ?>>
+                            <?php _e('Trwające (auto-refresh działa teraz)', 'chronotrack-live'); ?>
                         </option>
                         <option value="completed" <?php echo ($is_edit && $event->event_status === 'completed') ? 'selected' : ''; ?>>
-                            <?php _e('Completed (archived)', 'chronotrack-live'); ?>
-                        </option>
-                        <option value="upcoming" <?php echo ($is_edit && $event->event_status === 'upcoming') ? 'selected' : ''; ?>>
-                            <?php _e('Upcoming', 'chronotrack-live'); ?>
+                            <?php _e('Zakończone (auto-refresh zatrzymany)', 'chronotrack-live'); ?>
                         </option>
                     </select>
                     <p class="description">
-                        <?php _e('Active events will automatically refresh results. Set to Completed to archive.', 'chronotrack-live'); ?>
+                        <?php _e('Nadchodzące: auto-refresh startuje automatycznie o wybranej dacie/godzinie. Trwające: auto-refresh działa. Zakończone: auto-refresh zatrzymany.', 'chronotrack-live'); ?>
                     </p>
                 </td>
             </tr>
@@ -201,6 +183,60 @@ $is_edit = $event !== null;
 <script>
 jQuery(document).ready(function($) {
     let splitIndex = <?php echo count($split_config); ?>;
+
+    // Fetch event info from API
+    $('#fetch-from-api').on('click', function() {
+        const eventId = $('#event_id').val().trim();
+
+        if (!eventId) {
+            alert('<?php _e('Please enter Event ID', 'chronotrack-live'); ?>');
+            return;
+        }
+
+        const $button = $(this);
+        const $status = $('#api-fetch-status');
+
+        $button.prop('disabled', true).text('<?php _e('Fetching...', 'chronotrack-live'); ?>');
+        $status.html('<span style="color: #999;">⏳ <?php _e('Connecting to ChronoTrack API...', 'chronotrack-live'); ?></span>');
+
+        $.ajax({
+            url: ajaxurl,
+            type: 'POST',
+            data: {
+                action: 'chronotrack_fetch_event_info',
+                event_id: eventId,
+                nonce: '<?php echo wp_create_nonce('chronotrack_fetch_event_info'); ?>'
+            },
+            success: function(response) {
+                if (response.success) {
+                    const data = response.data;
+
+                    // Fill hidden fields
+                    $('#event_name').val(data.event_name);
+                    $('#event_date').val(data.event_date);
+                    $('#event_location').val(data.location);
+
+                    // Show preview
+                    $('#preview-name').text(data.event_name);
+                    $('#preview-date').text(data.event_date_formatted);
+                    $('#preview-location').text(data.location || 'N/A');
+                    $('#event-info-preview').slideDown();
+
+                    $status.html('<span style="color: #46b450;">✓ <?php _e('Event data loaded successfully!', 'chronotrack-live'); ?></span>');
+                } else {
+                    alert('<?php _e('Error:', 'chronotrack-live'); ?> ' + response.data.message);
+                    $status.html('<span style="color: #dc3232;">✗ ' + response.data.message + '</span>');
+                }
+            },
+            error: function() {
+                alert('<?php _e('Connection error. Please try again.', 'chronotrack-live'); ?>');
+                $status.html('<span style="color: #dc3232;">✗ <?php _e('Connection error', 'chronotrack-live'); ?></span>');
+            },
+            complete: function() {
+                $button.prop('disabled', false).text('<?php _e('Pobierz z API', 'chronotrack-live'); ?>');
+            }
+        });
+    });
 
     $('#add-split').on('click', function() {
         const row = $('<div class="split-time-row" style="margin-bottom: 10px;"></div>');

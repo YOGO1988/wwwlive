@@ -14,6 +14,11 @@ class ChronoTrack_Frontend {
         add_filter('the_content', array($this, 'add_results_to_content'));
         add_action('wp_head', array($this, 'hide_sidebar_for_chronotrack'));
         add_filter('body_class', array($this, 'add_body_class'));
+
+        // Force disable sidebars at WordPress core level
+        add_filter('is_active_sidebar', array($this, 'disable_sidebar'), 10, 2);
+        add_filter('sidebars_widgets', array($this, 'remove_sidebar_widgets'));
+        add_filter('theme_page_templates', array($this, 'add_full_width_template'));
     }
 
     /**
@@ -172,80 +177,7 @@ class ChronoTrack_Frontend {
             body.chronotrack-page .hfeed {
                 padding: 20px !important;
             }
-
-            /* FORCE VISIBILITY - Block all overlays and loading screens */
-            body.chronotrack-page .chronotrack-results-container {
-                position: relative !important;
-                z-index: 10000 !important;
-                background: #fff !important;
-                visibility: visible !important;
-                opacity: 1 !important;
-            }
-
-            /* Hide ALL overlay/loading elements from theme */
-            body.chronotrack-page .et_pb_section_video_bg,
-            body.chronotrack-page .et-pb-icon,
-            body.chronotrack-page .et_pb_preload,
-            body.chronotrack-page [class*="loading"]:not(.chronotrack-loading),
-            body.chronotrack-page [class*="overlay"]:not(.chronotrack-modal),
-            body.chronotrack-page [id*="loading"]:not(.chronotrack-loading),
-            body.chronotrack-page [id*="overlay"]:not(.chronotrack-modal) {
-                display: none !important;
-                visibility: hidden !important;
-                opacity: 0 !important;
-                pointer-events: none !important;
-                z-index: -9999 !important;
-                position: absolute !important;
-                left: -9999px !important;
-            }
-
-            /* Kill ALL pseudo-elements that could create overlays */
-            body.chronotrack-page::before,
-            body.chronotrack-page::after,
-            body.chronotrack-page *:not(.chronotrack-results-container):not(.chronotrack-results-container *)::before,
-            body.chronotrack-page *:not(.chronotrack-results-container):not(.chronotrack-results-container *)::after {
-                display: none !important;
-                content: none !important;
-                visibility: hidden !important;
-                opacity: 0 !important;
-            }
-
-            /* Ensure page background is white */
-            body.chronotrack-page {
-                background: #fff !important;
-            }
-
-            /* Prevent Divi from hiding content */
-            body.chronotrack-page .entry-content,
-            body.chronotrack-page .et_pb_section,
-            body.chronotrack-page #main-content,
-            body.chronotrack-page #et-main-area {
-                opacity: 1 !important;
-                visibility: visible !important;
-                display: block !important;
-            }
         </style>
-        <script type="text/javascript">
-            // KILL Divi JavaScript overlays
-            (function() {
-                // Remove overlays every 100ms
-                setInterval(function() {
-                    var overlays = document.querySelectorAll('[class*="loading"]:not(.chronotrack-loading), [class*="overlay"]:not(.chronotrack-modal), [id*="loading"]:not(.chronotrack-loading), [id*="overlay"]:not(.chronotrack-modal)');
-                    overlays.forEach(function(el) {
-                        if (!el.closest('.chronotrack-results-container') && !el.classList.contains('chronotrack-loading') && !el.classList.contains('chronotrack-modal')) {
-                            el.remove();
-                        }
-                    });
-                }, 100);
-
-                // Stop Divi animations on load
-                document.addEventListener('DOMContentLoaded', function() {
-                    if (typeof ET_PageBuilder !== 'undefined' && ET_PageBuilder.Modules && ET_PageBuilder.Modules.stop) {
-                        ET_PageBuilder.Modules.stop();
-                    }
-                });
-            })();
-        </script>
         <?php
     }
 
@@ -256,7 +188,38 @@ class ChronoTrack_Frontend {
         if ($this->is_chronotrack_page()) {
             $classes[] = 'chronotrack-page';
             $classes[] = 'page-template-full-width';
+            $classes[] = 'page-template-default';
         }
         return $classes;
+    }
+
+    /**
+     * Disable sidebar on ChronoTrack pages at WordPress core level
+     */
+    public function disable_sidebar($is_active, $sidebar_id) {
+        if ($this->is_chronotrack_page()) {
+            // Disable ALL sidebars on ChronoTrack pages
+            return false;
+        }
+        return $is_active;
+    }
+
+    /**
+     * Remove all sidebar widgets on ChronoTrack pages
+     */
+    public function remove_sidebar_widgets($sidebars_widgets) {
+        if ($this->is_chronotrack_page()) {
+            // Return empty array for all sidebars
+            return array('wp_inactive_widgets' => array());
+        }
+        return $sidebars_widgets;
+    }
+
+    /**
+     * Add full-width template option
+     */
+    public function add_full_width_template($templates) {
+        $templates['chronotrack-full-width.php'] = 'ChronoTrack Full Width';
+        return $templates;
     }
 }
