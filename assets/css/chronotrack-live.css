@@ -215,14 +215,12 @@ body.chronotrack-page .container {
 }
 
 .chronotrack-search {
-    width: 350px;
+    width: 250px;
     max-width: 100%;
     padding: 10px 15px;
     border: 1px solid #ddd;
     border-radius: 4px;
     font-size: 14px;
-    flex: 1;
-    min-width: 300px;
 }
 
 .chronotrack-filter {
@@ -506,19 +504,19 @@ body.chronotrack-page .container {
 .chronotrack-details-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 13px;
+    font-size: 11px;
 }
 
 .chronotrack-details-table th {
     text-align: left;
-    padding: 6px 8px;
+    padding: 4px 6px;
     font-weight: 600;
     color: #666;
     width: 50%;
 }
 
 .chronotrack-details-table td {
-    padding: 6px 8px;
+    padding: 4px 6px;
     border-bottom: 1px solid #eee;
 }
 
@@ -527,13 +525,13 @@ body.chronotrack-page .container {
 }
 
 .chronotrack-position {
-    font-size: 16px;
+    font-size: 13px;
     font-weight: 700;
     color: #000;
 }
 
 .chronotrack-time {
-    font-size: 14px;
+    font-size: 12px;
     font-weight: 600;
     color: #000;
 }

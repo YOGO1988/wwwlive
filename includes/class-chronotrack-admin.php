@@ -276,7 +276,7 @@ class ChronoTrack_Admin {
      * Create event page
      */
     private function create_event_page($event_id, $event_name) {
-        // Check if page already exists
+        // Check if page already exists for this event
         global $wpdb;
         $event = $wpdb->get_row($wpdb->prepare(
             "SELECT page_id FROM {$wpdb->prefix}chronotrack_events WHERE event_id = %s",
@@ -284,19 +284,37 @@ class ChronoTrack_Admin {
         ));
 
         if ($event && $event->page_id) {
-            // Update existing page
-            wp_update_post(array(
-                'ID' => $event->page_id,
-                'post_title' => $event_name,
-                'post_name' => sanitize_title($event_name . '-' . $event_id),
-            ));
-            return $event->page_id;
+            // Check if the page still exists in WordPress
+            $page = get_post($event->page_id);
+            if ($page && $page->post_status !== 'trash') {
+                // Update existing page title only (keep same slug!)
+                wp_update_post(array(
+                    'ID' => $event->page_id,
+                    'post_title' => $event_name,
+                    // DON'T update post_name - keep the same URL!
+                ));
+                return $event->page_id;
+            }
         }
 
-        // Create new page
+        // Check if page with this slug already exists (from previous event)
+        $slug = sanitize_title($event_name . '-' . $event_id);
+        $existing_page = get_page_by_path($slug, OBJECT, 'page');
+
+        if ($existing_page) {
+            // Reuse existing page
+            wp_update_post(array(
+                'ID' => $existing_page->ID,
+                'post_title' => $event_name,
+                'post_status' => 'publish',
+            ));
+            return $existing_page->ID;
+        }
+
+        // Create new page only if doesn't exist
         $page_data = array(
             'post_title' => $event_name,
-            'post_name' => sanitize_title($event_name . '-' . $event_id),
+            'post_name' => $slug,
             'post_content' => '', // Empty - results added automatically by the_content filter
             'post_status' => 'publish',
             'post_type' => 'page',

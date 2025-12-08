@@ -874,20 +874,34 @@
 
             container.empty();
 
+            // Count participants for each distance
+            const distanceCounts = {};
+            this.distances.forEach((distance) => {
+                const count = this.allResults.filter(r => r.distance === distance).length;
+                distanceCounts[distance] = count;
+            });
+
+            // Sort distances by participant count (descending - largest first)
+            const sortedDistances = this.distances.slice().sort((a, b) => {
+                return (distanceCounts[b] || 0) - (distanceCounts[a] || 0);
+            });
+
+            console.log('📏 Distances sorted by count:', sortedDistances.map(d => `${d} (${distanceCounts[d]})`));
+
             // Auto-select first distance if nothing selected
             const wasEmpty = !this.selectedDistance;
-            if (!this.selectedDistance && this.distances.length > 0) {
-                this.selectedDistance = this.distances[0];
+            if (!this.selectedDistance && sortedDistances.length > 0) {
+                this.selectedDistance = sortedDistances[0];
                 console.log('📏 Auto-selected first distance:', this.selectedDistance);
             }
 
             // Add buttons for each distance (no "Wszystkie" button)
-            this.distances.forEach((distance) => {
+            sortedDistances.forEach((distance) => {
                 const btn = $('<button>')
                     .addClass('chronotrack-distance-filter-btn')
                     .addClass(this.selectedDistance === distance ? 'active' : '')
                     .attr('data-distance', distance)
-                    .text(distance);
+                    .text(distance + ' (' + (distanceCounts[distance] || 0) + ')');
                 container.append(btn);
             });
 
