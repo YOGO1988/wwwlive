@@ -93,8 +93,18 @@ $columns = $db->get_event_columns($event->event_id, true);
                 <thead>
                     <tr>
                         <?php if (!empty($columns)): ?>
-                            <?php foreach ($columns as $column): ?>
-                                <th class="col-<?php echo esc_attr($column->column_id); ?>" title="<?php echo esc_attr($column->column_description ?? ''); ?>">
+                            <?php foreach ($columns as $column):
+                                // Get first API attribute for sorting
+                                $sortKey = '';
+                                if (!empty($column->api_attributes) && is_array($column->api_attributes) && count($column->api_attributes) > 0) {
+                                    $sortKey = $column->api_attributes[0];
+                                }
+                                $sortable = !empty($sortKey) ? 'sortable' : '';
+                            ?>
+                                <th class="col-<?php echo esc_attr($column->column_id); ?> <?php echo $sortable; ?>"
+                                    <?php if ($sortKey): ?>data-column="<?php echo esc_attr($sortKey); ?>"<?php endif; ?>
+                                    title="<?php echo esc_attr($column->column_description ?? ''); ?><?php if ($sortKey): echo ' (kliknij aby sortować)'; endif; ?>"
+                                    style="<?php if ($sortKey): ?>cursor: pointer;<?php endif; ?>">
                                     <?php
                                     // Split multi-word column names into multiple lines
                                     $name = $column->column_name;

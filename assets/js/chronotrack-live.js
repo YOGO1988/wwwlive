@@ -21,6 +21,9 @@
         columns: [], // Dynamic columns configuration
         distances: [], // Available distances
         selectedDistance: '', // Currently selected distance filter
+        sortColumn: null, // Currently sorted column
+        sortDirection: 'asc', // Sort direction: 'asc' or 'desc'
+        allResults: [], // Store all results for sorting
 
         init: function() {
             console.log('=== ChronoTrack Live Init START ===');
@@ -78,6 +81,12 @@
             $(document).on('click', '.chronotrack-distance-filter-btn', (e) => {
                 const distance = $(e.currentTarget).data('distance');
                 this.selectDistance(distance);
+            });
+
+            // Column sorting
+            $(document).on('click', '.chronotrack-results-table thead th.sortable', (e) => {
+                const column = $(e.currentTarget).data('column');
+                this.sortByColumn(column);
             });
 
             // Participant details
@@ -290,8 +299,12 @@
             if (!results || results.length === 0) {
                 console.log('❌ No results to render');
                 tbody.html('<tr><td colspan="20" class="chronotrack-no-results">Brak wyników</td></tr>');
+                this.allResults = [];
                 return;
             }
+
+            // Store results for sorting
+            this.allResults = results;
 
             // Remove "Brak wyników" row if it exists
             tbody.find('.chronotrack-no-results').closest('tr').remove();
@@ -1099,6 +1112,62 @@
 
         hideLoading: function() {
             $('.chronotrack-loading-row').hide();
+        },
+
+        sortByColumn: function(column) {
+            console.log('🔄 Sorting by column:', column);
+
+            // Toggle sort direction if clicking same column
+            if (this.sortColumn === column) {
+                this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
+            } else {
+                this.sortColumn = column;
+                this.sortDirection = 'asc';
+            }
+
+            // Update header indicators
+            $('.chronotrack-results-table thead th.sortable').removeClass('sort-asc sort-desc');
+            $('.chronotrack-results-table thead th[data-column="' + column + '"]')
+                .addClass('sort-' + this.sortDirection);
+
+            // Sort allResults
+            const direction = this.sortDirection === 'asc' ? 1 : -1;
+            this.allResults.sort((a, b) => {
+                let valA = a[column];
+                let valB = b[column];
+
+                // Handle numeric columns
+                if (column === 'bib_number' || column === 'position' || column === 'category_position' || column === 'age') {
+                    valA = parseInt(valA) || 999999;
+                    valB = parseInt(valB) || 999999;
+                }
+                // Handle time columns (convert to seconds)
+                else if (column === 'finish_time' || column === 'net_time') {
+                    valA = this.parseTimeToSeconds(valA);
+                    valB = this.parseTimeToSeconds(valB);
+                }
+                // Handle string columns
+                else {
+                    valA = (valA || '').toString().toLowerCase();
+                    valB = (valB || '').toString().toLowerCase();
+                }
+
+                if (valA < valB) return -1 * direction;
+                if (valA > valB) return 1 * direction;
+                return 0;
+            });
+
+            // Re-render results
+            this.renderResults(this.allResults);
+        },
+
+        parseTimeToSeconds: function(timeStr) {
+            if (!timeStr || timeStr === '-') return 999999;
+            const parts = timeStr.split(':');
+            if (parts.length === 3) {
+                return parseInt(parts[0]) * 3600 + parseInt(parts[1]) * 60 + parseInt(parts[2]);
+            }
+            return 999999;
         },
 
         showError: function(message) {

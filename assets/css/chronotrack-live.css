@@ -69,8 +69,9 @@ body.chronotrack-page .container {
 /* Header */
 .chronotrack-header {
     text-align: center;
-    margin-bottom: 30px;
-    padding-bottom: 20px;
+    margin-top: 10px;
+    margin-bottom: 15px;
+    padding-bottom: 15px;
     border-bottom: 2px solid #eee;
 }
 
@@ -214,12 +215,14 @@ body.chronotrack-page .container {
 }
 
 .chronotrack-search {
-    width: 200px;
+    width: 350px;
     max-width: 100%;
     padding: 10px 15px;
     border: 1px solid #ddd;
     border-radius: 4px;
     font-size: 14px;
+    flex: 1;
+    min-width: 300px;
 }
 
 .chronotrack-filter {
@@ -264,6 +267,36 @@ body.chronotrack-page .container {
     color: #333;
     border-bottom: 2px solid #ddd;
     white-space: nowrap;
+    position: relative;
+}
+
+/* Sortable columns */
+.chronotrack-results-table th.sortable {
+    cursor: pointer;
+    user-select: none;
+}
+
+.chronotrack-results-table th.sortable:hover {
+    background: #e9ecef;
+}
+
+.chronotrack-results-table th.sortable::after {
+    content: ' ⇅';
+    font-size: 10px;
+    opacity: 0.3;
+    margin-left: 4px;
+}
+
+.chronotrack-results-table th.sortable.sort-asc::after {
+    content: ' ↑';
+    opacity: 1;
+    color: #007cba;
+}
+
+.chronotrack-results-table th.sortable.sort-desc::after {
+    content: ' ↓';
+    opacity: 1;
+    color: #007cba;
 }
 
 .chronotrack-results-table td {
@@ -416,9 +449,16 @@ body.chronotrack-page .container {
 
 .chronotrack-details-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
     gap: 12px;
     margin-top: 10px;
+}
+
+/* Responsive grid for small modals */
+@media (max-width: 600px) {
+    .chronotrack-details-grid {
+        grid-template-columns: 1fr;
+    }
 }
 
 /* 2-column layout for participant details (split times go below) */
