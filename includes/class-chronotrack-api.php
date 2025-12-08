@@ -108,6 +108,15 @@ class ChronoTrack_API {
             }
         }
 
+        // Fallback: try event_date if event_start_time failed
+        if (empty($event_date) && !empty($event_data['event_date'])) {
+            if (is_numeric($event_data['event_date'])) {
+                $event_date = date('Y-m-d H:i:s', intval($event_data['event_date']));
+            } else if (strtotime($event_data['event_date'])) {
+                $event_date = date('Y-m-d H:i:s', strtotime($event_data['event_date']));
+            }
+        }
+
         // Clean location - remove comma and everything after it
         $location = $event_data['location_city'] ?? '';
         if (strpos($location, ',') !== false) {
@@ -683,7 +692,7 @@ class ChronoTrack_API {
             'last_name' => $result['results_last_name'] ?? '',
             'full_name' => trim(($result['results_last_name'] ?? '') . ' ' . ($result['results_first_name'] ?? '')),
             'age' => $result['results_age'] ?? 0,
-            'gender' => $result['results_sex'] ?? '',
+            'gender' => ($result['results_sex'] ?? '') === 'F' ? 'K' : ($result['results_sex'] ?? ''),
             'city' => $city,
             'athlete_city' => $city,  // Alternative field name
             'location_city' => $city,  // Alternative field name

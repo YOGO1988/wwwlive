@@ -950,8 +950,9 @@
             if (status === 'completed') {
                 // Event is completed - show final results, NO auto-refresh
                 console.log('🏁 Event completed - showing final results (no auto-refresh)');
+                $('.chronotrack-live-text').text('ZAWODY ZAKOŃCZONE').css('color', '#856404');
+                $('.chronotrack-live-indicator').css('background', '#fff3cd');
                 this.loadResults(this.currentView);  // Load once from database
-                this.showUpcomingMessage('Zawody zakończone. Poniżej znajdują się wyniki finalne.', false);
                 return;
             }
 
@@ -1003,6 +1004,8 @@
 
             // Status is 'live' OR 'upcoming' with time passed - start auto-refresh
             console.log('▶️ Event is LIVE - starting auto-refresh');
+            $('.chronotrack-live-text').text('NA ŻYWO').css('color', '#dc3545');
+            $('.chronotrack-live-indicator').css('background', '');
             this.startAutoRefresh();
         },
 
