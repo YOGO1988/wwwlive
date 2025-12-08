@@ -987,6 +987,8 @@
                     }
 
                     console.log('⏳ Event not started yet:', countdownMsg);
+                    $('.chronotrack-live-text').text('ZAWODY NADCHODZĄCE').css('color', '#856404');
+                    $('.chronotrack-live-indicator').css('background', '#fff3cd');
                     this.showUpcomingMessage(countdownMsg, true);
 
                     // Check every minute if it's time to start

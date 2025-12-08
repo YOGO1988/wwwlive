@@ -249,7 +249,8 @@ body.chronotrack-page .container {
     width: 100%;
     border-collapse: collapse;
     font-size: 12px;
-    table-layout: fixed;
+    table-layout: auto;
+    min-width: 100%;
 }
 
 .chronotrack-results-table thead {
@@ -350,12 +351,12 @@ body.chronotrack-page .container {
     height: 100%;
     overflow: auto;
     background-color: rgba(0,0,0,0.5);
-    padding-top: 180px; /* More space for WordPress menu and theme header */
+    padding-top: 120px; /* Space for WordPress menu and theme header */
 }
 
 .chronotrack-modal-content {
     background-color: #fefefe;
-    margin: 50px auto 50px auto; /* Even more top margin */
+    margin: 20px auto 50px auto; /* Top margin */
     padding: 15px;
     border: 1px solid #888;
     border-radius: 8px;
