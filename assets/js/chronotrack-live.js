@@ -292,8 +292,8 @@
             });
         },
 
-        renderResults: function(results) {
-            console.log('🎨 renderResults called, results:', results ? results.length : 'NULL');
+        renderResults: function(results, forceRebuild) {
+            console.log('🎨 renderResults called, results:', results ? results.length : 'NULL', 'forceRebuild:', forceRebuild);
             const tbody = $('#chronotrack-results-body');
 
             if (!results || results.length === 0) {
@@ -305,6 +305,28 @@
 
             // Store results for sorting
             this.allResults = results;
+
+            // CRITICAL FIX: If forceRebuild is true (from sorting), clear table and rebuild from scratch
+            if (forceRebuild) {
+                console.log('🔄 Force rebuild - clearing table and rebuilding in sorted order');
+                tbody.empty();
+
+                results.forEach((result) => {
+                    const newRow = this.createResultRow(result);
+                    tbody.append(newRow);
+                });
+
+                // Apply filters after rebuild
+                if (this.selectedDistance) {
+                    console.log('🔄 Applying distance filter after rebuild:', this.selectedDistance);
+                    this.filterResults();
+                } else {
+                    this.recolorRows(tbody);
+                }
+
+                console.log('✅ Rebuilt table with', results.length, 'results in sorted order');
+                return;
+            }
 
             // Remove "Brak wyników" row if it exists
             tbody.find('.chronotrack-no-results').closest('tr').remove();
@@ -972,11 +994,12 @@
             const eventDate = chronotrackData.eventDate;
 
             console.log('📊 Event status:', status, 'Event date:', eventDate);
+            console.log('📊 Full chronotrackData:', chronotrackData);
 
             // Handle different event statuses
             if (status === 'completed') {
                 // Event is completed - show final results, NO auto-refresh
-                console.log('🏁 Event completed - showing final results (no auto-refresh)');
+                console.log('🏁 Event completed - showing final results (NO auto-refresh by design)');
                 $('.chronotrack-live-text').text('ZAWODY ZAKOŃCZONE').css('color', '#856404');
                 $('.chronotrack-live-indicator').css('background', '#fff3cd');
                 this.loadResults(this.currentView);  // Load once from database
@@ -1032,10 +1055,12 @@
             }
 
             // Status is 'live' OR 'upcoming' with time passed - start auto-refresh
-            console.log('▶️ Event is LIVE - starting auto-refresh');
+            console.log('▶️▶️▶️ Event is LIVE - starting auto-refresh NOW ▶️▶️▶️');
+            console.log('▶️ Current status:', status);
             $('.chronotrack-live-text').text('NA ŻYWO').css('color', '#dc3545');
             $('.chronotrack-live-indicator').css('background', '');
             this.startAutoRefresh();
+            console.log('✅ Auto-refresh started! Interval ID:', this.refreshInterval);
         },
 
         showUpcomingMessage: function(message, showEmptyTable) {
@@ -1069,14 +1094,28 @@
             this.currentInterval = interval;
 
             console.log('▶️ Starting auto-refresh with interval:', interval + 'ms (60s API fetch)');
+            console.log('▶️ Interval object before clear:', this.refreshInterval);
+
+            // Clear any existing interval first
+            if (this.refreshInterval) {
+                console.log('⚠️ Clearing existing interval before starting new one');
+                clearInterval(this.refreshInterval);
+                this.refreshInterval = null;
+            }
 
             // CRITICAL FIX: Initial load from CACHE (fast), then API fetch every 60s
+            console.log('📥 Initial load from database...');
             this.loadResults(this.currentView);  // Fast load from database
 
             // Fetch fresh data from API every 60 seconds
+            console.log('⏰ Setting up interval to fetch from API every', interval, 'ms');
             this.refreshInterval = setInterval(() => {
+                console.log('🔄 Auto-refresh interval triggered - calling refreshFromAPI()');
                 this.refreshFromAPI();  // Fetch from API
             }, interval);
+
+            console.log('✅ Auto-refresh interval set! Interval ID:', this.refreshInterval);
+            console.log('✅ Next refresh will happen in', interval / 1000, 'seconds');
         },
 
         stopAutoRefresh: function() {
@@ -1151,7 +1190,7 @@
                 let valB = b[column];
 
                 // Handle numeric columns
-                if (column === 'bib_number' || column === 'position' || column === 'category_position' || column === 'age') {
+                if (column === 'bib_number' || column === 'position' || column === 'category_position' || column === 'gender_position' || column === 'age') {
                     valA = parseInt(valA) || 999999;
                     valB = parseInt(valB) || 999999;
                 }
@@ -1171,8 +1210,9 @@
                 return 0;
             });
 
-            // Re-render results
-            this.renderResults(this.allResults);
+            // Re-render results with forceRebuild=true to rebuild table in sorted order
+            console.log('✅ Sorted', this.allResults.length, 'results, rebuilding table...');
+            this.renderResults(this.allResults, true);
         },
 
         parseTimeToSeconds: function(timeStr) {
