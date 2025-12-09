@@ -437,13 +437,20 @@
 
                     // Special formatting for full_name - make it clickable with flag
                     if (column.id === 'full_name' || column.id.includes('name')) {
-                        // Add country flag before name if available (try country, nationality, athlete_country)
+                        // Add country flag before name if available
+                        // CRITICAL: API może zwracać z wielką literą (Country, Nationality)
                         let flagEmoji = '';
-                        const countryCode = result.country || result.nationality || result.athlete_country || result.country_code;
-                        if (countryCode && typeof CountryFlags !== 'undefined') {
-                            flagEmoji = CountryFlags.getFlag(countryCode);
-                            if (flagEmoji) {
-                                flagEmoji = flagEmoji + ' '; // Add space after flag
+                        const countryCode = result.country || result.Country || result.nationality || result.Nationality ||
+                                          result.athlete_country || result.country_code || result.CountryCode;
+
+                        if (countryCode) {
+                            console.log('🚩 Country code:', countryCode, 'for:', result.last_name);
+                            if (typeof CountryFlags !== 'undefined') {
+                                flagEmoji = CountryFlags.getFlag(countryCode);
+                                if (flagEmoji) {
+                                    flagEmoji = flagEmoji + ' '; // Add space after flag
+                                    console.log('✅ Flag:', flagEmoji);
+                                }
                             }
                         }
 
@@ -466,7 +473,8 @@
 
                 // Make name clickable in fallback mode too (with flag)
                 let flagEmoji = '';
-                const countryCode = result.country || result.nationality || result.athlete_country || result.country_code;
+                const countryCode = result.country || result.Country || result.nationality || result.Nationality ||
+                                  result.athlete_country || result.country_code || result.CountryCode;
                 if (countryCode && typeof CountryFlags !== 'undefined') {
                     flagEmoji = CountryFlags.getFlag(countryCode);
                     if (flagEmoji) {

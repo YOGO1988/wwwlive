@@ -18,6 +18,9 @@ if (empty($event_id)) {
 $columns = $db->get_event_columns($event_id, false);
 $available_attrs = $db->get_default_columns();
 
+// Get event details for split times
+$event = $db->get_event($event_id);
+
 // Extract all possible API attributes
 $all_api_attributes = array();
 foreach ($available_attrs as $col) {
@@ -25,6 +28,45 @@ foreach ($available_attrs as $col) {
         $all_api_attributes = array_merge($all_api_attributes, $col['api_options']);
     }
 }
+
+// CRITICAL: Add split_times dynamically based on event's split_times_config
+if ($event && !empty($event->split_times_config)) {
+    $split_config = is_string($event->split_times_config)
+        ? json_decode($event->split_times_config, true)
+        : $event->split_times_config;
+
+    if (is_array($split_config)) {
+        foreach ($split_config as $checkpoint) {
+            if (!empty($checkpoint['name'])) {
+                // Add split_time:CheckpointName to available attributes
+                $all_api_attributes[] = 'split_time:' . $checkpoint['name'];
+            }
+        }
+    }
+}
+
+// Also fetch split times from actual results to catch any not in config
+$sample_results = $db->get_results($event_id, 1); // Get just 1 result as sample
+if (!empty($sample_results)) {
+    $sample = $sample_results[0];
+    if (!empty($sample->split_times)) {
+        $split_times = is_string($sample->split_times)
+            ? json_decode($sample->split_times, true)
+            : $sample->split_times;
+
+        if (is_array($split_times)) {
+            foreach ($split_times as $split) {
+                if (!empty($split['interval_name'])) {
+                    $attr = 'split_time:' . $split['interval_name'];
+                    if (!in_array($attr, $all_api_attributes)) {
+                        $all_api_attributes[] = $attr;
+                    }
+                }
+            }
+        }
+    }
+}
+
 $all_api_attributes = array_unique($all_api_attributes);
 sort($all_api_attributes);
 ?>
