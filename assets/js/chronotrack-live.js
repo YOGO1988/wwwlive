@@ -172,11 +172,10 @@
                             console.log('📋 Columns loaded:', this.columns.length);
                         }
 
-                        // Save and render distances
+                        // Save distances (but don't render yet - need results first)
                         if (response.data.distances && response.data.distances.length > 0) {
                             this.distances = response.data.distances;
                             console.log('📏 Distances loaded:', this.distances.length);
-                            this.renderDistanceButtons();
                         }
 
                         const newCount = response.data.count || 0;
@@ -196,7 +195,15 @@
                         } else {
                             this.renderResults(response.data.results);
                         }
+
+                        // CRITICAL FIX: Render distance buttons AFTER results are rendered
+                        // This ensures allResults is populated so counts are correct
+                        if (this.distances && this.distances.length > 0) {
+                            this.renderDistanceButtons();
+                        }
+
                         this.updateTimestamp();
+                        this.updateStats(); // Update participant statistics
                         this.populateFilters(response.data.results);
                     } else {
                         this.consecutiveErrors++;
@@ -255,7 +262,7 @@
                         if (response.data.distances && response.data.distances.length > 0) {
                             this.distances = response.data.distances;
                             console.log('📏 Distances updated from refresh:', this.distances.length);
-                            this.renderDistanceButtons();
+                            // Don't render buttons yet - wait until results are loaded
                         }
 
                         if (response.data.columns && response.data.columns.length > 0) {
@@ -264,6 +271,7 @@
                         }
 
                         // After API refresh, reload from cache to get full data
+                        // renderDistanceButtons will be called after renderResults in loadResults()
                         this.loadResults(this.currentView);
                     } else {
                         console.error('❌ API refresh failed:', response.data.message);
@@ -1157,6 +1165,35 @@
             const timeString = hours + ':' + minutes + ':' + seconds;
 
             $('#chronotrack-timestamp').text('Aktualizacja: ' + timeString);
+        },
+
+        updateStats: function() {
+            if (!this.allResults || this.allResults.length === 0) {
+                // Hide stats if no results
+                $('#chronotrack-stats').hide();
+                return;
+            }
+
+            const total = this.allResults.length;
+
+            // Count finished (have finish time and it's not empty/dash)
+            const finished = this.allResults.filter(r => {
+                const time = r.finish_time || r.net_time;
+                return time && time !== '-' && time !== '00:00:00' && time !== '';
+            }).length;
+
+            // On course = total - finished (started but not finished yet)
+            const onCourse = total - finished;
+
+            console.log('📊 Stats calculated:', {total, finished, onCourse});
+
+            // Update UI
+            $('#stat-registered').text(total);
+            $('#stat-on-course').text(onCourse);
+            $('#stat-finished').text(finished);
+
+            // Show stats
+            $('#chronotrack-stats').show();
         },
 
         showLoading: function() {

@@ -75,6 +75,24 @@ $columns = $db->get_event_columns($event->event_id, true);
         <!-- Distance buttons will be populated by JavaScript -->
     </div>
 
+    <!-- Participant Statistics -->
+    <div class="chronotrack-stats" id="chronotrack-stats" style="display: none; margin: 15px 0; padding: 15px; background: #f8f9fa; border-radius: 6px; text-align: center;">
+        <div style="display: flex; justify-content: center; gap: 40px; flex-wrap: wrap;">
+            <div class="chronotrack-stat-item">
+                <span class="chronotrack-stat-label" style="font-size: 12px; color: #666; display: block; margin-bottom: 5px;">ZAREJESTROWANYCH</span>
+                <span class="chronotrack-stat-value" id="stat-registered" style="font-size: 24px; font-weight: 700; color: #333;">-</span>
+            </div>
+            <div class="chronotrack-stat-item">
+                <span class="chronotrack-stat-label" style="font-size: 12px; color: #666; display: block; margin-bottom: 5px;">NA TRASIE</span>
+                <span class="chronotrack-stat-value" id="stat-on-course" style="font-size: 24px; font-weight: 700; color: #ff9800;">-</span>
+            </div>
+            <div class="chronotrack-stat-item">
+                <span class="chronotrack-stat-label" style="font-size: 12px; color: #666; display: block; margin-bottom: 5px;">UKOŃCZYŁO</span>
+                <span class="chronotrack-stat-value" id="stat-finished" style="font-size: 24px; font-weight: 700; color: #4caf50;">-</span>
+            </div>
+        </div>
+    </div>
+
     <!-- Search/Filter -->
     <div class="chronotrack-filters">
         <input type="text"

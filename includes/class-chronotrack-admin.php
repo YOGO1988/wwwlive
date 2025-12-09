@@ -323,6 +323,34 @@ class ChronoTrack_Admin {
 
         $page_id = wp_insert_post($page_data);
 
+        // Set blank/full-width template to hide sidebar
+        // Try common template names - WordPress will use first available
+        $templates_to_try = array(
+            'elementor_canvas',           // Elementor Canvas (blank)
+            'page-templates/blank.php',   // Common blank template
+            'templates/blank.php',        // Alternative blank
+            'template-blank.php',         // Alternative blank
+            'page-templates/full-width.php', // Full width
+            'templates/full-width.php',   // Alternative full width
+            'template-fullwidth.php',     // Alternative full width
+        );
+
+        // Try to set a blank/full-width template if available
+        foreach ($templates_to_try as $template) {
+            $theme_templates = wp_get_theme()->get_page_templates();
+            if (isset($theme_templates[$template]) || $template === 'elementor_canvas') {
+                update_post_meta($page_id, '_wp_page_template', $template);
+                error_log("ChronoTrack: Set page template to '{$template}' for page {$page_id}");
+                break;
+            }
+        }
+
+        // Also try to disable Elementor's header/footer if Elementor is active
+        if (defined('ELEMENTOR_VERSION')) {
+            update_post_meta($page_id, '_elementor_page_assets_css', 'inline');
+            update_post_meta($page_id, '_elementor_template_type', 'wp-page');
+        }
+
         return $page_id;
     }
 

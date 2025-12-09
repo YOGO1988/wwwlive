@@ -116,6 +116,41 @@ class ChronoTrack_Frontend {
 
         ?>
         <style type="text/css">
+            /* Reduce header/menu height to save screen space */
+            body.chronotrack-page .site-header,
+            body.chronotrack-page header,
+            body.chronotrack-page #masthead,
+            body.chronotrack-page .header,
+            body.chronotrack-page [id*="header"] {
+                padding-top: 5px !important;
+                padding-bottom: 5px !important;
+                min-height: auto !important;
+            }
+
+            /* Reduce logo/branding size */
+            body.chronotrack-page .site-branding,
+            body.chronotrack-page .custom-logo,
+            body.chronotrack-page .site-logo img {
+                max-height: 50px !important;
+                height: auto !important;
+            }
+
+            /* Reduce navigation menu padding */
+            body.chronotrack-page .main-navigation,
+            body.chronotrack-page .site-navigation,
+            body.chronotrack-page nav {
+                padding-top: 5px !important;
+                padding-bottom: 5px !important;
+            }
+
+            /* Reduce menu items padding */
+            body.chronotrack-page .main-navigation a,
+            body.chronotrack-page .site-navigation a,
+            body.chronotrack-page nav a {
+                padding-top: 5px !important;
+                padding-bottom: 5px !important;
+            }
+
             /* Completely remove WordPress sidebar on ChronoTrack pages */
             body.chronotrack-page #secondary,
             body.chronotrack-page aside,
