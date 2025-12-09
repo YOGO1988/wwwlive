@@ -437,10 +437,11 @@
 
                     // Special formatting for full_name - make it clickable with flag
                     if (column.id === 'full_name' || column.id.includes('name')) {
-                        // Add country flag before name if available
+                        // Add country flag before name if available (try country, nationality, athlete_country)
                         let flagEmoji = '';
-                        if (result.country && typeof CountryFlags !== 'undefined') {
-                            flagEmoji = CountryFlags.getFlag(result.country);
+                        const countryCode = result.country || result.nationality || result.athlete_country || result.country_code;
+                        if (countryCode && typeof CountryFlags !== 'undefined') {
+                            flagEmoji = CountryFlags.getFlag(countryCode);
                             if (flagEmoji) {
                                 flagEmoji = flagEmoji + ' '; // Add space after flag
                             }
@@ -465,8 +466,9 @@
 
                 // Make name clickable in fallback mode too (with flag)
                 let flagEmoji = '';
-                if (result.country && typeof CountryFlags !== 'undefined') {
-                    flagEmoji = CountryFlags.getFlag(result.country);
+                const countryCode = result.country || result.nationality || result.athlete_country || result.country_code;
+                if (countryCode && typeof CountryFlags !== 'undefined') {
+                    flagEmoji = CountryFlags.getFlag(countryCode);
                     if (flagEmoji) {
                         flagEmoji = flagEmoji + ' '; // Add space after flag
                     }
@@ -494,6 +496,23 @@
             if (column.api_attributes && column.api_attributes.length > 0) {
                 for (let i = 0; i < column.api_attributes.length; i++) {
                     const attr = column.api_attributes[i];
+
+                    // Handle special case for split_time (międzyczasy)
+                    // Format: split_time:IntervalName (np. split_time:5km)
+                    if (attr.startsWith('split_time:')) {
+                        const intervalName = attr.substring(11); // Remove "split_time:" prefix
+                        if (result.split_times && Array.isArray(result.split_times)) {
+                            // Find split time with matching interval name
+                            const split = result.split_times.find(s =>
+                                s.interval_name === intervalName ||
+                                s.name === intervalName
+                            );
+                            if (split && split.formatted_time) {
+                                return split.formatted_time;
+                            }
+                        }
+                        return '-'; // No split time found
+                    }
 
                     // Handle special case for full_name
                     if (attr === 'full_name' || attr === 'athlete_last_name,athlete_first_name') {
@@ -1238,8 +1257,17 @@
                 let valA = a[column];
                 let valB = b[column];
 
-                // Handle numeric columns (bib_number, position, etc.)
-                if (column === 'bib_number' || column === 'position' || column === 'category_position' || column === 'gender_position' || column === 'age') {
+                // Handle numeric columns (all possible numeric field names from ChronoTrack API)
+                const numericColumns = [
+                    'bib_number', 'entry_bib',           // Numer startowy
+                    'position', 'overall_place',         // Miejsce open
+                    'category_position', 'division_place', // Miejsce w kategorii
+                    'gender_position', 'sex_place',      // Miejsce w płci
+                    'age', 'athlete_age',                // Wiek
+                    'interval_position'                  // Miejsce na punkcie kontrolnym
+                ];
+
+                if (numericColumns.includes(column)) {
                     // Convert to number, empty/null/undefined becomes Infinity (sorts to end)
                     valA = (valA !== null && valA !== undefined && valA !== '' && valA !== '-' && valA !== 0) ? parseInt(valA) : Infinity;
                     valB = (valB !== null && valB !== undefined && valB !== '' && valB !== '-' && valB !== 0) ? parseInt(valB) : Infinity;

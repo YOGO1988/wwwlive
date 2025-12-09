@@ -293,6 +293,10 @@ class ChronoTrack_Admin {
                     'post_title' => $event_name,
                     // DON'T update post_name - keep the same URL!
                 ));
+
+                // CRITICAL FIX: Also set template for existing pages
+                $this->set_page_template($event->page_id);
+
                 return $event->page_id;
             }
         }
@@ -308,6 +312,10 @@ class ChronoTrack_Admin {
                 'post_title' => $event_name,
                 'post_status' => 'publish',
             ));
+
+            // CRITICAL FIX: Also set template for reused pages
+            $this->set_page_template($existing_page->ID);
+
             return $existing_page->ID;
         }
 
@@ -323,7 +331,16 @@ class ChronoTrack_Admin {
 
         $page_id = wp_insert_post($page_data);
 
-        // Set blank/full-width template to hide sidebar
+        // Set blank/full-width template for new page
+        $this->set_page_template($page_id);
+
+        return $page_id;
+    }
+
+    /**
+     * Set page template to blank/full-width
+     */
+    private function set_page_template($page_id) {
         // Try common template names - WordPress will use first available
         $templates_to_try = array(
             'elementor_canvas',           // Elementor Canvas (blank)
@@ -336,22 +353,27 @@ class ChronoTrack_Admin {
         );
 
         // Try to set a blank/full-width template if available
+        $template_set = false;
         foreach ($templates_to_try as $template) {
             $theme_templates = wp_get_theme()->get_page_templates();
             if (isset($theme_templates[$template]) || $template === 'elementor_canvas') {
                 update_post_meta($page_id, '_wp_page_template', $template);
                 error_log("ChronoTrack: Set page template to '{$template}' for page {$page_id}");
+                $template_set = true;
                 break;
             }
+        }
+
+        if (!$template_set) {
+            error_log("ChronoTrack: No blank/full-width template found in theme for page {$page_id}");
         }
 
         // Also try to disable Elementor's header/footer if Elementor is active
         if (defined('ELEMENTOR_VERSION')) {
             update_post_meta($page_id, '_elementor_page_assets_css', 'inline');
             update_post_meta($page_id, '_elementor_template_type', 'wp-page');
+            error_log("ChronoTrack: Set Elementor settings for page {$page_id}");
         }
-
-        return $page_id;
     }
 
     /**
