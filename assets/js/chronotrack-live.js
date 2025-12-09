@@ -1238,6 +1238,20 @@
         sortByColumn: function(column) {
             console.log('🔄 Sorting by column:', column);
 
+            if (!this.allResults || this.allResults.length === 0) {
+                console.warn('⚠️ No results to sort!');
+                return;
+            }
+
+            // Debug: show sample values
+            if (this.allResults.length > 0) {
+                console.log('📊 Sample data for column "' + column + '":', {
+                    first: this.allResults[0][column],
+                    second: this.allResults[1] ? this.allResults[1][column] : 'N/A',
+                    type: typeof this.allResults[0][column]
+                });
+            }
+
             // Toggle sort direction if clicking same column
             if (this.sortColumn === column) {
                 this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
@@ -1268,9 +1282,14 @@
                 ];
 
                 if (numericColumns.includes(column)) {
-                    // Convert to number, empty/null/undefined becomes Infinity (sorts to end)
-                    valA = (valA !== null && valA !== undefined && valA !== '' && valA !== '-' && valA !== 0) ? parseInt(valA) : Infinity;
-                    valB = (valB !== null && valB !== undefined && valB !== '' && valB !== '-' && valB !== 0) ? parseInt(valB) : Infinity;
+                    // CRITICAL FIX: Accept 0 as valid value! Only reject null/undefined/empty string
+                    valA = (valA !== null && valA !== undefined && valA !== '' && valA !== '-') ? parseInt(valA) : Infinity;
+                    valB = (valB !== null && valB !== undefined && valB !== '' && valB !== '-') ? parseInt(valB) : Infinity;
+
+                    // Debug numeric sorting
+                    if (column === 'entry_bib' || column === 'overall_place') {
+                        console.log('🔢 Numeric:', column, 'A:', a[column], '→', valA, 'B:', b[column], '→', valB);
+                    }
                 }
                 // Handle time columns (convert to seconds)
                 else if (column === 'finish_time' || column === 'net_time') {
