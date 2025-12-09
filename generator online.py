@@ -37,7 +37,8 @@ class ChronoTrackApiClient:
             'athletes': {},
             'openResults': [],
             'eventInfo': None,
-            'regChoices': []  # Przechowywanie dostępnych dystansów
+            'regChoices': [],  # Przechowywanie dostępnych dystansów
+            'intervals': []  # Przechowywanie punktów kontrolnych
         }
         
         # Lista znalezionych pól custom_element
@@ -135,12 +136,30 @@ class ChronoTrackApiClient:
             'status': 'active' if event_data.get('event_is_published') == '1' else 'inactive',
             'location': f"{event_data.get('location_city', '')}, {event_data.get('location_country', '')}"
         }
-        
+
         self.cache['eventInfo'] = event_info
-        
+
         # Pobierz dostępne dystanse
         self.fetch_reg_choices()
-        
+
+        # Pobierz informacje o punktach kontrolnych (checkpoints/intervals)
+        try:
+            intervals_endpoint = f"/api/event/{self.config['eventId']}/interval"
+            intervals_response = self.make_api_request(intervals_endpoint, {'page': 1, 'size': 100})
+
+            if intervals_response and 'intervals' in intervals_response:
+                self.cache['intervals'] = intervals_response['intervals']
+                print(f"Pobrano {len(intervals_response['intervals'])} punktów kontrolnych:")
+                for interval in intervals_response['intervals']:
+                    interval_name = interval.get('interval_name', interval.get('name', 'Nieznany'))
+                    print(f"  - {interval_name}")
+            else:
+                print("Brak informacji o punktach kontrolnych w API")
+                self.cache['intervals'] = []
+        except Exception as e:
+            print(f"Błąd podczas pobierania punktów kontrolnych: {e}")
+            self.cache['intervals'] = []
+
         return event_info
     
     def fetch_reg_choices(self):
@@ -671,8 +690,11 @@ class ChronoTrackApiClient:
                 'athlete_id': main_result.get('athlete_id', ''),
                 'status': main_result.get('results_status', 'OK'),
                 'penalties': main_result.get('results_penalties', ''),
+                # Narodowość zawodnika
+                'athlete_country': main_result.get('results_country', main_result.get('athlete_country', '')),
+                'athlete_nationality': main_result.get('results_nationality', main_result.get('athlete_nationality', '')),
                 # Formatowane wersje czasów
-                'formatted_net_time': self.format_time(main_result.get('results_time', '')), 
+                'formatted_net_time': self.format_time(main_result.get('results_time', '')),
                 'formatted_gun_time': self.format_time(main_result.get('results_gun_time', '')),
                 'formatted_pace': self.format_pace(main_result.get('results_pace', ''))
             }
@@ -1187,6 +1209,7 @@ class ResultsGeneratorApp:
         self.all_columns = [
             {"id": "overall_place", "name": "Mce Open", "description": "Miejsce w klasyfikacji ogólnej", "api_options": ["overall_place", "results_rank", "place"], "selected": True},
             {"id": "entry_bib", "name": "Nr Start", "description": "Numer startowy", "api_options": ["entry_bib", "bib", "results_bib"], "selected": True},
+            {"id": "athlete_country", "name": "Flaga", "description": "Narodowość zawodnika (flaga)", "api_options": ["athlete_country", "athlete_nationality", "results_country", "results_nationality"], "selected": False},
             {"id": "full_name", "name": "Nazwisko, Imię", "description": "Nazwisko i imię zawodnika", "api_options": ["full_name", "athlete_last_name,athlete_first_name"], "selected": True},
             {"id": "athlete_city", "name": "Miejscowość", "description": "Miejscowość zawodnika", "api_options": ["athlete_city", "city", "location", "athlete_location", "custom_element_location", "custom_element_city", "location_city"], "selected": True},
             {"id": "club", "name": "Klub", "description": "Klub zawodnika", "api_options": ["club", "team", "athlete_club", "custom_element_club", "custom_element_team"], "selected": True},
@@ -1204,25 +1227,22 @@ class ResultsGeneratorApp:
         
         # Lista wszystkich możliwych atrybutów z API (rozszerzona)
         self.all_api_attributes = [
-            "overall_place", "results_rank", "place", "entry_bib", "bib", "results_bib", 
-            "full_name", "athlete_last_name", "athlete_first_name", "athlete_sex", 
+            "overall_place", "results_rank", "place", "entry_bib", "bib", "results_bib",
+            "full_name", "athlete_last_name", "athlete_first_name", "athlete_sex",
             "athlete_city", "city", "location", "athlete_location", "location_city",
-            "club", "team", "athlete_club", 
+            "club", "team", "athlete_club",
             "birth_year", "birthdate", "athlete_birthdate", "entry_race_age", "athlete_age",
-            "bracket_name", "category", "results_primary_bracket_name", 
-            "division_place", "category_place", "bracket_place", 
+            "bracket_name", "category", "results_primary_bracket_name",
+            "division_place", "category_place", "bracket_place",
             "gender_place", "sex_place", "results_sex_rank",
             "formatted_gun_time", "gun_time", "results_gun_time",
             "formatted_pace", "pace", "results_pace",
             "formatted_net_time", "net_time", "results_time",
             "race_distance", "race_name", "results_race_name", "reg_choice_name",
-            "athlete_country", "country", "athlete_state", "state",
-            "penalties", "results_penalties", "custom_2"
-            "split_time", "formatted_split_time", "split_interval"             
-            # Dodane atrybuty kar i custom_2
-            "split_time", "formatted_split_time", "split_interval_name", 
-            "split_pace", "formatted_split_pace", "split_times"
-            # Dodaj te atrybuty do istniejącej listy
+            "athlete_country", "country", "athlete_state", "state", "athlete_nationality", "results_country", "results_nationality",
+            "penalties", "results_penalties", "custom_2",
+            "split_time", "formatted_split_time", "split_interval_name",
+            "split_pace", "formatted_split_pace", "split_times",
             "split_1_name", "split_1_time", "split_1_formatted_time", "split_1_pace", "split_1_formatted_pace",
             "split_2_name", "split_2_time", "split_2_formatted_time", "split_2_pace", "split_2_formatted_pace",
             "split_3_name", "split_3_time", "split_3_formatted_time", "split_3_pace", "split_3_formatted_pace",
@@ -1232,9 +1252,62 @@ class ResultsGeneratorApp:
         
         # Aktywne kolumny (te, które zostały wybrane)
         self.active_columns = [col for col in self.all_columns if col["selected"]]
-        
+
         # Stwórz interfejs
         self.create_widgets()
+
+    def add_dynamic_split_columns(self):
+        """Dodaje dynamiczne kolumny międzyczasów na podstawie pobranych danych"""
+        # Zbierz wszystkie unikalne nazwy punktów kontrolnych z danych zawodników
+        split_names = set()
+
+        for athlete in self.api_client.cache.get('openResults', []):
+            split_times = athlete.get('split_times', [])
+            for split in split_times:
+                interval_name = split.get('interval_name', '')
+                if interval_name and interval_name not in ['Full Course', 'Finish', '']:
+                    split_names.add(interval_name)
+
+        # Usuń stare dynamiczne kolumny międzyczasów (jeśli istnieją)
+        self.all_columns = [col for col in self.all_columns if not col.get('is_dynamic_split', False)]
+
+        # Dodaj nowe dynamiczne kolumny dla każdego punktu kontrolnego
+        for i, split_name in enumerate(sorted(split_names), start=1):
+            # Kolumna czasu
+            time_col = {
+                "id": f"dynamic_split_{i}_time",
+                "name": f"{split_name} - Czas",
+                "description": f"Czas na punkcie {split_name}",
+                "api_options": [f"split_{i}_formatted_time"],
+                "selected": False,
+                "is_dynamic_split": True,
+                "split_name": split_name
+            }
+            self.all_columns.append(time_col)
+
+            # Kolumna tempa
+            pace_col = {
+                "id": f"dynamic_split_{i}_pace",
+                "name": f"{split_name} - Tempo",
+                "description": f"Tempo na punkcie {split_name}",
+                "api_options": [f"split_{i}_formatted_pace"],
+                "selected": False,
+                "is_dynamic_split": True,
+                "split_name": split_name
+            }
+            self.all_columns.append(pace_col)
+
+        # Dodaj dynamiczne atrybuty do all_api_attributes
+        for i in range(1, len(split_names) + 1):
+            new_attrs = [
+                f"dynamic_split_{i}_time",
+                f"dynamic_split_{i}_pace"
+            ]
+            for attr in new_attrs:
+                if attr not in self.all_api_attributes:
+                    self.all_api_attributes.append(attr)
+
+        print(f"Dodano {len(split_names)} dynamicznych punktów kontrolnych jako kolumny")
         
     def create_widgets(self):
         # Główna ramka
@@ -1499,7 +1572,7 @@ class ResultsGeneratorApp:
             for j, col_var in enumerate(self.column_vars):
                 # Pobierz aktualnie wybrane pole API dla tej kolumny
                 api_field = col_var.get()
-                
+
                 # Obsłuż specjalne przypadki
                 if api_field == "full_name" or api_field == "athlete_last_name,athlete_first_name":
                     # Połącz nazwisko i imię
@@ -1518,10 +1591,31 @@ class ResultsGeneratorApp:
                         if field_value:
                             values.append(str(field_value))
                     value = " ".join(values)
+                elif api_field.startswith("split_") and "_formatted_" in api_field:
+                    # Obsługa dynamicznych kolumn międzyczasów (np. split_1_formatted_time)
+                    # Sprawdź czy to pole już istnieje w danych zawodnika
+                    if api_field in athlete:
+                        value = athlete.get(api_field, "")
+                    else:
+                        # Jeśli nie, spróbuj znaleźć w split_times
+                        # Wyciągnij numer splitu (np. 1 z "split_1_formatted_time")
+                        import re
+                        match = re.search(r'split_(\d+)_formatted_(time|pace)', api_field)
+                        if match:
+                            split_num = int(match.group(1))
+                            field_type = match.group(2)  # 'time' lub 'pace'
+                            split_times = athlete.get('split_times', [])
+                            if split_num <= len(split_times):
+                                split_data = split_times[split_num - 1]
+                                value = split_data.get(f'formatted_{field_type}', '')
+                            else:
+                                value = ""
+                        else:
+                            value = ""
                 else:
                     # Standardowe pole - sprawdź czy istnieje w danych zawodnika
                     value = athlete.get(api_field, "")
-                
+
                 row_values.append(value)
             
             # Wstaw wiersz do treeview
@@ -2340,13 +2434,23 @@ class ResultsGeneratorApp:
             
             # Załaduj dane do listy zawodników
             self.athletes = list(self.api_client.cache['openResults'])
-            
+
+            # Dodaj dynamiczne kolumny międzyczasów na podstawie pobranych danych
+            self.add_dynamic_split_columns()
+
             # Aktualizuj dropdown z dystansami - ważne po pobraniu wszystkich danych
             self.update_reg_choice_dropdown()
-            
-            # Sortuj według miejsca ogólnego
-            self.athletes.sort(key=lambda x: int(x['overall_place']) if x.get('overall_place', '').isdigit() else 9999)
-            
+
+            # Sortuj według miejsca ogólnego - poprawione sortowanie
+            def safe_sort_key(athlete):
+                """Bezpieczna funkcja sortująca - obsługuje puste wartości i nienumeryczne dane"""
+                place = athlete.get('overall_place', '')
+                if place and str(place).strip().isdigit():
+                    return int(place)
+                return 999999  # Zawodnicy bez miejsca na końcu
+
+            self.athletes.sort(key=safe_sort_key)
+
             # Aktualizuj treeview
             self.refresh_preview()
             
@@ -2412,9 +2516,16 @@ class ResultsGeneratorApp:
                             
                             # Załaduj dane do listy zawodników
                             self.athletes = list(self.api_client.cache['openResults'])
-                    
-                    # Sortuj według miejsca ogólnego
-                    self.athletes.sort(key=lambda x: int(x['overall_place']) if x.get('overall_place', '').isdigit() else 9999)
+
+                    # Sortuj według miejsca ogólnego - poprawione sortowanie
+                    def safe_sort_key(athlete):
+                        """Bezpieczna funkcja sortująca - obsługuje puste wartości i nienumeryczne dane"""
+                        place = athlete.get('overall_place', '')
+                        if place and str(place).strip().isdigit():
+                            return int(place)
+                        return 999999  # Zawodnicy bez miejsca na końcu
+
+                    self.athletes.sort(key=safe_sort_key)
                     
                     # Aktualizuj GUI w wątku głównym
                     self.root.after(0, self.update_after_refresh, len(self.athletes))

@@ -111,7 +111,27 @@ class ChronoTrack_Frontend {
 
         ?>
         <style type="text/css">
-            /* Completely remove WordPress sidebar on ChronoTrack pages */
+            /* POPRAWKA: Całkowicie usuń sidebar, menu i niepotrzebne elementy na stronach ChronoTrack */
+
+            /* Ukryj główne menu nawigacji WordPress */
+            body.chronotrack-page .site-header,
+            body.chronotrack-page header.site-header,
+            body.chronotrack-page #masthead,
+            body.chronotrack-page .main-navigation,
+            body.chronotrack-page .site-navigation,
+            body.chronotrack-page nav.primary-navigation,
+            body.chronotrack-page .nav-menu,
+            body.chronotrack-page .menu,
+            body.chronotrack-page #site-navigation {
+                display: none !important;
+                visibility: hidden !important;
+                position: absolute !important;
+                left: -9999px !important;
+                height: 0 !important;
+                overflow: hidden !important;
+            }
+
+            /* Ukryj sidebar całkowicie */
             body.chronotrack-page #secondary,
             body.chronotrack-page aside,
             body.chronotrack-page .sidebar,
@@ -132,7 +152,7 @@ class ChronoTrack_Frontend {
                 overflow: hidden !important;
             }
 
-            /* Force full width layout - remove grid/flex containers */
+            /* Wymuszaj pełną szerokość layoutu - usuń grid/flex containers */
             body.chronotrack-page .site-content,
             body.chronotrack-page .hfeed,
             body.chronotrack-page .site-main,
@@ -142,9 +162,10 @@ class ChronoTrack_Frontend {
                 max-width: 100% !important;
                 grid-template-columns: none !important;
                 grid-template-areas: none !important;
+                margin: 0 auto !important;
             }
 
-            /* Make content full width - no flex basis */
+            /* Zawartość na pełną szerokość */
             body.chronotrack-page #primary,
             body.chronotrack-page .site-main,
             body.chronotrack-page .content-area,
@@ -160,17 +181,43 @@ class ChronoTrack_Frontend {
                 margin-right: 0 !important;
             }
 
-            /* Hide meta info */
+            /* Ukryj meta info, header i footer strony */
             body.chronotrack-page .entry-meta,
             body.chronotrack-page .entry-footer,
-            body.chronotrack-page .entry-header {
+            body.chronotrack-page .entry-header,
+            body.chronotrack-page .page-header,
+            body.chronotrack-page .entry-title {
                 display: none !important;
             }
 
-            /* Full width container */
+            /* Pełna szerokość kontenera */
             body.chronotrack-page .site-content,
             body.chronotrack-page .hfeed {
                 padding: 20px !important;
+                margin: 0 !important;
+            }
+
+            /* Ukryj stopkę i wszelkie elementy na górze */
+            body.chronotrack-page .site-footer,
+            body.chronotrack-page footer,
+            body.chronotrack-page .footer {
+                display: none !important;
+            }
+
+            /* Ustaw body na pełną szerokość bez marginesów */
+            body.chronotrack-page {
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+
+            /* Zapewnij, że wrapper jest na pełną szerokość */
+            body.chronotrack-page #page,
+            body.chronotrack-page .site,
+            body.chronotrack-page #wrapper {
+                width: 100% !important;
+                max-width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
             }
         </style>
         <?php
