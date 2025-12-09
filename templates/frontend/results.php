@@ -67,30 +67,30 @@ $columns = $db->get_event_columns($event->event_id, true);
             <div class="chronotrack-last-update">
                 <span id="chronotrack-timestamp"></span>
             </div>
+
+            <!-- Participant Statistics - moved here under NA ŻYWO -->
+            <div class="chronotrack-stats" id="chronotrack-stats" style="display: none; margin-top: 10px; padding: 10px; background: #f8f9fa; border-radius: 4px; font-size: 12px;">
+                <div style="display: flex; justify-content: flex-end; gap: 20px; flex-wrap: wrap;">
+                    <div class="chronotrack-stat-item">
+                        <span class="chronotrack-stat-label" style="color: #666; font-weight: 600;">WYSTARTOWAŁO:</span>
+                        <span class="chronotrack-stat-value" id="stat-started" style="font-weight: 700; color: #333;">-</span>
+                    </div>
+                    <div class="chronotrack-stat-item">
+                        <span class="chronotrack-stat-label" style="color: #666; font-weight: 600;">NA TRASIE:</span>
+                        <span class="chronotrack-stat-value" id="stat-on-course" style="font-weight: 700; color: #ff9800;">-</span>
+                    </div>
+                    <div class="chronotrack-stat-item">
+                        <span class="chronotrack-stat-label" style="color: #666; font-weight: 600;">UKOŃCZYŁO:</span>
+                        <span class="chronotrack-stat-value" id="stat-finished" style="font-weight: 700; color: #4caf50;">-</span>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
     <!-- Distance Filter Buttons -->
     <div class="chronotrack-distance-filters" id="chronotrack-distance-filters" style="margin: 20px 0;">
         <!-- Distance buttons will be populated by JavaScript -->
-    </div>
-
-    <!-- Participant Statistics -->
-    <div class="chronotrack-stats" id="chronotrack-stats" style="display: none; margin: 15px 0; padding: 15px; background: #f8f9fa; border-radius: 6px; text-align: center;">
-        <div style="display: flex; justify-content: center; gap: 40px; flex-wrap: wrap;">
-            <div class="chronotrack-stat-item">
-                <span class="chronotrack-stat-label" style="font-size: 12px; color: #666; display: block; margin-bottom: 5px;">ZAREJESTROWANYCH</span>
-                <span class="chronotrack-stat-value" id="stat-registered" style="font-size: 24px; font-weight: 700; color: #333;">-</span>
-            </div>
-            <div class="chronotrack-stat-item">
-                <span class="chronotrack-stat-label" style="font-size: 12px; color: #666; display: block; margin-bottom: 5px;">NA TRASIE</span>
-                <span class="chronotrack-stat-value" id="stat-on-course" style="font-size: 24px; font-weight: 700; color: #ff9800;">-</span>
-            </div>
-            <div class="chronotrack-stat-item">
-                <span class="chronotrack-stat-label" style="font-size: 12px; color: #666; display: block; margin-bottom: 5px;">UKOŃCZYŁO</span>
-                <span class="chronotrack-stat-value" id="stat-finished" style="font-size: 24px; font-weight: 700; color: #4caf50;">-</span>
-            </div>
-        </div>
     </div>
 
     <!-- Search/Filter -->

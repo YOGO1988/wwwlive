@@ -270,8 +270,14 @@
                             console.log('📋 Columns updated from refresh:', this.columns.length);
                         }
 
+                        // CRITICAL FIX: Reset isLoading BEFORE calling loadResults
+                        // Otherwise loadResults will skip because isLoading is still true
+                        this.isLoading = false;
+                        this.hideLoading();
+
                         // After API refresh, reload from cache to get full data
                         // renderDistanceButtons will be called after renderResults in loadResults()
+                        console.log('📥 Calling loadResults after API refresh...');
                         this.loadResults(this.currentView);
                     } else {
                         console.error('❌ API refresh failed:', response.data.message);
@@ -291,11 +297,13 @@
                     }
 
                     this.showError(errorMsg);
+                    // Reset isLoading on error
+                    this.isLoading = false;
+                    this.hideLoading();
                 },
                 complete: () => {
                     console.log('✅ API refresh complete');
-                    this.isLoading = false;
-                    this.hideLoading();
+                    // isLoading is already reset in success or error handlers
                 }
             });
         },
@@ -489,11 +497,15 @@
 
                     // Handle special case for full_name
                     if (attr === 'full_name' || attr === 'athlete_last_name,athlete_first_name') {
+                        // CRITICAL FIX: Always format as "Nazwisko Imię"
+                        if (result.last_name || result.first_name) {
+                            const lastName = (result.last_name || '').trim();
+                            const firstName = (result.first_name || '').trim();
+                            return lastName + (lastName && firstName ? ' ' : '') + firstName;
+                        }
+                        // Fallback to full_name if no first/last name available
                         if (result.full_name) {
                             return result.full_name;
-                        }
-                        if (result.last_name || result.first_name) {
-                            return (result.last_name || '') + ' ' + (result.first_name || '');
                         }
                     }
 
@@ -1174,7 +1186,7 @@
                 return;
             }
 
-            const total = this.allResults.length;
+            const started = this.allResults.length; // All results = all who started
 
             // Count finished (have finish time and it's not empty/dash)
             const finished = this.allResults.filter(r => {
@@ -1182,13 +1194,13 @@
                 return time && time !== '-' && time !== '00:00:00' && time !== '';
             }).length;
 
-            // On course = total - finished (started but not finished yet)
-            const onCourse = total - finished;
+            // On course = started - finished (started but not finished yet)
+            const onCourse = started - finished;
 
-            console.log('📊 Stats calculated:', {total, finished, onCourse});
+            console.log('📊 Stats calculated:', {started, finished, onCourse});
 
-            // Update UI
-            $('#stat-registered').text(total);
+            // Update UI - changed from stat-registered to stat-started
+            $('#stat-started').text(started);
             $('#stat-on-course').text(onCourse);
             $('#stat-finished').text(finished);
 
@@ -1226,20 +1238,33 @@
                 let valA = a[column];
                 let valB = b[column];
 
-                // Handle numeric columns
+                // Handle numeric columns (bib_number, position, etc.)
                 if (column === 'bib_number' || column === 'position' || column === 'category_position' || column === 'gender_position' || column === 'age') {
-                    valA = parseInt(valA) || 999999;
-                    valB = parseInt(valB) || 999999;
+                    // Convert to number, empty/null/undefined becomes Infinity (sorts to end)
+                    valA = (valA !== null && valA !== undefined && valA !== '' && valA !== '-' && valA !== 0) ? parseInt(valA) : Infinity;
+                    valB = (valB !== null && valB !== undefined && valB !== '' && valB !== '-' && valB !== 0) ? parseInt(valB) : Infinity;
                 }
                 // Handle time columns (convert to seconds)
                 else if (column === 'finish_time' || column === 'net_time') {
                     valA = this.parseTimeToSeconds(valA);
                     valB = this.parseTimeToSeconds(valB);
                 }
-                // Handle string columns
+                // Handle string columns (club, name, etc.)
                 else {
-                    valA = (valA || '').toString().toLowerCase();
-                    valB = (valB || '').toString().toLowerCase();
+                    const strA = (valA || '').toString().trim().toLowerCase();
+                    const strB = (valB || '').toString().trim().toLowerCase();
+
+                    // Special handling for club - empty clubs always go to end
+                    if (column === 'club') {
+                        // If A is empty but B is not, A goes to end
+                        if (!strA && strB) return 1;
+                        // If B is empty but A is not, B goes to end
+                        if (strA && !strB) return -1;
+                        // If both empty or both have value, compare normally
+                    }
+
+                    valA = strA;
+                    valB = strB;
                 }
 
                 if (valA < valB) return -1 * direction;
