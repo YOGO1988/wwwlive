@@ -22,6 +22,9 @@ class ChronoTrack_Ajax {
 
         add_action('wp_ajax_chronotrack_refresh_results', array($this, 'refresh_results'));
         add_action('wp_ajax_nopriv_chronotrack_refresh_results', array($this, 'refresh_results'));
+
+        // Admin-only AJAX action for PDF generation
+        add_action('wp_ajax_chronotrack_generate_pdf', array($this, 'generate_pdf'));
     }
 
     /**
@@ -127,8 +130,16 @@ class ChronoTrack_Ajax {
             wp_send_json_error(array('message' => __('Participant not found.', 'chronotrack-live')));
         }
 
+        // Get event info for modal header
+        $event = $db->get_event($event_id);
+
         wp_send_json_success(array(
             'participant' => $this->format_participant_details($result),
+            'event' => array(
+                'name' => $event->event_name ?? '',
+                'date' => $event->event_date ?? '',
+                'location' => $event->event_location ?? '',
+            ),
         ));
     }
 
@@ -151,8 +162,16 @@ class ChronoTrack_Ajax {
             wp_send_json_error(array('message' => $results->get_error_message()));
         }
 
+        // CRITICAL FIX: Also fetch and include distances/columns after API refresh
+        // Otherwise frontend can't render distance buttons
+        $db = chronotrack_live_results()->db;
+        $columns = $db->get_event_columns($event_id, true);
+        $distances = $db->get_unique_distances($event_id);
+
         wp_send_json_success(array(
             'results' => $this->format_results($results),
+            'columns' => $this->format_columns($columns),
+            'distances' => $distances,
             'count' => count($results),
             'timestamp' => current_time('timestamp'),
         ));
@@ -160,31 +179,38 @@ class ChronoTrack_Ajax {
 
     /**
      * Format results for JSON response
+     * Handles both objects (from database) and arrays (from API)
      */
     private function format_results($results) {
         $formatted = array();
 
         foreach ($results as $result) {
+            // Handle both object and array formats
+            $is_array = is_array($result);
+
             $formatted[] = array(
-                'id' => $result->id,
-                'participant_id' => $result->participant_id,
-                'bib_number' => $result->bib_number,
-                'first_name' => $result->first_name,
-                'last_name' => $result->last_name,
-                'full_name' => $result->first_name . ' ' . $result->last_name,
-                'age' => $result->age,
-                'gender' => $result->gender,
-                'city' => $result->city,
-                'club' => $result->club,
-                'distance' => $result->distance ?? '',
-                'category' => $result->category,
-                'position' => $result->position,
-                'category_position' => $result->category_position,
-                'gender_position' => $result->gender_position,
-                'finish_time' => $result->finish_time,
-                'net_time' => $result->net_time,
-                'split_times' => $result->split_times ?? array(),
-                'finish_timestamp' => $result->finish_timestamp,
+                'id' => $is_array ? ($result['id'] ?? 0) : $result->id,
+                'participant_id' => $is_array ? ($result['participant_id'] ?? '') : $result->participant_id,
+                'bib_number' => $is_array ? ($result['bib_number'] ?? '') : $result->bib_number,
+                'first_name' => $is_array ? ($result['first_name'] ?? '') : $result->first_name,
+                'last_name' => $is_array ? ($result['last_name'] ?? '') : $result->last_name,
+                'full_name' => $is_array ?
+                    ($result['first_name'] ?? '') . ' ' . ($result['last_name'] ?? '') :
+                    $result->first_name . ' ' . $result->last_name,
+                'age' => $is_array ? ($result['age'] ?? 0) : $result->age,
+                'gender' => $is_array ? ($result['gender'] ?? '') : $result->gender,
+                'city' => $is_array ? ($result['city'] ?? '') : $result->city,
+                'club' => $is_array ? ($result['club'] ?? '') : $result->club,
+                'distance' => $is_array ? ($result['distance'] ?? '') : ($result->distance ?? ''),
+                'category' => $is_array ? ($result['category'] ?? '') : $result->category,
+                'position' => $is_array ? ($result['position'] ?? 0) : $result->position,
+                'category_position' => $is_array ? ($result['category_position'] ?? 0) : $result->category_position,
+                'gender_position' => $is_array ? ($result['gender_position'] ?? 0) : $result->gender_position,
+                'finish_time' => $is_array ? ($result['finish_time'] ?? '') : $result->finish_time,
+                'net_time' => $is_array ? ($result['net_time'] ?? '') : $result->net_time,
+                'split_times' => $is_array ? ($result['split_times'] ?? array()) : ($result->split_times ?? array()),
+                'bracket_positions' => $is_array ? ($result['bracket_positions'] ?? array()) : ($result->bracket_positions ?? array()),
+                'finish_timestamp' => $is_array ? ($result['finish_timestamp'] ?? '') : $result->finish_timestamp,
             );
         }
 
@@ -233,9 +259,54 @@ class ChronoTrack_Ajax {
             'finish_time' => $result->finish_time,
             'net_time' => $result->net_time,
             'split_times' => $result->split_times ?? array(),
+            'bracket_positions' => $result->bracket_positions ?? array(),
             'detailed_splits' => $result->detailed_splits ?? array(),
             'finish_timestamp' => $result->finish_timestamp,
             'raw_data' => $result->raw_data ?? array(),
         );
+    }
+
+    /**
+     * Generate PDF for specific distance (Admin-only)
+     */
+    public function generate_pdf() {
+        // Check user capabilities
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(array('message' => __('Brak uprawnień.', 'chronotrack-live')));
+            return;
+        }
+
+        // Verify nonce
+        if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'chronotrack_admin_nonce')) {
+            wp_send_json_error(array('message' => __('Nieprawidłowy nonce.', 'chronotrack-live')));
+            return;
+        }
+
+        $event_id = sanitize_text_field($_POST['event_id'] ?? '');
+        $distance = sanitize_text_field($_POST['distance'] ?? '');
+
+        if (empty($event_id) || empty($distance)) {
+            wp_send_json_error(array('message' => __('Brak wymaganych parametrów.', 'chronotrack-live')));
+            return;
+        }
+
+        // Generate PDF
+        $pdf = chronotrack_live_results()->pdf;
+        $result = $pdf->generate_pdf($event_id, $distance);
+
+        if (is_wp_error($result)) {
+            wp_send_json_error(array('message' => $result->get_error_message()));
+            return;
+        }
+
+        // Return download URL
+        $upload_dir = wp_upload_dir();
+        $pdf_url = str_replace($upload_dir['basedir'], $upload_dir['baseurl'], $result);
+
+        wp_send_json_success(array(
+            'message' => __('PDF wygenerowany pomyślnie.', 'chronotrack-live'),
+            'download_url' => $pdf_url,
+            'filename' => basename($result)
+        ));
     }
 }

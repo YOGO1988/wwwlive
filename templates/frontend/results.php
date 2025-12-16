@@ -38,7 +38,12 @@ $columns = $db->get_event_columns($event->event_id, true);
         </div>
 
         <h1 class="chronotrack-event-name"><?php echo esc_html($event->event_name); ?></h1>
-        <div class="chronotrack-event-date"><?php echo date_i18n(get_option('date_format'), strtotime($event->event_date)); ?></div>
+        <div class="chronotrack-event-date">
+            <?php echo date_i18n(get_option('date_format'), strtotime($event->event_date)); ?>
+            <?php if (!empty($event->event_location)): ?>
+                · <?php echo esc_html($event->event_location); ?>
+            <?php endif; ?>
+        </div>
     </div>
 
     <!-- View Toggle -->
@@ -49,11 +54,37 @@ $columns = $db->get_event_columns($event->event_id, true);
         <button class="chronotrack-view-toggle" data-view="meta">
             META (Linia mety)
         </button>
-        <button class="chronotrack-manual-refresh">
-            🔄 Odśwież
-        </button>
-        <div class="chronotrack-last-update">
-            <span id="chronotrack-timestamp"></span>
+
+        <div class="chronotrack-live-wrapper">
+            <div class="chronotrack-live-indicator">
+                <span class="chronotrack-live-text">Na żywo</span>
+                <button class="chronotrack-manual-refresh-icon" title="Odśwież">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="chronotrack-last-update">
+                <span id="chronotrack-timestamp"></span>
+            </div>
+
+            <!-- Participant Statistics - moved here under NA ŻYWO -->
+            <div class="chronotrack-stats" id="chronotrack-stats" style="display: none; margin-top: 10px; padding: 10px; background: #f8f9fa; border-radius: 4px; font-size: 12px;">
+                <div style="display: flex; justify-content: flex-end; gap: 20px; flex-wrap: wrap;">
+                    <div class="chronotrack-stat-item">
+                        <span class="chronotrack-stat-label" style="color: #666; font-weight: 600;">WYSTARTOWAŁO:</span>
+                        <span class="chronotrack-stat-value" id="stat-started" style="font-weight: 700; color: #333;">-</span>
+                    </div>
+                    <div class="chronotrack-stat-item">
+                        <span class="chronotrack-stat-label" style="color: #666; font-weight: 600;">NA TRASIE:</span>
+                        <span class="chronotrack-stat-value" id="stat-on-course" style="font-weight: 700; color: #ff9800;">-</span>
+                    </div>
+                    <div class="chronotrack-stat-item">
+                        <span class="chronotrack-stat-label" style="color: #666; font-weight: 600;">UKOŃCZYŁO:</span>
+                        <span class="chronotrack-stat-value" id="stat-finished" style="font-weight: 700; color: #4caf50;">-</span>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -70,20 +101,7 @@ $columns = $db->get_event_columns($event->event_id, true);
                placeholder="Szukaj po nazwisku lub numerze...">
 
         <select id="chronotrack-category-filter" class="chronotrack-filter">
-            <option value="">Wszystkie kategorie</option>
         </select>
-
-        <select id="chronotrack-gender-filter" class="chronotrack-filter">
-            <option value="">K/M</option>
-            <option value="M">Mężczyźni</option>
-            <option value="F">Kobiety</option>
-        </select>
-    </div>
-
-    <!-- Loading Indicator -->
-    <div class="chronotrack-loading" style="display: none;">
-        <div class="chronotrack-spinner"></div>
-        <p>Ładowanie wyników...</p>
     </div>
 
     <!-- Results Table - Standings View -->
@@ -93,8 +111,18 @@ $columns = $db->get_event_columns($event->event_id, true);
                 <thead>
                     <tr>
                         <?php if (!empty($columns)): ?>
-                            <?php foreach ($columns as $column): ?>
-                                <th class="col-<?php echo esc_attr($column->column_id); ?>" title="<?php echo esc_attr($column->column_description ?? ''); ?>">
+                            <?php foreach ($columns as $column):
+                                // Get first API attribute for sorting
+                                $sortKey = '';
+                                if (!empty($column->api_attributes) && is_array($column->api_attributes) && count($column->api_attributes) > 0) {
+                                    $sortKey = $column->api_attributes[0];
+                                }
+                                $sortable = !empty($sortKey) ? 'sortable' : '';
+                            ?>
+                                <th class="col-<?php echo esc_attr($column->column_id); ?> <?php echo $sortable; ?>"
+                                    <?php if ($sortKey): ?>data-column="<?php echo esc_attr($sortKey); ?>"<?php endif; ?>
+                                    title="<?php echo esc_attr($column->column_description ?? ''); ?><?php if ($sortKey): echo ' (kliknij aby sortować)'; endif; ?>"
+                                    style="<?php if ($sortKey): ?>cursor: pointer;<?php endif; ?>">
                                     <?php
                                     // Split multi-word column names into multiple lines
                                     $name = $column->column_name;
@@ -126,6 +154,14 @@ $columns = $db->get_event_columns($event->event_id, true);
                         </td>
                     </tr>
                 </tbody>
+                <tfoot>
+                    <tr class="chronotrack-loading-row" style="display: none;">
+                        <td colspan="20" style="text-align: center; padding: 15px;">
+                            <div class="chronotrack-spinner"></div>
+                            <p style="margin: 10px 0 0 0;">Ładowanie wyników...</p>
+                        </td>
+                    </tr>
+                </tfoot>
             </table>
         </div>
     </div>

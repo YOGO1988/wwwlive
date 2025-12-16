@@ -1,0 +1,234 @@
+COMPLETE API REWRITE - Based on class-chronotrack-api.php lines 225-417
+
+Replace in generator_online.py:
+
+1. ADD after fetch_all_entries (around line 536):
+
+    def fetch_results(self):
+        """
+        Fetch results from ChronoTrack API with pagination
+        EXACT COPY from class-chronotrack-api.php lines 228-342
+        """
+        print(f"ChronoTrack API: Fetching results for event {self.config['eventId']}")
+
+        # First, fetch participant entries to get city and club data
+        entries_by_bib = self.fetch_all_entries()
+
+        all_results_by_bib = {}
+        page = 1
+        has_more_pages = True
+
+        # Fetch all pages of results
+        while has_more_pages:
+            params = {
+                'format': 'json',
+                'page': page,
+                'per_page': 100
+            }
+
+            endpoint = f"/api/event/{self.config['eventId']}/results"
+            response = self.make_api_request(endpoint, params)
+
+            if response and 'event_results' in response and response['event_results']:
+                print(f"ChronoTrack API: Page {page}: found {len(response['event_results'])} records")
+
+                # Process results from this page
+                for result in response['event_results']:
+                    bib = result.get('results_bib', '')
+                    if not bib:
+                        continue
+
+                    # Initialize bib entry if not exists
+                    if bib not in all_results_by_bib:
+                        all_results_by_bib[bib] = {
+                            'main_result': None,
+                            'split_times': []
+                        }
+
+                    interval_name = result.get('results_interval_name', '')
+
+                    # Check if this is main result or split time
+                    if interval_name in ['Full Course', 'Finish', ''] or not interval_name:
+                        # Main result - only save if we don't have one yet
+                        if all_results_by_bib[bib]['main_result'] is None:
+                            all_results_by_bib[bib]['main_result'] = result
+                    else:
+                        # Split time
+                        split_data = {
+                            'interval_name': interval_name,
+                            'time': result.get('results_time', ''),
+                            'pace': result.get('results_pace', ''),
+                            'formatted_time': self.format_time(result.get('results_time', '')),
+                            'formatted_pace': self.format_pace(result.get('results_pace', ''))
+                        }
+
+                        # Check if we already have this split for this bib
+                        existing = False
+                        for existing_split in all_results_by_bib[bib]['split_times']:
+                            if existing_split['interval_name'] == interval_name:
+                                existing = True
+                                break
+
+                        if not existing:
+                            all_results_by_bib[bib]['split_times'].append(split_data)
+
+                # Check for more pages
+                if 'page' in response and 'page_count' in response:
+                    has_more_pages = int(response['page']) < int(response['page_count'])
+                elif len(response['event_results']) >= 100:
+                    has_more_pages = True
+                else:
+                    has_more_pages = False
+
+                page += 1
+            else:
+                print('ChronoTrack API: No results on this page or invalid response')
+                has_more_pages = False
+
+        # Process collected results
+        print(f"ChronoTrack API: Processing results for {len(all_results_by_bib)} athletes")
+
+        processed_results = []
+        for bib, data in all_results_by_bib.items():
+            if data['main_result'] is None:
+                print(f"ChronoTrack API: No main result for BIB {bib}, skipping")
+                continue
+
+            result = data['main_result']
+            entry = entries_by_bib.get(bib, {})
+            processed_result = self.process_single_result(result, data['split_times'], entry)
+            if processed_result:
+                processed_results.append(processed_result)
+
+        return processed_results
+
+    def process_single_result(self, result, split_times=[], entry={}):
+        """
+        Process single result from API
+        EXACT COPY from class-chronotrack-api.php lines 348-417
+        Merges result data with entry data (for city, club, etc.)
+        """
+        # Sort split times by time (shortest first)
+        def parse_time_to_seconds(time_str):
+            if not time_str or time_str == '-':
+                return 999999  # For sorting purposes
+            if ':' in time_str:
+                parts = time_str.split(':')
+                if len(parts) == 3:  # HH:MM:SS
+                    return int(parts[0]) * 3600 + int(parts[1]) * 60 + int(parts[2])
+                elif len(parts) == 2:  # MM:SS
+                    return int(parts[0]) * 60 + int(parts[1])
+            return int(time_str)
+
+        split_times.sort(key=lambda x: parse_time_to_seconds(x.get('formatted_time', '')))
+
+        participant_id = result.get('athlete_id', f"participant_{result.get('results_bib', '')}")
+
+        # Extract birth year from birthdate (prefer entry data, fallback to result)
+        birth_year = ''
+        if entry.get('birthdate'):
+            birth_year = entry['birthdate'][:4] if len(entry['birthdate']) >= 4 else ''
+        elif result.get('results_birthdate'):
+            birth_year = result['results_birthdate'][:4] if len(result['results_birthdate']) >= 4 else ''
+
+        # City - prefer entry data
+        city = entry.get('city', result.get('results_city', ''))
+
+        # Club - prefer entry data
+        club = entry.get('club', result.get('results_club', ''))
+
+        # Distance - prefer entry data
+        distance = entry.get('distance', result.get('results_race_name', result.get('race_distance', '')))
+
+        return {
+            'participant_id': participant_id,
+            'bib_number': result.get('results_bib', ''),
+            'entry_bib': result.get('results_bib', ''),
+            'first_name': result.get('results_first_name', ''),
+            'last_name': result.get('results_last_name', ''),
+            'athlete_first_name': result.get('results_first_name', ''),
+            'athlete_last_name': result.get('results_last_name', ''),
+            'full_name': (result.get('results_last_name', '') + ' ' + result.get('results_first_name', '')).strip(),
+            'age': result.get('results_age', 0),
+            'entry_race_age': result.get('results_age', 0),
+            'gender': result.get('results_sex', ''),
+            'athlete_sex': result.get('results_sex', ''),
+            'city': city,
+            'athlete_city': city,
+            'location_city': city,
+            'club': club,
+            'athlete_club': club,
+            'birth_year': birth_year,
+            'birthdate': entry.get('birthdate', result.get('results_birthdate', '')),
+            'distance': distance,
+            'race_name': distance,
+            'race_distance': distance,
+            'category': result.get('results_primary_bracket_name', ''),
+            'bracket_name': result.get('results_primary_bracket_name', ''),
+            'results_primary_bracket_name': result.get('results_primary_bracket_name', ''),
+            'position': result.get('results_rank', 0),
+            'overall_place': result.get('results_rank', 0),
+            'results_rank': result.get('results_rank', 0),
+            'category_position': result.get('results_division_rank', 0),
+            'division_place': result.get('results_division_rank', 0),
+            'results_division_rank': result.get('results_division_rank', 0),
+            'category_place': result.get('results_division_rank', 0),
+            'bracket_place': result.get('results_division_rank', 0),
+            'gender_position': result.get('results_sex_rank', 0),
+            'gender_place': result.get('results_sex_rank', 0),
+            'sex_place': result.get('results_sex_rank', 0),
+            'results_sex_rank': result.get('results_sex_rank', 0),
+            'finish_time': self.format_time(result.get('results_gun_time', '')),
+            'gun_time': self.format_time(result.get('results_gun_time', '')),
+            'results_gun_time': self.format_time(result.get('results_gun_time', '')),
+            'formatted_gun_time': self.format_time(result.get('results_gun_time', '')),
+            'net_time': self.format_time(result.get('results_time', '')),
+            'formatted_net_time': self.format_time(result.get('results_time', '')),
+            'results_time': self.format_time(result.get('results_time', '')),
+            'pace': self.format_pace(result.get('results_pace', '')),
+            'formatted_pace': self.format_pace(result.get('results_pace', '')),
+            'split_times': split_times,
+            'status': result.get('results_status', 'OK'),
+            'penalties': result.get('results_penalties', ''),
+            'reg_choice_id': result.get('results_reg_choice', ''),
+            'reg_choice_name': result.get('results_reg_choice_name', '')
+        }
+
+2. REPLACE fetch_all_data() to use new fetch_results():
+
+    def fetch_all_data(self, reg_choice_id=None):
+        """Pobiera wszystkie dane z API - using new fetch_results()"""
+        print('Pobieranie wszystkich danych...')
+
+        try:
+            if not self.config['eventId']:
+                raise ValueError("Brak ID wydarzenia")
+
+            # Fetch event info
+            if not self.cache['eventInfo']:
+                self.fetch_event_info()
+
+            # Fetch all results using new method
+            all_results = self.fetch_results()
+
+            # Update cache
+            for athlete in all_results:
+                if athlete.get('bib_number'):
+                    self.cache['athletes'][athlete['bib_number']] = athlete
+
+            self.cache['openResults'] = all_results
+
+            return {
+                'open': len(all_results),
+                'total': len(self.cache['athletes'])
+            }
+        except Exception as e:
+            print(f'Błąd podczas pobierania wszystkich danych: {e}')
+            import traceback
+            traceback.print_exc()
+            return None
+
+3. DELETE these methods completely:
+   - fetch_open_results()
+   - fetch_sex_results()
+   - fetch_age_results()

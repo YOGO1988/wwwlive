@@ -136,7 +136,7 @@ class ChronoTrackApiClient:
             'status': 'active' if event_data.get('event_is_published') == '1' else 'inactive',
             'location': f"{event_data.get('location_city', '')}, {event_data.get('location_country', '')}"
         }
-
+        
         self.cache['eventInfo'] = event_info
 
         # Pobierz dostępne dystanse
@@ -553,624 +553,223 @@ class ChronoTrackApiClient:
             import traceback
             traceback.print_exc()
             return {}
-    
-    def fetch_open_results(self, fetch_all_pages=True, reg_choice_id=None):
-        """Pobiera wyniki OPEN, opcjonalnie filtrując po dystansie (reg_choice_id)"""
-        print('Pobieranie wyników OPEN...')
-        if reg_choice_id:
-            print(f"Filtrowanie dla dystansu ID: {reg_choice_id}")
-        
-        page = 1
-        all_results = []
-        has_more_pages = True
-        max_pages = 100 if fetch_all_pages else 5
-        
-        # Słownik do gromadzenia WSZYSTKICH wyników z wszystkich stron
+
+    def fetch_results(self):
+        """
+        Fetch results from ChronoTrack API with pagination
+        EXACT COPY from class-chronotrack-api.php lines 228-342
+        """
+        print(f"ChronoTrack API: Fetching results for event {self.config['eventId']}")
+
+        # First, fetch participant entries to get city and club data
+        entries_by_bib = self.fetch_all_entries()
+
         all_results_by_bib = {}
-        
-        while has_more_pages and page <= max_pages:
-            print(f"Pobieranie strony {page} wyników OPEN...")
-            
+        page = 1
+        has_more_pages = True
+
+        # Fetch all pages of results
+        while has_more_pages:
             params = {
-                'page': page, 
-                'size': 100,
                 'format': 'json',
-                'client_id': self.config['clientId'],
-                'user_id': self.config['userId'],
-                'user_pass': self.config['userPass'],
-                'elide_json': False,
-                'contact_details': True,
-                'include_all_fields': True,
-                'need_athlete_birthdate': True,
-                'need_transaction_account': True,
-                'interval': 'ALL'  # ⭐ KLUCZOWY PARAMETR dla czasów międzyczasowych
+                'page': page,
+                'per_page': 100
             }
-            
-            if reg_choice_id:
-                params['reg_choice'] = reg_choice_id
-            
+
             endpoint = f"/api/event/{self.config['eventId']}/results"
-            url = f"{self.config['baseUrl']}{endpoint}/"
-            
-            try:
-                response = requests.get(url, params=params)
-                response.raise_for_status()
-                response_data = response.json()
-                
-                if response_data and 'event_results' in response_data and response_data['event_results']:
-                    print(f"Strona {page}: znaleziono {len(response_data['event_results'])} rekordów")
-                    
-                    # ⭐ POPRAWKA: Gromadź WSZYSTKIE wyniki ze WSZYSTKICH stron
-                    for result in response_data['event_results']:
-                        bib = result.get('results_bib', '')
-                        if not bib:
-                            continue
-                        
-                        if bib not in all_results_by_bib:
-                            all_results_by_bib[bib] = {
-                                'main_result': None,
-                                'split_times': []
-                            }
-                        
-                        interval_name = result.get('results_interval_name', '')
-                        
-                        # Debug: wypisz informacje o interwale
-                        print(f"BIB {bib}: interval_name = '{interval_name}'")
-                        
-                        # Sprawdź czy to główny wynik czy punkt kontrolny
-                        if interval_name in ['Full Course', 'Finish'] or not interval_name:
-                            # To główny wynik - ale tylko jeśli jeszcze go nie mamy
-                            if all_results_by_bib[bib]['main_result'] is None:
-                                all_results_by_bib[bib]['main_result'] = result
-                                print(f"BIB {bib}: zapisano główny wynik")
-                        else:
-                            # To punkt kontrolny
-                            split_data = {
-                                'interval_name': interval_name,
-                                'time': result.get('results_time', ''),
-                                'pace': result.get('results_pace', ''),
-                                'formatted_time': self.format_time(result.get('results_time', '')),
-                                'formatted_pace': self.format_pace(result.get('results_pace', ''))
-                            }
-                            
-                            # Sprawdź czy już nie mamy tego punktu kontrolnego dla tego BIB
-                            existing_split = next((s for s in all_results_by_bib[bib]['split_times'] 
-                                                 if s['interval_name'] == interval_name), None)
-                            if not existing_split:
-                                all_results_by_bib[bib]['split_times'].append(split_data)
-                                print(f"BIB {bib}: dodano punkt kontrolny '{interval_name}': {split_data['formatted_time']}")
-                    
-                    # Sprawdź, czy są kolejne strony
-                    if 'page' in response_data and 'page_count' in response_data:
-                        has_more_pages = int(response_data['page']) < int(response_data['page_count'])
-                    elif len(response_data['event_results']) >= 100:
-                        has_more_pages = True
+            response = self.make_api_request(endpoint, params)
+
+            if response and 'event_results' in response and response['event_results']:
+                print(f"ChronoTrack API: Page {page}: found {len(response['event_results'])} records")
+
+                # Process results from this page
+                for result in response['event_results']:
+                    bib = result.get('results_bib', '')
+                    if not bib:
+                        continue
+
+                    # Initialize bib entry if not exists
+                    if bib not in all_results_by_bib:
+                        all_results_by_bib[bib] = {
+                            'main_result': None,
+                            'split_times': []
+                        }
+
+                    interval_name = result.get('results_interval_name', '')
+
+                    # Check if this is main result or split time
+                    if interval_name in ['Full Course', 'Finish', ''] or not interval_name:
+                        # Main result - only save if we don't have one yet
+                        if all_results_by_bib[bib]['main_result'] is None:
+                            all_results_by_bib[bib]['main_result'] = result
                     else:
-                        has_more_pages = False
-                    
-                    page += 1
-                else:
-                    print("Brak wyników na tej stronie lub nieprawidłowa odpowiedź API")
-                    has_more_pages = False
-            except Exception as e:
-                print(f"Błąd podczas zapytania API: {e}")
-                import traceback
-                traceback.print_exc()
-                has_more_pages = False
-        
-        # ⭐ POPRAWKA: Przetwórz WSZYSTKIE zgromadzone wyniki po zakończeniu pobierania
-        print(f"Przetwarzanie wyników dla {len(all_results_by_bib)} zawodników...")
-        
-        mapped_results = []
-        split_stats = {'with_splits': 0, 'without_splits': 0, 'total_splits': 0}
-        
-        for bib, data in all_results_by_bib.items():
-            main_result = data['main_result']
-            if not main_result:
-                print(f"UWAGA: Brak głównego wyniku dla BIB {bib}, pomijam...")
-                continue
-            
-            mapped_result = {
-                'entry_bib': main_result.get('results_bib', ''),
-                'athlete_first_name': main_result.get('results_first_name', ''),
-                'athlete_last_name': main_result.get('results_last_name', ''),
-                'athlete_sex': main_result.get('results_sex', ''),
-                'entry_race_age': main_result.get('results_age', ''),
-                'bracket_name': main_result.get('results_primary_bracket_name', ''),
-                'race_distance': main_result.get('results_race_name', ''),
-                'race_name': main_result.get('results_race_name', ''),
-                'reg_choice_id': main_result.get('results_reg_choice', ''),
-                'reg_choice_name': main_result.get('results_reg_choice_name', ''),
-                'net_time': main_result.get('results_time', ''),
-                'gun_time': main_result.get('results_gun_time', ''),
-                'overall_place': main_result.get('results_rank', ''),
-                'gender_place': main_result.get('results_sex_rank', ''),
-                'division_place': main_result.get('results_division_rank', ''),
-                'pace': main_result.get('results_pace', ''),
-                'athlete_id': main_result.get('athlete_id', ''),
-                'status': main_result.get('results_status', 'OK'),
-                'penalties': main_result.get('results_penalties', ''),
-                # Narodowość zawodnika
-                'athlete_country': main_result.get('results_country', main_result.get('athlete_country', '')),
-                'athlete_nationality': main_result.get('results_nationality', main_result.get('athlete_nationality', '')),
-                # Formatowane wersje czasów
-                'formatted_net_time': self.format_time(main_result.get('results_time', '')),
-                'formatted_gun_time': self.format_time(main_result.get('results_gun_time', '')),
-                'formatted_pace': self.format_pace(main_result.get('results_pace', ''))
-            }
-            
-            
-            # ⭐ OBSŁUGA WIELU PUNKTÓW KONTROLNYCH - POPRAWIONA WERSJA
-            if data['split_times']:
-                # Najpierw sprawdź czy rzeczywiście są split times
-                if len(data['split_times']) > 0:
-                    
-                    # ⭐ POPRAWKA: Sortuj punkty kontrolne według CZASU (od najkrótszego)
-                    def parse_time_to_seconds(time_str):
-                        """Konwertuje czas HH:MM:SS na sekundy dla sortowania"""
-                        if not time_str or time_str == '-':
-                            return float('inf')
-                        try:
-                            if ':' in time_str:
-                                parts = time_str.split(':')
-                                if len(parts) == 3:  # HH:MM:SS
-                                    return int(parts[0]) * 3600 + int(parts[1]) * 60 + int(parts[2])
-                                elif len(parts) == 2:  # MM:SS
-                                    return int(parts[0]) * 60 + int(parts[1])
-                            return float(time_str)
-                        except:
-                            return float('inf')
-                    
-                    try:
-                        # Sortuj split_times według czasu (najkrótszy = pierwszy punkt kontrolny)
-                        data['split_times'].sort(key=lambda x: parse_time_to_seconds(x['formatted_time']))
-                        print(f"BIB {bib}: posortowane punkty kontrolne: {[(s['interval_name'], s['formatted_time']) for s in data['split_times']]}")
-                    except Exception as e:
-                        print(f"Błąd sortowania split times dla BIB {bib}: {e}")
-                        # Jako backup - spróbuj sortować według nazwy
-                        try:
-                            data['split_times'].sort(key=lambda x: x['interval_name'])
-                        except:
-                            print(f"Nie udało się posortować split times dla BIB {bib}")
-                    
-                    # Teraz dodaj posortowane split times do mapped_result
-                    mapped_result['split_times'] = data['split_times']
-                    
-                    # Pierwszy punkt kontrolny jako główne pola
-                    first_split = data['split_times'][0]
-                    mapped_result.update({
-                        'split_interval_name': first_split['interval_name'],
-                        'split_time': first_split['time'],
-                        'split_pace': first_split['pace'],
-                        'formatted_split_time': first_split['formatted_time'],
-                        'formatted_split_pace': first_split['formatted_pace']
-                    })
-                    
-                    # ⭐ DODAJ WSZYSTKIE PUNKTY KONTROLNE JAKO OSOBNE POLA
-                    for i, split in enumerate(data['split_times']):
-                        mapped_result[f'split_{i+1}_name'] = split['interval_name']
-                        mapped_result[f'split_{i+1}_time'] = split['time']
-                        mapped_result[f'split_{i+1}_formatted_time'] = split['formatted_time']
-                        mapped_result[f'split_{i+1}_pace'] = split['pace']
-                        mapped_result[f'split_{i+1}_formatted_pace'] = split['formatted_pace']
-                    
-                    split_stats['with_splits'] += 1
-                    split_stats['total_splits'] += len(data['split_times'])
-                    
-                    print(f"BIB {bib}: {len(data['split_times'])} punktów kontrolnych: {[s['interval_name'] + '=' + s['formatted_time'] for s in data['split_times']]}")
-                else:
-                    # Lista split_times jest pusta
-                    mapped_result.update({
-                        'split_times': [],
-                        'split_interval_name': '',
-                        'split_time': '',
-                        'split_pace': '',
-                        'formatted_split_time': '',
-                        'formatted_split_pace': ''
-                    })
-                    split_stats['without_splits'] += 1
-            else:
-                # Brak punktów kontrolnych
-                mapped_result.update({
-                    'split_times': [],
-                    'split_interval_name': '',
-                    'split_time': '',
-                    'split_pace': '',
-                    'formatted_split_time': '',
-                    'formatted_split_pace': ''
-                })
-                split_stats['without_splits'] += 1
-            
-            # Reszta kodu dla birth_year, athlete_city, penalties, custom_elements...
-            # (kopiuj z poprzedniej wersji)
-            
-            # Dodaj informacje o roku urodzenia
-            if 'reg_transaction_account_birthdate' in main_result and main_result['reg_transaction_account_birthdate']:
-                birthdate = main_result['reg_transaction_account_birthdate']
-                if len(birthdate) >= 4 and '-' in birthdate:
-                    mapped_result['birth_year'] = birthdate.split('-')[0]
-            elif 'athlete_birthdate' in main_result and main_result['athlete_birthdate']:
-                birthdate = main_result['athlete_birthdate']
-                if len(birthdate) >= 4:
-                    if '-' in birthdate:
-                        mapped_result['birth_year'] = birthdate.split('-')[0]
-                    else:
-                        mapped_result['birth_year'] = birthdate[0:4]
-            
-            # Obsługa hometown
-            if 'results_hometown' in main_result and main_result['results_hometown']:
-                hometown = main_result['results_hometown']
-                if ", Poland" in hometown:
-                    mapped_result['athlete_city'] = hometown.replace(", Poland", "")
-                else:
-                    mapped_result['athlete_city'] = hometown
-            
-            # Custom elements
-            for key, value in main_result.items():
-                if key not in mapped_result and key.startswith('custom_element'):
-                    mapped_result[key] = value
-                    if key.startswith('custom_element') and value:
-                        mapped_result['club'] = value
-            
-            mapped_results.append(mapped_result)
-        
-        # ⭐ STATYSTYKI PUNKTÓW KONTROLNYCH
-        print(f"STATYSTYKI SPLIT TIMES:")
-        print(f"- Zawodnicy z punktami kontrolnymi: {split_stats['with_splits']}")
-        print(f"- Zawodnicy bez punktów kontrolnych: {split_stats['without_splits']}")
-        print(f"- Łączna liczba punktów kontrolnych: {split_stats['total_splits']}")
-        if split_stats['with_splits'] > 0:
-            avg_splits = split_stats['total_splits'] / split_stats['with_splits']
-            print(f"- Średnio punktów kontrolnych na zawodnika: {avg_splits:.1f}")
-        
-        # Reszta kodu (reg_choice_name, cache itp.)
-        for athlete in mapped_results:
-            if athlete.get('reg_choice_id') and not athlete.get('reg_choice_name'):
-                for choice in self.cache['regChoices']:
-                    if choice['id'] == athlete['reg_choice_id']:
-                        athlete['reg_choice_name'] = choice['name']
-                        break
-            
-            if not athlete.get('race_name') and athlete.get('reg_choice_name'):
-                athlete['race_name'] = athlete['reg_choice_name']
-            elif not athlete.get('race_name') and athlete.get('race_distance'):
-                athlete['race_name'] = athlete['race_distance']
-        
-        # Zaktualizuj cache
-        for athlete in mapped_results:
-            if athlete['entry_bib']:
-                self.cache['athletes'][athlete['entry_bib']] = athlete
-        
-        # Zapisz do cache
-        if reg_choice_id:
-            filtered_results = [result for result in mapped_results if result['reg_choice_id'] == reg_choice_id]
-            self.cache['openResults'] = filtered_results
-            print(f"Zapisano do cache {len(filtered_results)} wyników dla dystansu ID {reg_choice_id}")
-        else:
-            self.cache['openResults'] = mapped_results
-            print(f"Zapisano do cache wszystkie wyniki ({len(mapped_results)} rekordów)")
-        
-        return mapped_results
-    
-    def fetch_sex_results(self, fetch_all_pages=True, reg_choice_id=None):
-        """Pobiera wyniki według płci, opcjonalnie filtrując po dystansie"""
-        print('Pobieranie wyników według płci...')
-        if reg_choice_id:
-            print(f"Filtrowanie dla dystansu ID: {reg_choice_id}")
-        
-        sex_types = ['M', 'F']
-        results = {'M': [], 'F': []}
-        max_pages = 20 if fetch_all_pages else 3  # Zwiększony limit stron
-        
-        for sex_type in sex_types:
-            page = 1
-            sex_results = []
-            has_more_pages = True
-            
-            while has_more_pages and page <= max_pages:
-                print(f"Pobieranie strony {page} wyników dla płci {sex_type}...")
-                
-                params = {'page': page, 'size': 100, 'bracket': 'sex', 'sex': sex_type}
-                if reg_choice_id:
-                    params['reg_choice'] = reg_choice_id
-                
-                response = self.make_api_request(
-                    f"/api/event/{self.config['eventId']}/results",
-                    params
-                )
-                
-                if response and 'event_results' in response and response['event_results']:
-                    # Mapuj pola zgodnie z API ChronoTrack
-                    mapped_results = []
-                    for result in response['event_results']:
-                        mapped_result = {
-                            'entry_bib': result.get('results_bib', ''),
-                            'athlete_first_name': result.get('results_first_name', ''),
-                            'athlete_last_name': result.get('results_last_name', ''),
-                            'athlete_sex': result.get('results_sex', ''),
-                            'entry_race_age': result.get('results_age', ''),
-                            'bracket_name': result.get('results_primary_bracket_name', ''),
-                            'race_distance': result.get('results_race_name', ''),
-                            'race_name': result.get('results_race_name', ''),  # Dodane pole race_name
-                            'reg_choice_id': result.get('results_reg_choice', ''),
-                            'reg_choice_name': result.get('results_reg_choice_name', ''),  # Dodane pole reg_choice_name
-                            'net_time': result.get('results_time', ''),
-                            'gun_time': result.get('results_gun_time', ''),
-                            'overall_place': result.get('results_rank', ''),
-                            'gender_place': result.get('results_rank', ''),  # W wynikach płci, ranking to miejsce w płci
+                        # Split time
+                        split_data = {
+                            'interval_name': interval_name,
+                            'time': result.get('results_time', ''),
                             'pace': result.get('results_pace', ''),
-                            'athlete_id': result.get('athlete_id', ''),
-                            'penalties': result.get('results_penalties', ''),  # Dodane pole kar
-                            # Formatowane wersje czasów
-                            'formatted_net_time': self.format_time(result.get('results_time', '')),
-                            'formatted_gun_time': self.format_time(result.get('results_gun_time', '')),
+                            'formatted_time': self.format_time(result.get('results_time', '')),
                             'formatted_pace': self.format_pace(result.get('results_pace', ''))
                         }
-                        mapped_results.append(mapped_result)
-                    
-                    # Dodaj wyniki do listy
-                    sex_results.extend(mapped_results)
-                    
-                    # Zaktualizuj cache zawodników
-                    for athlete in mapped_results:
-                        if athlete['entry_bib']:
-                            if athlete['entry_bib'] in self.cache['athletes']:
-                                # Aktualizuj tylko miejsce w kategorii płci
-                                self.cache['athletes'][athlete['entry_bib']]['gender_place'] = athlete['gender_place']
-                            else:
-                                # Dodaj nowego zawodnika do cache
-                                self.cache['athletes'][athlete['entry_bib']] = athlete
-                    
-                    # Sprawdź, czy są kolejne strony
-                    if 'page' in response and 'page_count' in response:
-                        has_more_pages = int(response['page']) < int(response['page_count'])
-                    elif len(response['event_results']) >= 100:
-                        has_more_pages = True
-                    else:
-                        has_more_pages = False
-                    page += 1
-                else:
-                    has_more_pages = False
-            
-            # Zapisz wyniki dla tej płci
-            results[sex_type] = sex_results
-            print(f"Zaktualizowano wyniki dla płci {sex_type}: {len(sex_results)} rekordów")
-        
-        return results
-    
-    def fetch_age_results(self, fetch_all_pages=True, reg_choice_id=None):
-        """Pobiera wyniki według kategorii wiekowych, opcjonalnie filtrując po dystansie"""
-        print('Pobieranie wyników według kategorii wiekowych...')
-        if reg_choice_id:
-            print(f"Filtrowanie dla dystansu ID: {reg_choice_id}")
-        
-        page = 1
-        all_results = []
-        age_categories = {}
-        has_more_pages = True
-        max_pages = 20 if fetch_all_pages else 3  # Zwiększony limit stron
-        
-        while has_more_pages and page <= max_pages:
-            print(f"Pobieranie strony {page} wyników kategorii wiekowych...")
-            
-            params = {'page': page, 'size': 100, 'bracket': 'AGE'}
-            if reg_choice_id:
-                params['reg_choice'] = reg_choice_id
-            
-            response = self.make_api_request(
-                f"/api/event/{self.config['eventId']}/results",
-                params
-            )
-            
-            if response and 'event_results' in response and response['event_results']:
-                # Mapuj pola zgodnie z API ChronoTrack
-                mapped_results = []
-                for result in response['event_results']:
-                    mapped_result = {
-                        'entry_bib': result.get('results_bib', ''),
-                        'athlete_first_name': result.get('results_first_name', ''),
-                        'athlete_last_name': result.get('results_last_name', ''),
-                        'athlete_sex': result.get('results_sex', ''),
-                        'entry_race_age': result.get('results_age', ''),
-                        'bracket_name': result.get('results_primary_bracket_name', ''),
-                        'race_distance': result.get('results_race_name', ''),
-                        'race_name': result.get('results_race_name', ''),  # Dodane pole race_name
-                        'reg_choice_id': result.get('results_reg_choice', ''),
-                        'reg_choice_name': result.get('results_reg_choice_name', ''),  # Dodane pole reg_choice_name
-                        'net_time': result.get('results_time', ''),
-                        'gun_time': result.get('results_gun_time', ''),
-                        'overall_place': result.get('results_rank', ''),
-                        'division_place': result.get('results_rank', ''),  # W wynikach kategorii, ranking to miejsce w kategorii
-                        'pace': result.get('results_pace', ''),
-                        'athlete_id': result.get('athlete_id', ''),
-                        'penalties': result.get('results_penalties', ''),  # Dodane pole kar
-                        # Formatowane wersje czasów
-                        'formatted_net_time': self.format_time(result.get('results_time', '')),
-                        'formatted_gun_time': self.format_time(result.get('results_gun_time', '')),
-                        'formatted_pace': self.format_pace(result.get('results_pace', ''))
-                    }
-                    mapped_results.append(mapped_result)
-                    # Dodaj wyniki do listy
-                all_results.extend(mapped_results)
-                
-                # Grupuj według kategorii wiekowych i zaktualizuj cache
-                for athlete in mapped_results:
-                    if athlete['entry_bib']:
-                        # Zaktualizuj dane zawodnika w cache
-                        if athlete['entry_bib'] in self.cache['athletes']:
-                            self.cache['athletes'][athlete['entry_bib']]['division_place'] = athlete['division_place']
-                        else:
-                            self.cache['athletes'][athlete['entry_bib']] = athlete
-                    
-                    if athlete['bracket_name']:
-                        if athlete['bracket_name'] not in age_categories:
-                            age_categories[athlete['bracket_name']] = []
-                        age_categories[athlete['bracket_name']].append(athlete)
-                
-                # Sprawdź, czy są kolejne strony
+
+                        # Check if we already have this split for this bib
+                        existing = False
+                        for existing_split in all_results_by_bib[bib]['split_times']:
+                            if existing_split['interval_name'] == interval_name:
+                                existing = True
+                                break
+
+                        if not existing:
+                            all_results_by_bib[bib]['split_times'].append(split_data)
+
+                # Check for more pages
                 if 'page' in response and 'page_count' in response:
                     has_more_pages = int(response['page']) < int(response['page_count'])
                 elif len(response['event_results']) >= 100:
                     has_more_pages = True
                 else:
                     has_more_pages = False
+
                 page += 1
             else:
+                print('ChronoTrack API: No results on this page or invalid response')
                 has_more_pages = False
-        
-        print(f"Zaktualizowano wyniki AGE: {len(all_results)} zawodników w {len(age_categories)} kategoriach")
-        return age_categories
-    
+
+        # Process collected results
+        print(f"ChronoTrack API: Processing results for {len(all_results_by_bib)} athletes")
+
+        processed_results = []
+        for bib, data in all_results_by_bib.items():
+            if data['main_result'] is None:
+                print(f"ChronoTrack API: No main result for BIB {bib}, skipping")
+                continue
+
+            result = data['main_result']
+            entry = entries_by_bib.get(bib, {})
+            processed_result = self.process_single_result(result, data['split_times'], entry)
+            if processed_result:
+                processed_results.append(processed_result)
+
+        return processed_results
+
+    def process_single_result(self, result, split_times=[], entry={}):
+        """
+        Process single result from API
+        EXACT COPY from class-chronotrack-api.php lines 348-417
+        Merges result data with entry data (for city, club, etc.)
+        """
+        # Sort split times by time (shortest first)
+        def parse_time_to_seconds(time_str):
+            if not time_str or time_str == '-':
+                return 999999  # For sorting purposes
+            if ':' in time_str:
+                parts = time_str.split(':')
+                if len(parts) == 3:  # HH:MM:SS
+                    return int(parts[0]) * 3600 + int(parts[1]) * 60 + int(parts[2])
+                elif len(parts) == 2:  # MM:SS
+                    return int(parts[0]) * 60 + int(parts[1])
+            return int(time_str)
+
+        split_times.sort(key=lambda x: parse_time_to_seconds(x.get('formatted_time', '')))
+
+        participant_id = result.get('athlete_id', f"participant_{result.get('results_bib', '')}")
+
+        # Extract birth year from birthdate (prefer entry data, fallback to result)
+        birth_year = ''
+        if entry.get('birthdate'):
+            birth_year = entry['birthdate'][:4] if len(entry['birthdate']) >= 4 else ''
+        elif result.get('results_birthdate'):
+            birth_year = result['results_birthdate'][:4] if len(result['results_birthdate']) >= 4 else ''
+
+        # City - prefer entry data
+        city = entry.get('city', result.get('results_city', ''))
+
+        # Club - prefer entry data
+        club = entry.get('club', result.get('results_club', ''))
+
+        # Distance - prefer entry data
+        distance = entry.get('distance', result.get('results_race_name', result.get('race_distance', '')))
+
+        return {
+            'participant_id': participant_id,
+            'bib_number': result.get('results_bib', ''),
+            'entry_bib': result.get('results_bib', ''),
+            'first_name': result.get('results_first_name', ''),
+            'last_name': result.get('results_last_name', ''),
+            'athlete_first_name': result.get('results_first_name', ''),
+            'athlete_last_name': result.get('results_last_name', ''),
+            'full_name': (result.get('results_last_name', '') + ' ' + result.get('results_first_name', '')).strip(),
+            'age': result.get('results_age', 0),
+            'entry_race_age': result.get('results_age', 0),
+            'gender': result.get('results_sex', ''),
+            'athlete_sex': result.get('results_sex', ''),
+            'city': city,
+            'athlete_city': city,
+            'location_city': city,
+            'club': club,
+            'athlete_club': club,
+            'birth_year': birth_year,
+            'birthdate': entry.get('birthdate', result.get('results_birthdate', '')),
+            'athlete_country': result.get('results_country', entry.get('country', result.get('athlete_country', ''))),
+            'athlete_nationality': result.get('results_nationality', entry.get('nationality', result.get('athlete_nationality', ''))),
+            'distance': distance,
+            'race_name': distance,
+            'race_distance': distance,
+            'category': result.get('results_primary_bracket_name', ''),
+            'bracket_name': result.get('results_primary_bracket_name', ''),
+            'results_primary_bracket_name': result.get('results_primary_bracket_name', ''),
+            'position': result.get('results_rank', 0),
+            'overall_place': result.get('results_rank', 0),
+            'results_rank': result.get('results_rank', 0),
+            'category_position': result.get('results_division_rank', 0),
+            'division_place': result.get('results_division_rank', 0),
+            'results_division_rank': result.get('results_division_rank', 0),
+            'category_place': result.get('results_division_rank', 0),
+            'bracket_place': result.get('results_division_rank', 0),
+            'gender_position': result.get('results_sex_rank', 0),
+            'gender_place': result.get('results_sex_rank', 0),
+            'sex_place': result.get('results_sex_rank', 0),
+            'results_sex_rank': result.get('results_sex_rank', 0),
+            'finish_time': self.format_time(result.get('results_gun_time', '')),
+            'gun_time': self.format_time(result.get('results_gun_time', '')),
+            'results_gun_time': self.format_time(result.get('results_gun_time', '')),
+            'formatted_gun_time': self.format_time(result.get('results_gun_time', '')),
+            'net_time': self.format_time(result.get('results_time', '')),
+            'formatted_net_time': self.format_time(result.get('results_time', '')),
+            'results_time': self.format_time(result.get('results_time', '')),
+            'pace': self.format_pace(result.get('results_pace', '')),
+            'formatted_pace': self.format_pace(result.get('results_pace', '')),
+            'split_times': split_times,
+            'status': result.get('results_status', 'OK'),
+            'penalties': result.get('results_penalties', ''),
+            'reg_choice_id': result.get('results_reg_choice', ''),
+            'reg_choice_name': result.get('results_reg_choice_name', '')
+        }
+
     def fetch_all_data(self, reg_choice_id=None):
-        """Pobiera wszystkie dane z API i zapisuje je w cache, opcjonalnie filtrując po dystansie"""
+        """Pobiera wszystkie dane z API - using new fetch_results()"""
         print('Pobieranie wszystkich danych...')
-        
+
         try:
-            # Ustaw event ID
             if not self.config['eventId']:
                 raise ValueError("Brak ID wydarzenia")
-                
-            # Pobierz informacje o wydarzeniu, jeśli ich nie ma
+
+            # Fetch event info
             if not self.cache['eventInfo']:
                 self.fetch_event_info()
-                
-            # Pobierz dane zawodników (entries)
-            self.entries = self.fetch_all_entries()
-            
-            # Odśwież wszystkie rodzaje wyników
-            open_results = self.fetch_open_results(True, reg_choice_id)
-            sex_results = self.fetch_sex_results(True, reg_choice_id)
-            age_results = self.fetch_age_results(True, reg_choice_id)
-            
-            # Znajdź wszystkie używane custom_element pola w danych
-            active_custom_fields = set()
-            
-            # Uzupełnij dane z entries
-            for athlete in self.cache['openResults']:
-                bib = athlete.get('entry_bib')
-                if bib and bib in self.entries:
-                    entry = self.entries[bib]
-                    
-                    # Sprawdź dostępność pola location_city
-                    if 'location_city' in entry and entry['location_city'] and ('athlete_city' not in athlete or not athlete['athlete_city']):
-                        athlete['athlete_city'] = entry['location_city']
-                        print(f"Ustawiono miasto dla {bib} z location_city: {entry['location_city']}")
-                    
-                    # Dodaj dane z entry do wyników
-                    if 'club' not in athlete or not athlete['club']:
-                        athlete['club'] = entry.get('club', '')
-                    
-                    if 'athlete_city' not in athlete or not athlete['athlete_city']:
-                        athlete['athlete_city'] = entry.get('athlete_city', '')
-                    
-                    # Sprawdź czy mamy informacje o klubie w polach custom_element260xxx
-                    if ('club' not in athlete or not athlete['club']) and 'possible_club' in entry:
-                        athlete['club'] = entry['possible_club']
-                        print(f"Ustawiono klub z possible_club dla {bib}: {athlete['club']}")
-                    
-                    # Sprawdź czy mamy informacje o karach
-                    if 'penalties' not in athlete or not athlete['penalties']:
-                        athlete['penalties'] = entry.get('penalties', '')
-                        if athlete['penalties']:
-                            print(f"Ustawiono kary z entries dla {bib}: {athlete['penalties']}")
-                    
-                    # Jeśli są pytania customowe z pól custom_element, dodaj je
-                    if 'custom_questions' in entry and entry['custom_questions']:
-                        athlete['custom_questions'] = entry['custom_questions']
-                        # Dodaj wszystkie pytania customowe do athlete dla łatwiejszego dostępu
-                        for question in entry['custom_questions']:
-                            field = question['field']
-                            athlete[field] = question['answer']
-                            active_custom_fields.add(field)
-                            
-                            # Sprawdź czy to może być klub
-                            if field.startswith('custom_element') and question['answer'] and ('club' not in athlete or not athlete['club']):
-                                athlete['club'] = question['answer']
-                                print(f"Ustawiono klub z pytania customowego {field}: {athlete['club']}")
-                    
-                    # Dopisz wszystkie pola custom_element z entries do athlete
-                    for key, value in entry.items():
-                        if key.startswith('custom_element') and value:
-                            athlete[key] = value
-                            active_custom_fields.add(key)
-                            
-                            # Uzupełnij dane klubu, jeśli brakuje
-                            if ('club' not in athlete or not athlete['club']) and (
-                               'club' in key.lower() or 'team' in key.lower() or 
-                               key.startswith('custom_element')):
-                                athlete['club'] = value
-                                print(f"Ustawiono klub dla {bib} z pola {key}: {value}")
-                            
-                            # Uzupełnij dane miasta, jeśli brakuje
-                            if ('athlete_city' not in athlete or not athlete['athlete_city']) and (
-                               'city' in key.lower() or 'location' in key.lower() or 
-                               'miejscowość' in key.lower()):
-                                athlete['athlete_city'] = value
-                                print(f"Ustawiono miasto dla {bib} z pola {key}: {value}")
 
-                    # Sprawdź pole results_hometown i przetwórz je
-                    if 'results_hometown' in athlete and athlete['results_hometown']:
-                        hometown = athlete['results_hometown']
-                        if ", Poland" in hometown:
-                            athlete['athlete_city'] = hometown.replace(", Poland", "")
-                            print(f"Ustawiono miasto dla {bib} z results_hometown (usunięto ', Poland'): {athlete['athlete_city']}")
-                    
-                    # Sprawdź wszystkie możliwe źródła roku urodzenia
-                    # 1. Sprawdź pole reg_transaction_account_birthdate
-                    if 'reg_transaction_account_birthdate' in entry and entry['reg_transaction_account_birthdate']:
-                        birthdate = entry['reg_transaction_account_birthdate']
-                        if len(birthdate) >= 10 and '-' in birthdate:
-                            # Format "YYYY-MM-DD"
-                            athlete['birth_year'] = birthdate.split('-')[0]
-                            print(f"Ustawiono rok urodzenia z reg_transaction_account_birthdate: {athlete['birth_year']}")
-                    
-                    # 2. Sprawdź pole athlete_birthdate
-                    if 'athlete_birthdate' in entry and entry['athlete_birthdate']:
-                        birthdate = entry['athlete_birthdate']
-                        if len(birthdate) >= 4:
-                            if '-' in birthdate:
-                                # Format "YYYY-MM-DD"
-                                athlete['birth_year'] = birthdate.split('-')[0]
-                            else:
-                                # Inny format - pierwsze 4 znaki
-                                athlete['birth_year'] = birthdate[0:4]
-                            print(f"Ustawiono rok urodzenia z athlete_birthdate: {athlete['birth_year']}")
-                    
-                    # 3. Sprawdź pole birth_date
-                    if 'birth_date' in entry and entry['birth_date']:
-                        birthdate = entry['birth_date']
-                        if len(birthdate) >= 4:
-                            if '-' in birthdate:
-                                # Format "YYYY-MM-DD"
-                                athlete['birth_year'] = birthdate.split('-')[0]
-                            else:
-                                # Inny format - pierwsze 4 znaki
-                                athlete['birth_year'] = birthdate[0:4]
-                            print(f"Ustawiono rok urodzenia z birth_date: {athlete['birth_year']}")
-                    
-                    # 4. Jeśli nadal brak roku, oblicz na podstawie wieku
-                    if ('birth_year' not in athlete or not athlete['birth_year']) and 'entry_race_age' in athlete and athlete['entry_race_age']:
-                        try:
-                            current_year = datetime.now().year
-                            age = int(athlete['entry_race_age'])
-                            athlete['birth_year'] = str(current_year - age)
-                            print(f"Obliczono rok urodzenia na podstawie wieku {age}: {athlete['birth_year']}")
-                        except Exception as e:
-                            print(f"Błąd podczas obliczania roku urodzenia: {e}")
-                    
-            # Zapisz znalezione pola custom_element do późniejszego wykorzystania
-            print(f"Znaleziono {len(active_custom_fields)} aktywnych pól custom_element:")
-            if active_custom_fields:
-                for field in sorted(active_custom_fields):
-                    print(f"  - {field}")
-                self.custom_fields = list(active_custom_fields)
-            else:
-                self.custom_fields = []
-            
+            # Fetch all results using new method
+            all_results = self.fetch_results()
+
+            # Update cache
+            for athlete in all_results:
+                if athlete.get('bib_number'):
+                    self.cache['athletes'][athlete['bib_number']] = athlete
+
+            self.cache['openResults'] = all_results
+
             return {
-                'open': len(open_results),
-                'sex': sum(len(group) for group in sex_results.values()),
-                'age': sum(len(group) for group in age_results.values()),
+                'open': len(all_results),
                 'total': len(self.cache['athletes'])
             }
         except Exception as e:
@@ -1241,8 +840,8 @@ class ResultsGeneratorApp:
             "race_distance", "race_name", "results_race_name", "reg_choice_name",
             "athlete_country", "country", "athlete_state", "state", "athlete_nationality", "results_country", "results_nationality",
             "penalties", "results_penalties", "custom_2",
-            "split_time", "formatted_split_time", "split_interval_name",
-            "split_pace", "formatted_split_pace", "split_times",
+            "split_time", "formatted_split_time", "split_interval",
+            "split_interval_name", "split_pace", "formatted_split_pace", "split_times",
             "split_1_name", "split_1_time", "split_1_formatted_time", "split_1_pace", "split_1_formatted_pace",
             "split_2_name", "split_2_time", "split_2_formatted_time", "split_2_pace", "split_2_formatted_pace",
             "split_3_name", "split_3_time", "split_3_formatted_time", "split_3_pace", "split_3_formatted_pace",
@@ -1252,62 +851,9 @@ class ResultsGeneratorApp:
         
         # Aktywne kolumny (te, które zostały wybrane)
         self.active_columns = [col for col in self.all_columns if col["selected"]]
-
+        
         # Stwórz interfejs
         self.create_widgets()
-
-    def add_dynamic_split_columns(self):
-        """Dodaje dynamiczne kolumny międzyczasów na podstawie pobranych danych"""
-        # Zbierz wszystkie unikalne nazwy punktów kontrolnych z danych zawodników
-        split_names = set()
-
-        for athlete in self.api_client.cache.get('openResults', []):
-            split_times = athlete.get('split_times', [])
-            for split in split_times:
-                interval_name = split.get('interval_name', '')
-                if interval_name and interval_name not in ['Full Course', 'Finish', '']:
-                    split_names.add(interval_name)
-
-        # Usuń stare dynamiczne kolumny międzyczasów (jeśli istnieją)
-        self.all_columns = [col for col in self.all_columns if not col.get('is_dynamic_split', False)]
-
-        # Dodaj nowe dynamiczne kolumny dla każdego punktu kontrolnego
-        for i, split_name in enumerate(sorted(split_names), start=1):
-            # Kolumna czasu
-            time_col = {
-                "id": f"dynamic_split_{i}_time",
-                "name": f"{split_name} - Czas",
-                "description": f"Czas na punkcie {split_name}",
-                "api_options": [f"split_{i}_formatted_time"],
-                "selected": False,
-                "is_dynamic_split": True,
-                "split_name": split_name
-            }
-            self.all_columns.append(time_col)
-
-            # Kolumna tempa
-            pace_col = {
-                "id": f"dynamic_split_{i}_pace",
-                "name": f"{split_name} - Tempo",
-                "description": f"Tempo na punkcie {split_name}",
-                "api_options": [f"split_{i}_formatted_pace"],
-                "selected": False,
-                "is_dynamic_split": True,
-                "split_name": split_name
-            }
-            self.all_columns.append(pace_col)
-
-        # Dodaj dynamiczne atrybuty do all_api_attributes
-        for i in range(1, len(split_names) + 1):
-            new_attrs = [
-                f"dynamic_split_{i}_time",
-                f"dynamic_split_{i}_pace"
-            ]
-            for attr in new_attrs:
-                if attr not in self.all_api_attributes:
-                    self.all_api_attributes.append(attr)
-
-        print(f"Dodano {len(split_names)} dynamicznych punktów kontrolnych jako kolumny")
         
     def create_widgets(self):
         # Główna ramka
@@ -1572,7 +1118,7 @@ class ResultsGeneratorApp:
             for j, col_var in enumerate(self.column_vars):
                 # Pobierz aktualnie wybrane pole API dla tej kolumny
                 api_field = col_var.get()
-
+                
                 # Obsłuż specjalne przypadki
                 if api_field == "full_name" or api_field == "athlete_last_name,athlete_first_name":
                     # Połącz nazwisko i imię
@@ -1591,31 +1137,10 @@ class ResultsGeneratorApp:
                         if field_value:
                             values.append(str(field_value))
                     value = " ".join(values)
-                elif api_field.startswith("split_") and "_formatted_" in api_field:
-                    # Obsługa dynamicznych kolumn międzyczasów (np. split_1_formatted_time)
-                    # Sprawdź czy to pole już istnieje w danych zawodnika
-                    if api_field in athlete:
-                        value = athlete.get(api_field, "")
-                    else:
-                        # Jeśli nie, spróbuj znaleźć w split_times
-                        # Wyciągnij numer splitu (np. 1 z "split_1_formatted_time")
-                        import re
-                        match = re.search(r'split_(\d+)_formatted_(time|pace)', api_field)
-                        if match:
-                            split_num = int(match.group(1))
-                            field_type = match.group(2)  # 'time' lub 'pace'
-                            split_times = athlete.get('split_times', [])
-                            if split_num <= len(split_times):
-                                split_data = split_times[split_num - 1]
-                                value = split_data.get(f'formatted_{field_type}', '')
-                            else:
-                                value = ""
-                        else:
-                            value = ""
                 else:
                     # Standardowe pole - sprawdź czy istnieje w danych zawodnika
                     value = athlete.get(api_field, "")
-
+                
                 row_values.append(value)
             
             # Wstaw wiersz do treeview
@@ -2434,10 +1959,7 @@ class ResultsGeneratorApp:
             
             # Załaduj dane do listy zawodników
             self.athletes = list(self.api_client.cache['openResults'])
-
-            # Dodaj dynamiczne kolumny międzyczasów na podstawie pobranych danych
-            self.add_dynamic_split_columns()
-
+            
             # Aktualizuj dropdown z dystansami - ważne po pobraniu wszystkich danych
             self.update_reg_choice_dropdown()
 
@@ -2526,7 +2048,7 @@ class ResultsGeneratorApp:
                         return 999999  # Zawodnicy bez miejsca na końcu
 
                     self.athletes.sort(key=safe_sort_key)
-                    
+
                     # Aktualizuj GUI w wątku głównym
                     self.root.after(0, self.update_after_refresh, len(self.athletes))
                 except Exception as e:
