@@ -1142,11 +1142,11 @@
         },
 
         startAutoRefresh: function() {
-            // Fetch from API every 60 seconds for live updates
-            const interval = 60000; // 60 seconds
+            // Fetch from API every 15 seconds for live updates
+            const interval = 15000; // 15 seconds
             this.currentInterval = interval;
 
-            console.log('▶️ Starting auto-refresh with interval:', interval + 'ms (60s API fetch)');
+            console.log('▶️ Starting auto-refresh with interval:', interval + 'ms (15s API fetch)');
             console.log('▶️ Interval object before clear:', this.refreshInterval);
 
             // Clear any existing interval first
@@ -1160,13 +1160,13 @@
             console.log('📥 Initial AGGRESSIVE load - fetching from cache AND API...');
             this.loadResults(this.currentView);  // Fast load from database (if available)
 
-            // IMMEDIATELY fetch fresh data from API (don't wait 60s!)
+            // IMMEDIATELY fetch fresh data from API (don't wait 15s!)
             setTimeout(() => {
                 console.log('🚀 AGGRESSIVE: Fetching from API immediately after cache load...');
                 this.refreshFromAPI();
             }, 1000); // Wait 1 second after cache load, then fetch from API
 
-            // Fetch fresh data from API every 60 seconds
+            // Fetch fresh data from API every 15 seconds
             console.log('⏰ Setting up interval to fetch from API every', interval, 'ms');
             this.refreshInterval = setInterval(() => {
                 console.log('🔄 Auto-refresh interval triggered - calling refreshFromAPI()');
