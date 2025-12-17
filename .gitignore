@@ -22,3 +22,6 @@ __pycache__/
 # WordPress
 wp-config.php
 wp-content/uploads/
+
+# Libraries
+lib/tcpdf/

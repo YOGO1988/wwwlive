@@ -68,19 +68,31 @@ body.chronotrack-page .container {
 
 /* Header */
 .chronotrack-header {
-    text-align: center;
     margin-top: 10px;
     margin-bottom: 15px;
     padding-bottom: 15px;
     border-bottom: 2px solid #eee;
 }
 
+.chronotrack-header-flex {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 30px;
+    flex-wrap: wrap;
+}
+
+.chronotrack-event-info {
+    flex: 1;
+    min-width: 300px;
+    text-align: left;
+}
+
 .chronotrack-logos {
     display: flex;
-    justify-content: center;
+    justify-content: flex-end;
     align-items: center;
-    gap: 40px;
-    margin-bottom: 20px;
+    gap: 20px;
     flex-wrap: wrap;
 }
 
@@ -88,6 +100,8 @@ body.chronotrack-page .container {
 .chronotrack-sponsor-logo img {
     display: block;
     object-fit: contain;
+    max-height: 80px !important;
+    width: auto;
 }
 
 .chronotrack-event-name {

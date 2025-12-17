@@ -19,30 +19,34 @@ $columns = $db->get_event_columns($event->event_id, true);
 
     <!-- Event Header -->
     <div class="chronotrack-header">
-        <div class="chronotrack-logos">
-            <?php if (!empty($event->event_logo_url)): ?>
-                <div class="chronotrack-event-logo">
-                    <img src="<?php echo esc_url($event->event_logo_url); ?>"
-                         alt="<?php echo esc_attr($event->event_name); ?>"
-                         style="max-width: <?php echo $max_logo_width; ?>px; max-height: <?php echo $max_logo_height; ?>px;">
+        <div class="chronotrack-header-flex">
+            <div class="chronotrack-event-info">
+                <h1 class="chronotrack-event-name"><?php echo esc_html($event->event_name); ?></h1>
+                <div class="chronotrack-event-date">
+                    <?php echo date_i18n(get_option('date_format'), strtotime($event->event_date)); ?>
+                    <?php if (!empty($event->event_location)): ?>
+                        · <?php echo esc_html($event->event_location); ?>
+                    <?php endif; ?>
                 </div>
-            <?php endif; ?>
+            </div>
 
-            <?php if (!empty($event->sponsor_logo_url)): ?>
-                <div class="chronotrack-sponsor-logo">
-                    <img src="<?php echo esc_url($event->sponsor_logo_url); ?>"
-                         alt="<?php _e('Sponsor', 'chronotrack-live'); ?>"
-                         style="max-width: <?php echo $max_logo_width; ?>px; max-height: <?php echo $max_logo_height; ?>px;">
-                </div>
-            <?php endif; ?>
-        </div>
+            <div class="chronotrack-logos">
+                <?php if (!empty($event->event_logo_url)): ?>
+                    <div class="chronotrack-event-logo">
+                        <img src="<?php echo esc_url($event->event_logo_url); ?>"
+                             alt="<?php echo esc_attr($event->event_name); ?>"
+                             style="max-width: <?php echo $max_logo_width; ?>px; max-height: <?php echo $max_logo_height; ?>px;">
+                    </div>
+                <?php endif; ?>
 
-        <h1 class="chronotrack-event-name"><?php echo esc_html($event->event_name); ?></h1>
-        <div class="chronotrack-event-date">
-            <?php echo date_i18n(get_option('date_format'), strtotime($event->event_date)); ?>
-            <?php if (!empty($event->event_location)): ?>
-                · <?php echo esc_html($event->event_location); ?>
-            <?php endif; ?>
+                <?php if (!empty($event->sponsor_logo_url)): ?>
+                    <div class="chronotrack-sponsor-logo">
+                        <img src="<?php echo esc_url($event->sponsor_logo_url); ?>"
+                             alt="<?php _e('Sponsor', 'chronotrack-live'); ?>"
+                             style="max-width: <?php echo $max_logo_width; ?>px; max-height: <?php echo $max_logo_height; ?>px;">
+                    </div>
+                <?php endif; ?>
+            </div>
         </div>
     </div>
 
