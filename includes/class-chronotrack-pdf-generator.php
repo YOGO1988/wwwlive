@@ -358,11 +358,29 @@ class ChronoTrack_PDF_Generator {
     private function load_tcpdf() {
         $tcpdf_path = CHRONOTRACK_LIVE_PLUGIN_DIR . 'lib/tcpdf/tcpdf.php';
 
+        error_log('TCPDF: Checking path: ' . $tcpdf_path);
+        error_log('TCPDF: File exists: ' . (file_exists($tcpdf_path) ? 'YES' : 'NO'));
+        error_log('TCPDF: CHRONOTRACK_LIVE_PLUGIN_DIR: ' . CHRONOTRACK_LIVE_PLUGIN_DIR);
+
         if (!file_exists($tcpdf_path)) {
+            error_log('TCPDF: File NOT found at: ' . $tcpdf_path);
             return false;
         }
 
-        require_once $tcpdf_path;
-        return true;
+        try {
+            require_once $tcpdf_path;
+            error_log('TCPDF: Successfully loaded');
+
+            // Check if TCPDF class is now available
+            if (!class_exists('TCPDF')) {
+                error_log('TCPDF: Class TCPDF not found after require!');
+                return false;
+            }
+
+            return true;
+        } catch (Exception $e) {
+            error_log('TCPDF: Exception loading: ' . $e->getMessage());
+            return false;
+        }
     }
 }

@@ -959,9 +959,11 @@
 
             // Auto-select first distance if nothing selected
             const wasEmpty = !this.selectedDistance;
+            let autoSelected = false;
             if (!this.selectedDistance && sortedDistances.length > 0) {
                 this.selectedDistance = sortedDistances[0];
-                console.log('📏 Auto-selected first distance:', this.selectedDistance);
+                autoSelected = true;
+                console.log('📏 Auto-selected first distance (largest):', this.selectedDistance);
             }
 
             // Add buttons for each distance (no "Wszystkie" button)
@@ -993,8 +995,12 @@
                 container.append(pdfBtn);
             }
 
-            // NOTE: Don't call filterResults() here - it will be called in renderResults()
-            // after rows are actually added to the table
+            // CRITICAL FIX: If we auto-selected a distance, apply the filter NOW
+            // This ensures only the largest distance is shown initially
+            if (autoSelected) {
+                console.log('🔄 Auto-selected distance - applying filter now:', this.selectedDistance);
+                this.filterResults();
+            }
         },
 
         selectDistance: function(distance) {
@@ -1150,9 +1156,15 @@
                 this.refreshInterval = null;
             }
 
-            // CRITICAL FIX: Initial load from CACHE (fast), then API fetch every 60s
-            console.log('📥 Initial load from database...');
-            this.loadResults(this.currentView);  // Fast load from database
+            // CRITICAL FIX: Initial AGGRESSIVE load - load cache AND fetch from API immediately
+            console.log('📥 Initial AGGRESSIVE load - fetching from cache AND API...');
+            this.loadResults(this.currentView);  // Fast load from database (if available)
+
+            // IMMEDIATELY fetch fresh data from API (don't wait 60s!)
+            setTimeout(() => {
+                console.log('🚀 AGGRESSIVE: Fetching from API immediately after cache load...');
+                this.refreshFromAPI();
+            }, 1000); // Wait 1 second after cache load, then fetch from API
 
             // Fetch fresh data from API every 60 seconds
             console.log('⏰ Setting up interval to fetch from API every', interval, 'ms');
