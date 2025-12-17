@@ -638,6 +638,9 @@ class ChronoTrack_API {
         // Country - prefer entry data
         $country = $entry['country'] ?? $result['results_country'] ?? $entry['location_country'] ?? '';
 
+        // Nationality - prefer entry data
+        $nationality = $entry['nationality'] ?? $result['results_nationality'] ?? $country;
+
         // Club - prefer entry data
         $club = $entry['club'] ?? $result['results_club'] ?? '';
 
@@ -698,6 +701,9 @@ class ChronoTrack_API {
             'location_city' => $city,  // Alternative field name
             'country' => $country,
             'location_country' => $country,  // Alternative field name
+            'athlete_country' => $country,  // Alternative field name
+            'nationality' => $nationality,
+            'athlete_nationality' => $nationality,  // Alternative field name
             'club' => $club,
             'athlete_club' => $club,  // Alternative field name
             'birth_year' => $birth_year,

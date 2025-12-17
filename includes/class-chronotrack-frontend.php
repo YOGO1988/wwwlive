@@ -19,6 +19,9 @@ class ChronoTrack_Frontend {
         add_filter('is_active_sidebar', array($this, 'disable_sidebar'), 10, 2);
         add_filter('sidebars_widgets', array($this, 'remove_sidebar_widgets'));
         add_filter('theme_page_templates', array($this, 'add_full_width_template'));
+
+        // Use blank template for ChronoTrack pages
+        add_filter('template_include', array($this, 'use_blank_template'), 99);
     }
 
     /**
@@ -266,5 +269,18 @@ class ChronoTrack_Frontend {
     public function add_full_width_template($templates) {
         $templates['chronotrack-full-width.php'] = 'ChronoTrack Full Width';
         return $templates;
+    }
+
+    /**
+     * Use blank template for ChronoTrack pages
+     */
+    public function use_blank_template($template) {
+        if ($this->is_chronotrack_page()) {
+            $blank_template = CHRONOTRACK_LIVE_PLUGIN_DIR . 'templates/template-blank.php';
+            if (file_exists($blank_template)) {
+                return $blank_template;
+            }
+        }
+        return $template;
     }
 }

@@ -171,6 +171,10 @@ class ChronoTrack_Database {
         dbDelta($results_sql);
         dbDelta($splits_sql);
         dbDelta($columns_sql);
+
+        // Add country and nationality columns if they don't exist
+        $wpdb->query("ALTER TABLE $results_table ADD COLUMN IF NOT EXISTS country VARCHAR(255) AFTER city");
+        $wpdb->query("ALTER TABLE $results_table ADD COLUMN IF NOT EXISTS nationality VARCHAR(255) AFTER country");
     }
 
     /**
@@ -325,6 +329,8 @@ class ChronoTrack_Database {
                 'age' => absint($result['age'] ?? 0),
                 'gender' => sanitize_text_field($result['gender'] ?? ''),
                 'city' => sanitize_text_field($result['city'] ?? ''),
+                'country' => sanitize_text_field($result['country'] ?? ''),
+                'nationality' => sanitize_text_field($result['nationality'] ?? ''),
                 'club' => sanitize_text_field($result['club'] ?? ''),
                 'distance' => sanitize_text_field($result['distance'] ?? ''),
                 'category' => sanitize_text_field($result['category'] ?? ''),
@@ -369,13 +375,18 @@ class ChronoTrack_Database {
                 );
                 if ($update_result !== false) {
                     $saved_count++;
+                    // Save split times to splits table
+                    $this->save_split_times($existing->id, $event_id, $result);
                 } else {
                     error_log("⚠️ UPDATE FAILED for BIB {$data['bib_number']}: " . $wpdb->last_error);
                 }
             } else {
                 $insert_result = $wpdb->insert($table, $data);
                 if ($insert_result !== false) {
+                    $result_id = $wpdb->insert_id;
                     $saved_count++;
+                    // Save split times to splits table
+                    $this->save_split_times($result_id, $event_id, $result);
                 } else {
                     error_log("⚠️ INSERT FAILED for BIB {$data['bib_number']}: " . $wpdb->last_error);
                 }
@@ -384,6 +395,34 @@ class ChronoTrack_Database {
 
         error_log("DB save_results() complete: saved {$saved_count} records to database");
         return $saved_count;
+    }
+
+    /**
+     * Save split times to splits table
+     */
+    private function save_split_times($result_id, $event_id, $result) {
+        global $wpdb;
+        $splits_table = $wpdb->prefix . 'chronotrack_splits';
+
+        // Delete existing splits for this result
+        $wpdb->delete($splits_table, array('result_id' => $result_id));
+
+        // Insert new splits
+        if (!empty($result['split_times']) && is_array($result['split_times'])) {
+            foreach ($result['split_times'] as $split) {
+                $wpdb->insert($splits_table, array(
+                    'result_id' => $result_id,
+                    'event_id' => sanitize_text_field($event_id),
+                    'participant_id' => sanitize_text_field($result['participant_id'] ?? ''),
+                    'checkpoint_name' => sanitize_text_field($split['interval_name'] ?? $split['checkpoint_name'] ?? ''),
+                    'checkpoint_time' => sanitize_text_field($split['formatted_time'] ?? $split['checkpoint_time'] ?? ''),
+                    'checkpoint_time_seconds' => absint($split['time_seconds'] ?? $split['checkpoint_time_seconds'] ?? 0),
+                    'checkpoint_position' => absint($split['rank'] ?? $split['checkpoint_position'] ?? 0),
+                    'segment_time' => sanitize_text_field($split['segment_time'] ?? ''),
+                    'segment_time_seconds' => absint($split['segment_time_seconds'] ?? 0),
+                ));
+            }
+        }
     }
 
     /**
