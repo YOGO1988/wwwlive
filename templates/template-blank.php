@@ -7,6 +7,13 @@
 if (!defined('ABSPATH')) {
     exit;
 }
+
+// Dequeue scripts from other plugins that might conflict
+add_action('wp_enqueue_scripts', function() {
+    // Dequeue plugin "x" scripts that cause jQuery errors on blank template
+    wp_dequeue_script('x-frontend');
+    wp_dequeue_script('yogo-x-frontend');
+}, 100);
 ?>
 <!DOCTYPE html>
 <html <?php language_attributes(); ?>>
