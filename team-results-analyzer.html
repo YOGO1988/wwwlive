@@ -625,6 +625,9 @@
             if (!timeStr || timeStr.trim() === '') return null;
             timeStr = timeStr.trim();
 
+            // Obsłuż przecinek jako separator dziesiętny (format polski w CSV)
+            timeStr = timeStr.replace(',', '.');
+
             let hours = 0, minutes = 0, seconds = 0, centiseconds = 0;
 
             let hasCs = timeStr.includes('.');
@@ -820,37 +823,31 @@
                 const men = athletes.filter(a => a.gender === 'M');
                 const women = athletes.filter(a => a.gender === 'F');
 
-                // Spróbuj wszystkich możliwych kombinacji
+                // Iteruj tylko po prawidłowych kombinacjach:
+                // m >= minGender i w >= minGender, czyli m w zakresie [minGender, teamSize - minGender]
                 let bestCombination = null;
                 let bestTime = Infinity;
 
-                // Iteruj po możliwych liczbach mężczyzn
-                for (let m = 0; m <= Math.min(men.length, teamSize); m++) {
+                const mMin = minGender;
+                const mMax = teamSize - minGender;
+
+                for (let m = mMin; m <= mMax; m++) {
                     const w = teamSize - m;
 
-                    if (w > women.length) continue;
-
-                    // Sprawdź czy kombinacja spełnia wymagania minimum
-                    if (minGender > 0) {
-                        // Obie płcie muszą mieć co najmniej minGender osób
-                        if (m < minGender || w < minGender) continue;
-                    }
+                    if (m > men.length || w > women.length) continue;
 
                     const selectedMen = men.slice(0, m);
                     const selectedWomen = women.slice(0, w);
                     const combination = [...selectedMen, ...selectedWomen];
+                    const totalTime = combination.reduce((sum, a) => sum + a.time, 0);
 
-                    if (combination.length === teamSize) {
-                        const totalTime = combination.reduce((sum, a) => sum + a.time, 0);
-
-                        if (totalTime < bestTime) {
-                            bestTime = totalTime;
-                            bestCombination = {
-                                athletes: combination.sort((a, b) => a.time - b.time),
-                                menCount: m,
-                                womenCount: w
-                            };
-                        }
+                    if (totalTime < bestTime) {
+                        bestTime = totalTime;
+                        bestCombination = {
+                            athletes: combination.sort((a, b) => a.time - b.time),
+                            menCount: m,
+                            womenCount: w
+                        };
                     }
                 }
 
