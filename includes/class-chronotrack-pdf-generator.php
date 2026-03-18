@@ -68,34 +68,48 @@ class ChronoTrack_PDF_Generator {
      * Create PDF file
      */
     private function create_pdf($event, $distance, $results, $columns) {
-        // Create new PDF document (Landscape A4)
-        $pdf = new TCPDF('L', 'mm', 'A4', true, 'UTF-8', false);
+        error_log("PDF: Starting PDF generation for event {$event->event_name}, distance {$distance}");
+        error_log("PDF: Results count: " . count($results));
 
-        // Set document information
-        $pdf->SetCreator('YO&GO Events - ChronoTrack Live Results');
-        $pdf->SetAuthor('YO&GO Events');
-        $pdf->SetTitle($event->event_name . ' - ' . $distance);
-        $pdf->SetSubject('Wyniki zawodów');
+        try {
+            // Create new PDF document (Landscape A4)
+            error_log("PDF: Creating TCPDF instance");
+            $pdf = new TCPDF('L', 'mm', 'A4', true, 'UTF-8', false);
 
-        // Remove default header/footer
-        $pdf->setPrintHeader(false);
-        $pdf->setPrintFooter(false);
+            // Set document information
+            $pdf->SetCreator('YO&GO Events - ChronoTrack Live Results');
+            $pdf->SetAuthor('YO&GO Events');
+            $pdf->SetTitle($event->event_name . ' - ' . $distance);
+            $pdf->SetSubject('Wyniki zawodów');
 
-        // Set margins
-        $pdf->SetMargins(10, 28, 10); // left, top, right
-        $pdf->SetAutoPageBreak(true, 15); // bottom margin
+            // Remove default header/footer
+            $pdf->setPrintHeader(false);
+            $pdf->setPrintFooter(false);
 
-        // Set font for Polish characters
-        $pdf->SetFont('dejavusans', '', 8);
+            // Set margins
+            $pdf->SetMargins(10, 28, 10); // left, top, right
+            $pdf->SetAutoPageBreak(true, 15); // bottom margin
 
-        // Add a page
-        $pdf->AddPage();
+            // Set font for Polish characters
+            error_log("PDF: Setting font");
+            $pdf->SetFont('dejavusans', '', 8);
 
-        // Add custom header with logos
-        $this->add_header($pdf, $event, $distance);
+            // Add a page
+            error_log("PDF: Adding first page");
+            $pdf->AddPage();
 
-        // Add results table
-        $this->add_results_table($pdf, $results, $columns);
+            // Add custom header with logos
+            error_log("PDF: Adding header");
+            $this->add_header($pdf, $event, $distance);
+
+            // Add results table
+            error_log("PDF: Adding results table");
+            $this->add_results_table($pdf, $results, $columns);
+        } catch (Exception $e) {
+            error_log("PDF: CRITICAL ERROR during PDF creation: " . $e->getMessage());
+            error_log("PDF: Stack trace: " . $e->getTraceAsString());
+            throw $e; // Re-throw to be caught by generate_pdf()
+        }
 
         // Add footer
         $this->add_footer($pdf);
@@ -171,16 +185,36 @@ class ChronoTrack_PDF_Generator {
      */
     private function add_logo($pdf, $url, $x, $y, $width, $height) {
         try {
+            if (empty($url)) {
+                return; // Skip if no URL
+            }
+
+            error_log("PDF: Attempting to download logo from: {$url}");
+
             // Download image to temp file
             $temp_file = download_url($url);
 
             if (is_wp_error($temp_file)) {
-                error_log('Failed to download logo: ' . $temp_file->get_error_message());
+                error_log('PDF: Failed to download logo: ' . $temp_file->get_error_message());
+                return; // Continue without logo
+            }
+
+            if (!file_exists($temp_file)) {
+                error_log('PDF: Temp file not found after download');
                 return;
             }
 
-            // Get image type
-            $image_type = exif_imagetype($temp_file);
+            // Get image type (with error handling in case exif extension missing)
+            if (function_exists('exif_imagetype')) {
+                $image_type = exif_imagetype($temp_file);
+                if ($image_type === false) {
+                    error_log('PDF: Invalid image file');
+                    @unlink($temp_file);
+                    return;
+                }
+            }
+
+            error_log("PDF: Adding logo to PDF at position ({$x}, {$y})");
 
             // Add image to PDF
             $pdf->Image($temp_file, $x, $y, $width, $height, '', '', '', false, 300, '', false, false, 0);
@@ -188,8 +222,12 @@ class ChronoTrack_PDF_Generator {
             // Clean up temp file
             @unlink($temp_file);
 
+            error_log("PDF: Logo added successfully");
+
         } catch (Exception $e) {
-            error_log('Error adding logo to PDF: ' . $e->getMessage());
+            error_log('PDF: Error adding logo to PDF: ' . $e->getMessage());
+            error_log('PDF: Stack trace: ' . $e->getTraceAsString());
+            // Continue without logo - don't break PDF generation
         }
     }
 
