@@ -437,8 +437,7 @@
 
                     // Special formatting for full_name - make it clickable with flag
                     if (column.id === 'full_name' || column.id.includes('name')) {
-                        // Add country flag before name if available
-                        // CRITICAL: API może zwracać z wielką literą (Country, Nationality)
+                        // Add country flag AFTER name if available
                         let flagEmoji = '';
                         const countryCode = result.country || result.Country || result.nationality || result.Nationality ||
                                           result.athlete_country || result.country_code || result.CountryCode;
@@ -448,7 +447,7 @@
                             if (typeof CountryFlags !== 'undefined') {
                                 flagEmoji = CountryFlags.getFlag(countryCode);
                                 if (flagEmoji) {
-                                    flagEmoji = flagEmoji + ' '; // Add space after flag
+                                    flagEmoji = ' ' + flagEmoji; // Add space BEFORE flag
                                     console.log('✅ Flag:', flagEmoji);
                                 }
                             }
@@ -458,7 +457,7 @@
                             .attr('href', '#')
                             .addClass('chronotrack-view-details')
                             .attr('data-participant-id', result.participant_id)
-                            .html(flagEmoji + '<strong>' + this.escapeHtml(value) + '</strong>');
+                            .html('<strong>' + this.escapeHtml(value) + '</strong>' + flagEmoji);
                         cell.append(nameLink);
                     } else {
                         cell.text(this.cleanValue(value));
@@ -471,14 +470,14 @@
                 row.append($('<td>').addClass('col-position').text(this.cleanValue(result.position)));
                 row.append($('<td>').addClass('col-bib').text(this.cleanValue(result.bib_number)));
 
-                // Make name clickable in fallback mode too (with flag)
+                // Make name clickable in fallback mode too (with flag AFTER name)
                 let flagEmoji = '';
                 const countryCode = result.country || result.Country || result.nationality || result.Nationality ||
                                   result.athlete_country || result.country_code || result.CountryCode;
                 if (countryCode && typeof CountryFlags !== 'undefined') {
                     flagEmoji = CountryFlags.getFlag(countryCode);
                     if (flagEmoji) {
-                        flagEmoji = flagEmoji + ' '; // Add space after flag
+                        flagEmoji = ' ' + flagEmoji; // Add space BEFORE flag
                     }
                 }
 
@@ -486,7 +485,7 @@
                     .attr('href', '#')
                     .addClass('chronotrack-view-details')
                     .attr('data-participant-id', result.participant_id)
-                    .html(flagEmoji + '<strong>' + this.escapeHtml(result.full_name) + '</strong>');
+                    .html('<strong>' + this.escapeHtml(result.full_name) + '</strong>' + flagEmoji);
                 row.append($('<td>').addClass('col-name').append(nameLink));
 
                 row.append($('<td>').addClass('col-category').text(this.cleanValue(result.category)));
@@ -524,24 +523,24 @@
 
                     // Handle special case for full_name
                     if (attr === 'full_name' || attr === 'athlete_last_name,athlete_first_name') {
-                        // Add country flag before name if available
+                        // Add country flag AFTER name if available
                         let flagEmoji = '';
                         if (result.country && typeof CountryFlags !== 'undefined') {
                             flagEmoji = CountryFlags.getFlag(result.country);
                             if (flagEmoji) {
-                                flagEmoji = flagEmoji + ' '; // Add space after flag
+                                flagEmoji = ' ' + flagEmoji; // Add space BEFORE flag
                             }
                         }
 
-                        // CRITICAL FIX: Always format as "Nazwisko Imię"
+                        // CRITICAL FIX: Always format as "Nazwisko Imię 🇵🇱"
                         if (result.last_name || result.first_name) {
                             const lastName = (result.last_name || '').trim();
                             const firstName = (result.first_name || '').trim();
-                            return flagEmoji + lastName + (lastName && firstName ? ' ' : '') + firstName;
+                            return lastName + (lastName && firstName ? ' ' : '') + firstName + flagEmoji;
                         }
                         // Fallback to full_name if no first/last name available
                         if (result.full_name) {
-                            return flagEmoji + result.full_name;
+                            return result.full_name + flagEmoji;
                         }
                     }
 

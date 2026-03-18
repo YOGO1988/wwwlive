@@ -28,9 +28,9 @@ class ChronoTrack_PDF_Generator {
             return new WP_Error('tcpdf_missing', __('TCPDF library not found. Please install TCPDF.', 'chronotrack-live'));
         }
 
-        // Get event data (by ChronoTrack ID, not internal WordPress ID)
+        // Get event data (get_event searches by ChronoTrack event_id)
         $db = chronotrack_live_results()->db;
-        $event = $db->get_event_by_chronotrack_id($event_id);
+        $event = $db->get_event($event_id);
 
         if (!$event) {
             return new WP_Error('event_not_found', __('Event not found.', 'chronotrack-live'));

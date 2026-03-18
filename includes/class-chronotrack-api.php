@@ -640,60 +640,77 @@ class ChronoTrack_API {
         // City - prefer entry data
         $city = $entry['city'] ?? $result['results_city'] ?? '';
 
+        // Country code → name mapping (used multiple times below)
+        $country_code_map = array(
+            'PL' => 'Poland',
+            'DE' => 'Germany',
+            'CZ' => 'Czech Republic',
+            'SK' => 'Slovakia',
+            'UA' => 'Ukraine',
+            'BY' => 'Belarus',
+            'LT' => 'Lithuania',
+            'LV' => 'Latvia',
+            'EE' => 'Estonia',
+            'RU' => 'Russia',
+            'NL' => 'Netherlands',
+            'BE' => 'Belgium',
+            'CH' => 'Switzerland',
+            'AT' => 'Austria',
+            'HU' => 'Hungary',
+            'RO' => 'Romania',
+            'BG' => 'Bulgaria',
+            'SE' => 'Sweden',
+            'NO' => 'Norway',
+            'DK' => 'Denmark',
+            'FI' => 'Finland',
+            'PT' => 'Portugal',
+            'GR' => 'Greece',
+            'IE' => 'Ireland',
+            'CA' => 'Canada',
+            'US' => 'United States',
+            'AU' => 'Australia',
+            'NZ' => 'New Zealand',
+            'JP' => 'Japan',
+            'CN' => 'China',
+            'KR' => 'South Korea',
+            'BR' => 'Brazil',
+            'AR' => 'Argentina',
+            'MX' => 'Mexico',
+            'ZA' => 'South Africa',
+            'KE' => 'Kenya',
+            'ET' => 'Ethiopia',
+        );
+
         // Country - prefer entry data (try country_name first - it's the most reliable!)
-        $country = $entry['country_name'] ?? $entry['country'] ?? $result['results_country'] ?? $entry['location_country'] ?? '';
+        $country = $entry['country_name'] ?? $entry['country'] ?? $result['results_country'] ?? '';
+
+        // Convert location_country code to name (PL → Poland)
+        if (empty($country) && !empty($entry['location_country'])) {
+            $location_country_code = $entry['location_country'];
+            $country = $country_code_map[$location_country_code] ?? $location_country_code;
+        }
 
         // If no country yet, try to extract from results_hometown (e.g., "Września, Poland")
+        // ONLY if country is still empty!
         if (empty($country) && !empty($result['results_hometown'])) {
             $hometown_parts = explode(',', $result['results_hometown']);
             if (count($hometown_parts) > 1) {
-                $country = trim($hometown_parts[count($hometown_parts) - 1]); // Last part = country
+                $last_part = trim($hometown_parts[count($hometown_parts) - 1]);
+                // Only use if it looks like a country name (not a city)
+                // Check if it's in our known countries or is already "Poland" etc.
+                if (in_array($last_part, $country_code_map) || strlen($last_part) <= 2) {
+                    // It's a code or known country
+                    $country = $country_code_map[$last_part] ?? $last_part;
+                } else {
+                    // Likely a country name like "Poland"
+                    $country = $last_part;
+                }
             }
         }
 
         // If still no country, check results_country_code and convert to country name
         if (empty($country) && !empty($result['results_country_code'])) {
             $country_code = $result['results_country_code'];
-            // Map country codes to names (for flags)
-            $country_code_map = array(
-                'PL' => 'Poland',
-                'DE' => 'Germany',
-                'CZ' => 'Czech Republic',
-                'SK' => 'Slovakia',
-                'UA' => 'Ukraine',
-                'BY' => 'Belarus',
-                'LT' => 'Lithuania',
-                'LV' => 'Latvia',
-                'EE' => 'Estonia',
-                'RU' => 'Russia',
-                'NL' => 'Netherlands',
-                'BE' => 'Belgium',
-                'CH' => 'Switzerland',
-                'AT' => 'Austria',
-                'HU' => 'Hungary',
-                'RO' => 'Romania',
-                'BG' => 'Bulgaria',
-                'SE' => 'Sweden',
-                'NO' => 'Norway',
-                'DK' => 'Denmark',
-                'FI' => 'Finland',
-                'PT' => 'Portugal',
-                'GR' => 'Greece',
-                'IE' => 'Ireland',
-                'CA' => 'Canada',
-                'US' => 'United States',
-                'AU' => 'Australia',
-                'NZ' => 'New Zealand',
-                'JP' => 'Japan',
-                'CN' => 'China',
-                'KR' => 'South Korea',
-                'BR' => 'Brazil',
-                'AR' => 'Argentina',
-                'MX' => 'Mexico',
-                'ZA' => 'South Africa',
-                'KE' => 'Kenya',
-                'ET' => 'Ethiopia',
-            );
             $country = $country_code_map[$country_code] ?? '';
         }
 
