@@ -635,14 +635,15 @@ class ChronoTrack_API {
         // City - prefer entry data
         $city = $entry['city'] ?? $result['results_city'] ?? '';
 
-        // Country - prefer entry data
-        $country = $entry['country'] ?? $result['results_country'] ?? $entry['location_country'] ?? '';
+        // Country - prefer entry data (try country_name first - it's the most reliable!)
+        $country = $entry['country_name'] ?? $entry['country'] ?? $result['results_country'] ?? $entry['location_country'] ?? '';
 
         // Nationality - prefer entry data
         $nationality = $entry['nationality'] ?? $result['results_nationality'] ?? $country;
 
         // DEBUG: Log all available country-related fields
-        error_log("COUNTRY DEBUG for BIB {$result['results_bib']}: entry[country]=" . ($entry['country'] ?? 'NULL') .
+        error_log("COUNTRY DEBUG for BIB {$result['results_bib']}: entry[country_name]=" . ($entry['country_name'] ?? 'NULL') .
+                  ", entry[country]=" . ($entry['country'] ?? 'NULL') .
                   ", result[results_country]=" . ($result['results_country'] ?? 'NULL') .
                   ", entry[location_country]=" . ($entry['location_country'] ?? 'NULL') .
                   ", entry[nationality]=" . ($entry['nationality'] ?? 'NULL') .
