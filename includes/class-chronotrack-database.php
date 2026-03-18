@@ -48,6 +48,7 @@ class ChronoTrack_Database {
             age int(11),
             gender varchar(10),
             city varchar(255),
+            country varchar(10) DEFAULT 'pl',
             club varchar(255),
             distance varchar(255),
             category varchar(255),
@@ -115,6 +116,23 @@ class ChronoTrack_Database {
         dbDelta($results_sql);
         dbDelta($splits_sql);
         dbDelta($columns_sql);
+
+        // Run migrations for existing installations
+        $this->run_migrations();
+    }
+
+    /**
+     * Run database migrations for version upgrades
+     */
+    public function run_migrations() {
+        global $wpdb;
+        $results_table = $wpdb->prefix . 'chronotrack_results';
+
+        // v4.1.0: Add country column if missing
+        $columns = $wpdb->get_col("SHOW COLUMNS FROM $results_table LIKE 'country'");
+        if (empty($columns)) {
+            $wpdb->query("ALTER TABLE $results_table ADD COLUMN country varchar(10) DEFAULT 'pl' AFTER city");
+        }
     }
 
     /**
@@ -236,6 +254,7 @@ class ChronoTrack_Database {
                 'age' => absint($result['age'] ?? 0),
                 'gender' => sanitize_text_field($result['gender'] ?? ''),
                 'city' => sanitize_text_field($result['city'] ?? ''),
+                'country' => sanitize_text_field($result['country'] ?? 'pl'),
                 'club' => sanitize_text_field($result['club'] ?? ''),
                 'distance' => sanitize_text_field($result['distance'] ?? ''),
                 'category' => sanitize_text_field($result['category'] ?? ''),

@@ -186,9 +186,35 @@ class ChronoTrack_API {
                             // Extract distance/race name
                             $distance = $entry['race_distance'] ?? $entry['race_name'] ?? $entry['reg_choice_name'] ?? '';
 
+                            // Extract country code
+                            $country = $entry['location_country'] ?? $entry['athlete_address_country'] ??
+                                       $entry['athlete_country'] ?? $entry['address_country_code'] ??
+                                       $entry['country_code'] ?? '';
+                            // Normalize to 2-letter ISO code
+                            if (strlen($country) > 2) {
+                                $country_map = array(
+                                    'Poland' => 'PL', 'Polska' => 'PL', 'POLAND' => 'PL',
+                                    'Germany' => 'DE', 'Deutschland' => 'DE',
+                                    'Czech Republic' => 'CZ', 'Czechia' => 'CZ',
+                                    'Slovakia' => 'SK', 'Ukraine' => 'UA',
+                                    'Lithuania' => 'LT', 'Latvia' => 'LV', 'Estonia' => 'EE',
+                                    'Belarus' => 'BY', 'Russia' => 'RU',
+                                    'United Kingdom' => 'GB', 'UK' => 'GB',
+                                    'France' => 'FR', 'Italy' => 'IT', 'Spain' => 'ES',
+                                    'Sweden' => 'SE', 'Norway' => 'NO', 'Denmark' => 'DK',
+                                    'Netherlands' => 'NL', 'Belgium' => 'BE',
+                                    'Austria' => 'AT', 'Switzerland' => 'CH',
+                                    'Hungary' => 'HU', 'Romania' => 'RO', 'Bulgaria' => 'BG',
+                                    'United States' => 'US', 'USA' => 'US',
+                                );
+                                $country = $country_map[$country] ?? strtoupper(substr($country, 0, 2));
+                            }
+                            $country = strtolower($country);
+
                             $all_entries[$bib] = array(
                                 'city' => $city,
                                 'club' => $club,
+                                'country' => $country,
                                 'athlete_city' => $city,
                                 'athlete_club' => $club,
                                 'location_city' => $entry['location_city'] ?? '',
@@ -364,6 +390,12 @@ class ChronoTrack_API {
         // City - prefer entry data
         $city = $entry['city'] ?? $result['results_city'] ?? '';
 
+        // Country - prefer entry data, default to 'pl' (Polish races)
+        $country = $entry['country'] ?? 'pl';
+        if (empty($country)) {
+            $country = 'pl';
+        }
+
         // Club - prefer entry data
         $club = $entry['club'] ?? $result['results_club'] ?? '';
 
@@ -379,6 +411,7 @@ class ChronoTrack_API {
             'age' => $result['results_age'] ?? 0,
             'gender' => $result['results_sex'] ?? '',
             'city' => $city,
+            'country' => $country,
             'athlete_city' => $city,  // Alternative field name
             'location_city' => $city,  // Alternative field name
             'club' => $club,
