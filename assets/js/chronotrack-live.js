@@ -976,8 +976,8 @@
                 container.append(btn);
             });
 
-            // Add "Generuj PDF" button if there's a selected distance
-            if (this.selectedDistance && chronotrackData.userCanGeneratePDF) {
+            // Add "Generuj PDF" button if there's a selected distance (accessible to all users)
+            if (this.selectedDistance) {
                 const pdfBtn = $('<button>')
                     .addClass('chronotrack-generate-pdf-btn')
                     .html('📄 Generuj PDF')
@@ -1403,7 +1403,7 @@
                 method: 'POST',
                 data: {
                     action: 'chronotrack_generate_pdf',
-                    nonce: chronotrackData.adminNonce,
+                    nonce: chronotrackData.nonce,
                     event_id: chronotrackData.eventId,
                     distance: this.selectedDistance
                 },

@@ -23,8 +23,9 @@ class ChronoTrack_Ajax {
         add_action('wp_ajax_chronotrack_refresh_results', array($this, 'refresh_results'));
         add_action('wp_ajax_nopriv_chronotrack_refresh_results', array($this, 'refresh_results'));
 
-        // Admin-only AJAX action for PDF generation
+        // PDF generation (accessible to all users, including guests)
         add_action('wp_ajax_chronotrack_generate_pdf', array($this, 'generate_pdf'));
+        add_action('wp_ajax_nopriv_chronotrack_generate_pdf', array($this, 'generate_pdf'));
     }
 
     /**
@@ -267,17 +268,11 @@ class ChronoTrack_Ajax {
     }
 
     /**
-     * Generate PDF for specific distance (Admin-only)
+     * Generate PDF for specific distance (accessible to all users)
      */
     public function generate_pdf() {
-        // Check user capabilities
-        if (!current_user_can('manage_options')) {
-            wp_send_json_error(array('message' => __('Brak uprawnień.', 'chronotrack-live')));
-            return;
-        }
-
-        // Verify nonce
-        if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'chronotrack_admin_nonce')) {
+        // Verify nonce (public nonce, not admin-only)
+        if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'chronotrack_nonce')) {
             wp_send_json_error(array('message' => __('Nieprawidłowy nonce.', 'chronotrack-live')));
             return;
         }
