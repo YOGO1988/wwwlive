@@ -53,20 +53,17 @@
         },
 
         removeSidebar: function() {
-            const sidebarSelectors = [
-                '#secondary', 'aside.sidebar', '.sidebar', '.widget-area',
-                '#sidebar', '[id*="sidebar"]',
-                '[class*="sidebar"]:not(.chronotrack-distance-filters)',
-                'aside:not(.chronotrack-results-container)'
-            ];
-            sidebarSelectors.forEach(selector => { $(selector).remove(); });
-            $('.site-content, .hfeed, #content').css({
-                'display': 'block', 'width': '100%', 'max-width': '100%',
-                'grid-template-columns': 'none'
-            });
-            $('#primary, .content-area, article, main').css({
-                'width': '100%', 'max-width': '100%', 'flex': '0 0 100%'
-            });
+            // Hide sidebar via CSS only - never remove from DOM (other plugins/theme need those elements)
+            const style = document.createElement('style');
+            style.id = 'chronotrack-layout-fix';
+            style.textContent = [
+                '#secondary { display: none !important; }',
+                '.widget-area:not(.chronotrack-results-container *) { display: none !important; }',
+                '.et_pb_sidebar_1, .et_pb_sidebar { display: none !important; }',
+                '.site-content, #content { width: 100% !important; max-width: 100% !important; grid-template-columns: 1fr !important; }',
+                '#primary, .content-area { width: 100% !important; max-width: 100% !important; flex: 0 0 100% !important; }',
+            ].join('\n');
+            document.head.appendChild(style);
         },
 
         bindEvents: function() {
