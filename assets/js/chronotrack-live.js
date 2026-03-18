@@ -524,15 +524,24 @@
 
                     // Handle special case for full_name
                     if (attr === 'full_name' || attr === 'athlete_last_name,athlete_first_name') {
+                        // Add country flag before name if available
+                        let flagEmoji = '';
+                        if (result.country && typeof CountryFlags !== 'undefined') {
+                            flagEmoji = CountryFlags.getFlag(result.country);
+                            if (flagEmoji) {
+                                flagEmoji = flagEmoji + ' '; // Add space after flag
+                            }
+                        }
+
                         // CRITICAL FIX: Always format as "Nazwisko Imię"
                         if (result.last_name || result.first_name) {
                             const lastName = (result.last_name || '').trim();
                             const firstName = (result.first_name || '').trim();
-                            return lastName + (lastName && firstName ? ' ' : '') + firstName;
+                            return flagEmoji + lastName + (lastName && firstName ? ' ' : '') + firstName;
                         }
                         // Fallback to full_name if no first/last name available
                         if (result.full_name) {
-                            return result.full_name;
+                            return flagEmoji + result.full_name;
                         }
                     }
 
