@@ -79,7 +79,7 @@ class ChronoTrack_Live_Results {
 
         // Enqueue scripts and styles
         add_action('wp_enqueue_scripts', array($this, 'enqueue_frontend_assets'));
-        add_action('admin_enqueue_scripts', array($this, 'enqueue_admin_assets'));
+        // Admin assets are handled by ChronoTrack_Admin::enqueue_admin_scripts
 
         // Load text domain
         add_action('plugins_loaded', array($this, 'load_textdomain'));
@@ -124,36 +124,6 @@ class ChronoTrack_Live_Results {
                 'meta' => __('Finish Line', 'chronotrack-live'),
                 'details' => __('Details', 'chronotrack-live'),
             )
-        ));
-    }
-
-    /**
-     * Enqueue admin assets
-     */
-    public function enqueue_admin_assets($hook) {
-        // Only load on ChronoTrack admin pages
-        if (strpos($hook, 'chronotrack') === false) {
-            return;
-        }
-
-        wp_enqueue_style(
-            'chronotrack-admin',
-            CHRONOTRACK_LIVE_PLUGIN_URL . 'assets/css/chronotrack-admin.css',
-            array(),
-            CHRONOTRACK_LIVE_VERSION
-        );
-
-        wp_enqueue_script(
-            'chronotrack-admin',
-            CHRONOTRACK_LIVE_PLUGIN_URL . 'assets/js/chronotrack-admin.js',
-            array('jquery'),
-            CHRONOTRACK_LIVE_VERSION,
-            true
-        );
-
-        wp_localize_script('chronotrack-admin', 'chronotrackAdmin', array(
-            'ajaxUrl' => admin_url('admin-ajax.php'),
-            'nonce' => wp_create_nonce('chronotrack_admin_nonce'),
         ));
     }
 
