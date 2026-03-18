@@ -212,6 +212,9 @@ class ChronoTrack_Ajax {
                 'split_times' => $is_array ? ($result['split_times'] ?? array()) : ($result->split_times ?? array()),
                 'bracket_positions' => $is_array ? ($result['bracket_positions'] ?? array()) : ($result->bracket_positions ?? array()),
                 'finish_timestamp' => $is_array ? ($result['finish_timestamp'] ?? '') : $result->finish_timestamp,
+                // CRITICAL: Add country and nationality for flags!
+                'country' => $is_array ? ($result['country'] ?? '') : ($result->country ?? ''),
+                'nationality' => $is_array ? ($result['nationality'] ?? '') : ($result->nationality ?? ''),
             );
         }
 
@@ -264,6 +267,9 @@ class ChronoTrack_Ajax {
             'detailed_splits' => $result->detailed_splits ?? array(),
             'finish_timestamp' => $result->finish_timestamp,
             'raw_data' => $result->raw_data ?? array(),
+            // CRITICAL: Add country and nationality for flags!
+            'country' => $result->country ?? '',
+            'nationality' => $result->nationality ?? '',
         );
     }
 

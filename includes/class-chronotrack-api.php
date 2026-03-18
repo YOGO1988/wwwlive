@@ -275,6 +275,11 @@ class ChronoTrack_API {
                                 'birthdate' => $entry['athlete_birthdate'] ?? $entry['reg_transaction_account_birthdate'] ?? '',
                                 'distance' => $distance,
                                 'race_name' => $distance,
+                                // Country data - CRITICAL for nationality flags!
+                                'country_name' => $entry['country_name'] ?? '',
+                                'country' => $entry['country'] ?? '',
+                                'nationality' => $entry['nationality'] ?? '',
+                                'location_country' => $entry['location_country'] ?? '',
                             );
                         }
                     }
@@ -638,6 +643,60 @@ class ChronoTrack_API {
         // Country - prefer entry data (try country_name first - it's the most reliable!)
         $country = $entry['country_name'] ?? $entry['country'] ?? $result['results_country'] ?? $entry['location_country'] ?? '';
 
+        // If no country yet, try to extract from results_hometown (e.g., "Września, Poland")
+        if (empty($country) && !empty($result['results_hometown'])) {
+            $hometown_parts = explode(',', $result['results_hometown']);
+            if (count($hometown_parts) > 1) {
+                $country = trim($hometown_parts[count($hometown_parts) - 1]); // Last part = country
+            }
+        }
+
+        // If still no country, check results_country_code and convert to country name
+        if (empty($country) && !empty($result['results_country_code'])) {
+            $country_code = $result['results_country_code'];
+            // Map country codes to names (for flags)
+            $country_code_map = array(
+                'PL' => 'Poland',
+                'DE' => 'Germany',
+                'CZ' => 'Czech Republic',
+                'SK' => 'Slovakia',
+                'UA' => 'Ukraine',
+                'BY' => 'Belarus',
+                'LT' => 'Lithuania',
+                'LV' => 'Latvia',
+                'EE' => 'Estonia',
+                'RU' => 'Russia',
+                'NL' => 'Netherlands',
+                'BE' => 'Belgium',
+                'CH' => 'Switzerland',
+                'AT' => 'Austria',
+                'HU' => 'Hungary',
+                'RO' => 'Romania',
+                'BG' => 'Bulgaria',
+                'SE' => 'Sweden',
+                'NO' => 'Norway',
+                'DK' => 'Denmark',
+                'FI' => 'Finland',
+                'PT' => 'Portugal',
+                'GR' => 'Greece',
+                'IE' => 'Ireland',
+                'CA' => 'Canada',
+                'US' => 'United States',
+                'AU' => 'Australia',
+                'NZ' => 'New Zealand',
+                'JP' => 'Japan',
+                'CN' => 'China',
+                'KR' => 'South Korea',
+                'BR' => 'Brazil',
+                'AR' => 'Argentina',
+                'MX' => 'Mexico',
+                'ZA' => 'South Africa',
+                'KE' => 'Kenya',
+                'ET' => 'Ethiopia',
+            );
+            $country = $country_code_map[$country_code] ?? '';
+        }
+
         // Nationality - prefer entry data
         $nationality = $entry['nationality'] ?? $result['results_nationality'] ?? $country;
 
@@ -645,6 +704,8 @@ class ChronoTrack_API {
         error_log("COUNTRY DEBUG for BIB {$result['results_bib']}: entry[country_name]=" . ($entry['country_name'] ?? 'NULL') .
                   ", entry[country]=" . ($entry['country'] ?? 'NULL') .
                   ", result[results_country]=" . ($result['results_country'] ?? 'NULL') .
+                  ", result[results_country_code]=" . ($result['results_country_code'] ?? 'NULL') .
+                  ", result[results_hometown]=" . ($result['results_hometown'] ?? 'NULL') .
                   ", entry[location_country]=" . ($entry['location_country'] ?? 'NULL') .
                   ", entry[nationality]=" . ($entry['nationality'] ?? 'NULL') .
                   ", result[results_nationality]=" . ($result['results_nationality'] ?? 'NULL') .

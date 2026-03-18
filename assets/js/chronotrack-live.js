@@ -755,7 +755,7 @@
 
             // Add "Open" option to show all results
             categorySelect.append(
-                $('<option>').val('').text('Open (wszystkie)')
+                $('<option>').val('').text('Open')
             );
 
             // Add categories sorted alphabetically
