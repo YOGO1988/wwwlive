@@ -649,6 +649,14 @@ class ChronoTrack_API {
                   ", result[results_nationality]=" . ($result['results_nationality'] ?? 'NULL') .
                   ", FINAL country={$country}, nationality={$nationality}");
 
+        // SMART FIX: If country is still empty, try to detect from city or club
+        if (empty($country) && !empty($city)) {
+            $country = $this->detect_country_from_city($city);
+            if (!empty($country) && empty($nationality)) {
+                $nationality = $country; // Also set nationality if detected
+            }
+        }
+
         // Club - prefer entry data
         $club = $entry['club'] ?? $result['results_club'] ?? '';
 
@@ -914,6 +922,67 @@ class ChronoTrack_API {
         }
 
         return $bracket_results;
+    }
+
+    /**
+     * Detect country from city name
+     * Uses common Polish, German, Czech, etc. city names
+     */
+    private function detect_country_from_city($city) {
+        if (empty($city)) {
+            return '';
+        }
+
+        $city_lower = mb_strtolower($city, 'UTF-8');
+
+        // Polish cities (most common)
+        $polish_cities = array(
+            'warszawa', 'kraków', 'krakow', 'łódź', 'lodz', 'wrocław', 'wroclaw',
+            'poznań', 'poznan', 'gdańsk', 'gdansk', 'szczecin', 'bydgoszcz',
+            'lublin', 'katowice', 'białystok', 'bialystok', 'gdynia', 'częstochowa',
+            'czestochowa', 'radom', 'sosnowiec', 'toruń', 'torun', 'kielce', 'gliwice',
+            'zabrze', 'bytom', 'olsztyn', 'bielsko-biała', 'bielsko-biala', 'rzeszów',
+            'rzeszow', 'ruda śląska', 'ruda slaska', 'rybnik', 'tychy', 'dąbrowa górnicza',
+            'dabrowa gornicza', 'płock', 'plock', 'elbląg', 'elblag', 'opole', 'gorzów',
+            'gorzow', 'wałbrzych', 'walbrzych', 'zielona góra', 'zielona gora', 'tarnów',
+            'tarnow', 'chorzów', 'chorzow', 'koszalin', 'legnica', 'grudziądz', 'grudziadz',
+            'jaworzno', 'słupsk', 'slupsk', 'jastrzębie', 'jastrzebie', 'nowy sącz',
+            'nowy sacz', 'jelenia góra', 'jelenia gora', 'konin', 'piotrków', 'piotrkow',
+            'lubin', 'inowrocław', 'inowroclaw', 'ostrów', 'ostrow', 'suwałki', 'suwalki',
+            'stargard', 'piła', 'pila', 'głogów', 'glogów', 'gniezno', 'zamość', 'zamosc',
+            'pruszków', 'pruszkow', 'racibórz', 'raciborz', 'oświęcim', 'oswiecim',
+            'świnoujście', 'swinoujscie', 'stalowa wola', 'mielec', 'kędzierzyn', 'kedzierzyn',
+            'przelewice', // Event location
+        );
+
+        // German cities
+        $german_cities = array('berlin', 'hamburg', 'münchen', 'munchen', 'köln', 'koln',
+            'frankfurt', 'stuttgart', 'düsseldorf', 'dusseldorf', 'dortmund', 'essen', 'leipzig', 'bremen');
+
+        // Czech cities
+        $czech_cities = array('praha', 'prague', 'brno', 'ostrava', 'plzeň', 'plzen', 'liberec', 'olomouc');
+
+        // Check for matches
+        foreach ($polish_cities as $polish_city) {
+            if (strpos($city_lower, $polish_city) !== false) {
+                return 'Poland';
+            }
+        }
+
+        foreach ($german_cities as $german_city) {
+            if (strpos($city_lower, $german_city) !== false) {
+                return 'Germany';
+            }
+        }
+
+        foreach ($czech_cities as $czech_city) {
+            if (strpos($city_lower, $czech_city) !== false) {
+                return 'Czech Republic';
+            }
+        }
+
+        // Default: empty (unknown country)
+        return '';
     }
 
     /**
