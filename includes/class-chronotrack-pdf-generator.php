@@ -30,7 +30,7 @@ class ChronoTrack_PDF_Generator {
 
         // Get event data
         $db = chronotrack_live_results()->db;
-        $event = $db->get_event_by_chronotrack_id($event_id);
+        $event = $db->get_event($event_id);
 
         if (!$event) {
             return new WP_Error('event_not_found', __('Event not found.', 'chronotrack-live'));
