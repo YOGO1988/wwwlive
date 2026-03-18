@@ -285,6 +285,12 @@ class ChronoTrack_Ajax {
             return;
         }
 
+        // Check if PDF generator is available
+        if (!isset(chronotrack_live_results()->pdf)) {
+            wp_send_json_error(array('message' => __('PDF generator nie jest dostępny. Brakuje biblioteki TCPDF.', 'chronotrack-live')));
+            return;
+        }
+
         // Generate PDF
         $pdf = chronotrack_live_results()->pdf;
         $result = $pdf->generate_pdf($event_id, $distance);

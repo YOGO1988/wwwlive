@@ -31,7 +31,11 @@ require_once CHRONOTRACK_LIVE_PLUGIN_DIR . 'includes/class-chronotrack-admin.php
 require_once CHRONOTRACK_LIVE_PLUGIN_DIR . 'includes/class-chronotrack-frontend.php';
 require_once CHRONOTRACK_LIVE_PLUGIN_DIR . 'includes/class-chronotrack-ajax.php';
 require_once CHRONOTRACK_LIVE_PLUGIN_DIR . 'includes/class-chronotrack-api.php';
-require_once CHRONOTRACK_LIVE_PLUGIN_DIR . 'includes/class-chronotrack-pdf-generator.php';
+
+// Load PDF generator only if TCPDF library exists
+if (file_exists(CHRONOTRACK_LIVE_PLUGIN_DIR . 'lib/tcpdf/tcpdf.php')) {
+    require_once CHRONOTRACK_LIVE_PLUGIN_DIR . 'includes/class-chronotrack-pdf-generator.php';
+}
 
 /**
  * Main ChronoTrack Live Results Class
@@ -78,7 +82,11 @@ class ChronoTrack_Live_Results {
         $this->frontend = new ChronoTrack_Frontend();
         $this->ajax = new ChronoTrack_Ajax();
         $this->api = new ChronoTrack_API();
-        $this->pdf = new ChronoTrack_PDF_Generator();
+
+        // Initialize PDF generator only if TCPDF is available
+        if (class_exists('ChronoTrack_PDF_Generator')) {
+            $this->pdf = new ChronoTrack_PDF_Generator();
+        }
 
         // Enqueue scripts and styles
         add_action('wp_enqueue_scripts', array($this, 'enqueue_frontend_assets'));
