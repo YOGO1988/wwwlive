@@ -876,6 +876,11 @@
                     const position = participant.bracket_positions[bracketName];
                     // ONLY show brackets with actual position (> 0)
                     if (position && position > 0) {
+                        // CRITICAL FIX: Skip "Overall" bracket - it duplicates "Miejsce Open"
+                        if (bracketName === 'Overall' && position == participant.position) {
+                            return; // Skip - already shown as "Miejsce Open"
+                        }
+
                         // CRITICAL FIX: Skip SEX brackets (M, K, F) if they duplicate gender_position
                         // This prevents showing "Miejsce M/K: 6" and then "M: 6" (redundant)
                         const isSexBracket = ['M', 'K', 'F', 'Male', 'Female', 'Mężczyźni', 'Kobiety'].includes(bracketName);
