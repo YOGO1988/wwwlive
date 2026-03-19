@@ -257,30 +257,27 @@ class ChronoTrack_PDF_Generator {
      * Add results table using HTML (better rendering, no empty pages)
      */
     private function add_results_table($pdf, $results, $columns) {
-        // Build HTML table
+        // Build HTML table - MATCHING USER'S PDF STYLE
         $html = '<style>
             table {
                 border-collapse: collapse;
                 width: 100%;
-                font-size: 8pt;
+                font-size: 7pt;
             }
             th {
                 background-color: #FF6600;
                 color: #FFFFFF;
                 font-weight: bold;
                 text-align: center;
-                padding: 5px 3px;
+                padding: 3px 2px;
                 border: 1px solid #000000;
+                line-height: 1.2;
             }
             td {
                 text-align: center;
-                padding: 4px 2px;
+                padding: 2px 1px;
                 border: 1px solid #CCCCCC;
-            }
-            tr:nth-child(even) {
-                background-color: #F5F5F5;
-            }
-            tr:nth-child(odd) {
+                line-height: 1.3;
                 background-color: #FFFFFF;
             }
         </style>';
@@ -425,7 +422,8 @@ class ChronoTrack_PDF_Generator {
             }
         }
 
-        return '-';
+        // Return empty string for blank cells (NOT dash)
+        return '';
     }
 
     /**

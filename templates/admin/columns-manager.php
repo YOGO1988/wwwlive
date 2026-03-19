@@ -33,20 +33,32 @@ foreach ($available_attrs as $col) {
 // This will get ALL checkpoints/intervals configured for this event
 $api = chronotrack_live_results()->api;
 
-// Try to get split times from API by fetching a small sample of results
+// Try to get split times from API by fetching multiple pages to ensure we get ALL intervals
 error_log("Columns Manager: Fetching split times from API for event {$event_id}");
 
 try {
-    // Fetch just 1 page (up to 100 results) to extract interval names
-    $api_results = $api->fetch_results_page($event_id, 1, 100);
+    // Fetch first 3 pages (up to 300 results) to maximize chances of finding all intervals
+    $all_api_results = array();
 
-    if (!empty($api_results)) {
-        error_log("Columns Manager: Found " . count($api_results) . " results, extracting split times");
+    for ($page = 1; $page <= 3; $page++) {
+        $page_results = $api->fetch_results_page($event_id, $page, 100);
+
+        if (!empty($page_results)) {
+            $all_api_results = array_merge($all_api_results, $page_results);
+            error_log("Columns Manager: Page {$page} returned " . count($page_results) . " results");
+        } else {
+            error_log("Columns Manager: Page {$page} returned no results, stopping");
+            break; // No more pages
+        }
+    }
+
+    if (!empty($all_api_results)) {
+        error_log("Columns Manager: Total " . count($all_api_results) . " results fetched, extracting split times");
 
         // Extract unique interval names from all results
         $found_intervals = array();
 
-        foreach ($api_results as $result) {
+        foreach ($all_api_results as $result) {
             if (isset($result['split_times']) && is_array($result['split_times'])) {
                 foreach ($result['split_times'] as $split) {
                     if (!empty($split['interval_name'])) {
@@ -64,7 +76,7 @@ try {
             }
         }
 
-        error_log("Columns Manager: Found " . count($found_intervals) . " unique split time intervals");
+        error_log("Columns Manager: Found " . count($found_intervals) . " unique split time intervals: " . implode(', ', array_keys($found_intervals)));
     } else {
         error_log("Columns Manager: No results found from API, checking database cache");
 

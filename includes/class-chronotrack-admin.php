@@ -492,12 +492,46 @@ class ChronoTrack_Admin {
                 $event_date_formatted = date_i18n(get_option('date_format') . ' ' . get_option('time_format'), $timestamp);
             }
 
+            // CRITICAL: Also fetch split times/intervals from API
+            error_log("AJAX: Fetching split times for event {$event_id}");
+            $split_times_list = array();
+
+            try {
+                // Fetch first 3 pages to get all possible intervals
+                $found_intervals = array();
+
+                for ($page = 1; $page <= 3; $page++) {
+                    $results = $api->fetch_results_page($event_id, $page, 100);
+
+                    if (!empty($results)) {
+                        foreach ($results as $result) {
+                            if (isset($result['split_times']) && is_array($result['split_times'])) {
+                                foreach ($result['split_times'] as $split) {
+                                    if (!empty($split['interval_name']) && !isset($found_intervals[$split['interval_name']])) {
+                                        $found_intervals[$split['interval_name']] = true;
+                                        $split_times_list[] = $split['interval_name'];
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        break; // No more pages
+                    }
+                }
+
+                error_log("AJAX: Found " . count($split_times_list) . " unique split times: " . implode(', ', $split_times_list));
+            } catch (Exception $e) {
+                error_log("AJAX: Error fetching split times: " . $e->getMessage());
+                // Continue without split times
+            }
+
             wp_send_json_success(array(
                 'event_name' => $event_info['event_name'],
                 'event_date' => $event_info['event_date'],
                 'event_date_formatted' => $event_date_formatted,
                 'location' => $event_info['location'],
                 'status' => $event_info['status'],
+                'split_times' => $split_times_list, // NEW: list of interval names
             ));
         } else {
             wp_send_json_error(array('message' => 'Nie można pobrać danych wydarzenia z API. Sprawdź czy Event ID jest prawidłowy.'));

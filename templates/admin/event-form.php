@@ -181,7 +181,12 @@ jQuery(document).ready(function($) {
                     $('#preview-location').text(data.location || 'N/A');
                     $('#event-info-preview').slideDown();
 
-                    $status.html('<span style="color: #46b450;">✓ <?php _e('Event data loaded successfully!', 'chronotrack-live'); ?></span>');
+                    // Show split times if available
+                    let statusMsg = '✓ <?php _e('Event data loaded successfully!', 'chronotrack-live'); ?>';
+                    if (data.split_times && data.split_times.length > 0) {
+                        statusMsg += '<br><strong>Znalezione punkty kontrolne:</strong> ' + data.split_times.join(', ');
+                    }
+                    $status.html('<span style="color: #46b450;">' + statusMsg + '</span>');
                 } else {
                     alert('<?php _e('Error:', 'chronotrack-live'); ?> ' + response.data.message);
                     $status.html('<span style="color: #dc3232;">✗ ' + response.data.message + '</span>');
