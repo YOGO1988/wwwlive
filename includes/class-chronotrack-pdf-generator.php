@@ -333,28 +333,55 @@ class ChronoTrack_PDF_Generator {
 
     /**
      * Get value for a column from result object
+     * Uses same logic as chronotrack-live.js getColumnValue()
      */
     private function get_column_value($result, $column) {
-        $field = $column->api_field;
+        // Get API attributes array (same as JS)
+        $attributes = !empty($column->api_attributes) ? $column->api_attributes : [];
 
-        // Handle special cases (same as in chronotrack-live.js)
-        if ($field === 'full_name') {
-            return trim(($result->athlete_last_name ?? '') . ' ' . ($result->athlete_first_name ?? ''));
-        }
+        // Try each attribute in order until we find a value
+        foreach ($attributes as $attr) {
+            // Handle special case for full_name
+            if ($attr === 'full_name' || $attr === 'athlete_last_name,athlete_first_name') {
+                $last_name = isset($result->last_name) ? trim($result->last_name) : '';
+                $first_name = isset($result->first_name) ? trim($result->first_name) : '';
 
-        // Handle bracket positions
-        if (strpos($field, 'category_position') !== false || strpos($field, 'division_place') !== false) {
-            // Try to get from bracket_positions if available
-            if (isset($result->bracket_positions) && is_array($result->bracket_positions)) {
-                foreach ($result->bracket_positions as $bracket => $position) {
-                    if ($position > 0) {
-                        return $position;
+                if ($last_name || $first_name) {
+                    return $last_name . ($last_name && $first_name ? ' ' : '') . $first_name;
+                }
+
+                if (isset($result->full_name)) {
+                    return $result->full_name;
+                }
+            }
+
+            // Handle category_position with bracket_positions fallback
+            if ($attr === 'category_position' || $attr === 'division_place' || $attr === 'results_division_rank') {
+                $cat_position = isset($result->{$attr}) ? $result->{$attr} : null;
+
+                // If category_position is 0 or empty, try bracket_positions
+                if ((!$cat_position || $cat_position == 0) && isset($result->bracket_positions) && is_array($result->bracket_positions)) {
+                    // Try to find position in bracket_positions
+                    foreach ($result->bracket_positions as $bracket => $position) {
+                        if ($position > 0) {
+                            return $position;
+                        }
                     }
                 }
+
+                // Return category_position if > 0
+                if ($cat_position && $cat_position > 0) {
+                    return $cat_position;
+                }
+            }
+
+            // Try direct attribute - accept 0 as valid value
+            if (isset($result->{$attr}) && $result->{$attr} !== null && $result->{$attr} !== '') {
+                return $result->{$attr};
             }
         }
 
-        return $result->{$field} ?? '';
+        return '-';
     }
 
     /**
