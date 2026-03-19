@@ -257,7 +257,10 @@ class ChronoTrack_PDF_Generator {
      * Add results table using HTML (better rendering, no empty pages)
      */
     private function add_results_table($pdf, $results, $columns) {
-        // Build HTML table - MATCHING USER'S PDF STYLE
+        // Calculate dynamic column widths
+        $col_widths = $this->calculate_column_widths($columns, 277); // 297mm - margins
+
+        // Build HTML table with STRIPED ROWS and dynamic column widths
         $html = '<style>
             table {
                 border-collapse: collapse;
@@ -278,25 +281,32 @@ class ChronoTrack_PDF_Generator {
                 padding: 2px 1px;
                 border: 1px solid #CCCCCC;
                 line-height: 1.3;
+            }
+            /* STRIPED ROWS - alternating colors like user PDF */
+            tbody tr:nth-child(odd) {
                 background-color: #FFFFFF;
+            }
+            tbody tr:nth-child(even) {
+                background-color: #F5F5F5;
             }
             tr {
                 page-break-inside: avoid !important;
             }
         </style>';
 
-        $html .= '<table nobr="true">';
+        $html .= '<table nobr="true" cellspacing="0" cellpadding="2">';
 
-        // Table header - repeat on every page
+        // Table header with dynamic widths
         $html .= '<thead><tr>';
-        foreach ($columns as $col) {
-            $html .= '<th>' . htmlspecialchars($col->column_name, ENT_QUOTES, 'UTF-8') . '</th>';
+        foreach ($columns as $index => $col) {
+            $width_percent = ($col_widths[$index] / 277) * 100;
+            $html .= '<th style="width:' . round($width_percent, 2) . '%;">' . htmlspecialchars($col->column_name, ENT_QUOTES, 'UTF-8') . '</th>';
         }
         $html .= '</tr></thead>';
 
-        // Table body
+        // Table body with nobr rows
         $html .= '<tbody>';
-        foreach ($results as $result) {
+        foreach ($results as $row_index => $result) {
             // CRITICAL: Use nobr="true" to prevent row from breaking across pages
             $html .= '<tr nobr="true">';
             foreach ($columns as $col) {
@@ -309,8 +319,17 @@ class ChronoTrack_PDF_Generator {
 
         $html .= '</table>';
 
-        // Write HTML table with proper page break handling
+        // CRITICAL: Disable auto page break during table to prevent mid-row breaks
+        $auto_page_break = $pdf->getAutoPageBreak();
+        $pdf->SetAutoPageBreak(false);
+
+        // Write HTML table
         $pdf->writeHTML($html, true, false, true, false, '');
+
+        // Re-enable auto page break
+        if ($auto_page_break) {
+            $pdf->SetAutoPageBreak(true, 15);
+        }
     }
 
     /**
