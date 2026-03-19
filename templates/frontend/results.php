@@ -88,8 +88,9 @@ $columns = $db->get_event_columns($event->event_id, true);
     </div>
 
     <!-- Distance Filter Buttons -->
-    <div class="chronotrack-distance-filters" id="chronotrack-distance-filters" style="margin: 20px 0;">
+    <div class="chronotrack-distance-filters" id="chronotrack-distance-filters" style="margin: 20px 0; display: flex; align-items: center; gap: 10px;">
         <!-- Distance buttons will be populated by JavaScript -->
+        <!-- PDF button will be added here with fixed position -->
     </div>
 
     <!-- Search/Filter -->

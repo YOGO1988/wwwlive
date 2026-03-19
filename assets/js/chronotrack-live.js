@@ -1008,13 +1008,6 @@
                 console.log('📏 Auto-selected first distance (largest):', this.selectedDistance);
             }
 
-            // CRITICAL FIX: Use flexbox layout to keep PDF button in fixed position
-            const distanceButtonsWrapper = $('<div>')
-                .css({
-                    'display': 'inline-block',
-                    'margin-right': '20px'
-                });
-
             // Add buttons for each distance (no "Wszystkie" button)
             sortedDistances.forEach((distance) => {
                 const btn = $('<button>')
@@ -1022,27 +1015,25 @@
                     .addClass(this.selectedDistance === distance ? 'active' : '')
                     .attr('data-distance', distance)
                     .text(distance + ' (' + (distanceCounts[distance] || 0) + ')');
-                distanceButtonsWrapper.append(btn);
+                container.append(btn);
             });
 
-            container.append(distanceButtonsWrapper);
-
-            // Add "Generuj PDF" button if there's a selected distance (accessible to all users)
-            // CRITICAL: Button stays in same position regardless of number of distances
+            // Add "Generuj PDF" button if there's a selected distance
+            // CRITICAL: Use margin-left: auto with flexbox to keep button on the right edge
             if (this.selectedDistance) {
                 const pdfBtn = $('<button>')
                     .addClass('chronotrack-generate-pdf-btn')
                     .html('📄 Generuj PDF')
                     .attr('data-distance', this.selectedDistance)
                     .css({
+                        'margin-left': 'auto',  // Push to right edge with flexbox
                         'background': '#0066cc',
                         'color': '#fff',
                         'border': '1px solid #0066cc',
                         'padding': '8px 16px',
                         'border-radius': '4px',
                         'cursor': 'pointer',
-                        'font-size': '14px',
-                        'vertical-align': 'top'
+                        'font-size': '14px'
                     });
                 container.append(pdfBtn);
             }

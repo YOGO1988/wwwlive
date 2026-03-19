@@ -263,7 +263,7 @@ class ChronoTrack_PDF_Generator {
             error_log("PDF: Adding header");
             $this->add_header($pdf, $event, $distance);
 
-            // Add results table
+            // Add results table (includes footer)
             error_log("PDF: Adding results table");
             $this->add_results_table($pdf, $results, $columns);
         } catch (Exception $e) {
@@ -272,8 +272,7 @@ class ChronoTrack_PDF_Generator {
             throw $e; // Re-throw to be caught by generate_pdf()
         }
 
-        // Add footer
-        $this->add_footer($pdf);
+        // Footer is now added inside add_results_table() at the bottom of the last page
 
         // Generate filename
         $filename = $this->get_filename($event, $distance);
@@ -406,16 +405,24 @@ class ChronoTrack_PDF_Generator {
      * Add results table using HTML (better rendering, no empty pages)
      */
     private function add_results_table($pdf, $results, $columns) {
-        // Calculate dynamic column widths
-        $col_widths = $this->calculate_column_widths($columns, 277); // 297mm - margins
+        // Calculate dynamic column widths in mm
+        $col_widths = $this->calculate_column_widths($columns, 277); // 297mm - 20mm margins
 
-        // Build HTML table with STRIPED ROWS and dynamic column widths
+        // CRITICAL: Set explicit column widths on BOTH headers AND data cells
+        $width_style = '';
+        foreach ($col_widths as $index => $width_mm) {
+            $width_style .= 'col' . $index . ' { width: ' . round($width_mm, 2) . 'mm; } ';
+        }
+
+        // Build HTML table with explicit column widths
         $html = '<style>
             table {
                 border-collapse: collapse;
                 width: 100%;
                 font-size: 7pt;
+                table-layout: fixed;
             }
+            ' . $width_style . '
             th {
                 background-color: #FF6600;
                 color: #FFFFFF;
@@ -431,13 +438,6 @@ class ChronoTrack_PDF_Generator {
                 border: 1px solid #CCCCCC;
                 line-height: 1.3;
             }
-            /* STRIPED ROWS - alternating colors like user PDF */
-            tbody tr:nth-child(odd) {
-                background-color: #FFFFFF;
-            }
-            tbody tr:nth-child(even) {
-                background-color: #F5F5F5;
-            }
             tr {
                 page-break-inside: avoid !important;
             }
@@ -445,15 +445,15 @@ class ChronoTrack_PDF_Generator {
 
         $html .= '<table nobr="true" cellspacing="0" cellpadding="2">';
 
-        // Table header with dynamic widths
+        // Table header with explicit widths
         $html .= '<thead><tr>';
         foreach ($columns as $index => $col) {
-            $width_percent = ($col_widths[$index] / 277) * 100;
-            $html .= '<th style="width:' . round($width_percent, 2) . '%;">' . htmlspecialchars($col->column_name, ENT_QUOTES, 'UTF-8') . '</th>';
+            $html .= '<th class="col' . $index . '" style="width:' . round($col_widths[$index], 2) . 'mm;">' .
+                     htmlspecialchars($col->column_name, ENT_QUOTES, 'UTF-8') . '</th>';
         }
         $html .= '</tr></thead>';
 
-        // Table body with STRIPED ROWS (manual bgcolor - TCPDF doesn't support nth-child)
+        // Table body with STRIPED ROWS
         $html .= '<tbody>';
         $row_number = 0;
         foreach ($results as $row_index => $result) {
@@ -461,11 +461,12 @@ class ChronoTrack_PDF_Generator {
             // STRIPED ROWS: odd=white, even=gray
             $bgcolor = ($row_number % 2 == 1) ? '#FFFFFF' : '#F5F5F5';
 
-            // CRITICAL: Use nobr="true" to prevent row from breaking across pages
             $html .= '<tr nobr="true" bgcolor="' . $bgcolor . '">';
-            foreach ($columns as $col) {
+            foreach ($columns as $index => $col) {
                 $value = $this->get_column_value($result, $col);
-                $html .= '<td>' . htmlspecialchars($value, ENT_QUOTES, 'UTF-8') . '</td>';
+                // CRITICAL: Apply same width to data cells as headers
+                $html .= '<td class="col' . $index . '" style="width:' . round($col_widths[$index], 2) . 'mm;">' .
+                         htmlspecialchars($value, ENT_QUOTES, 'UTF-8') . '</td>';
             }
             $html .= '</tr>';
         }
@@ -473,13 +474,28 @@ class ChronoTrack_PDF_Generator {
 
         $html .= '</table>';
 
-        // CRITICAL FIX: KEEP auto page break ENABLED to allow multi-page tables
-        // The nobr="true" attribute on rows prevents mid-row breaks
-        // Disabling auto page break causes table to be cut off at bottom of page!
-        $pdf->SetAutoPageBreak(true, 15);
+        // Keep auto page break enabled for multi-page tables
+        $pdf->SetAutoPageBreak(true, 20); // Increased bottom margin for footer
 
         // Write HTML table
         $pdf->writeHTML($html, true, false, true, false, '');
+
+        // CRITICAL: Add footer at bottom of CURRENT page (after table ends)
+        $currentY = $pdf->GetY();
+        $pageHeight = $pdf->getPageHeight();
+
+        // Only add footer if we're not too close to bottom (leave space)
+        if ($currentY < ($pageHeight - 25)) {
+            $pdf->SetY($pageHeight - 20);
+        }
+
+        // Footer
+        $pdf->SetFont('dejavusans', '', 7);
+        $pdf->SetTextColor(0, 0, 0);
+        $footer_text = 'Wygenerował: YO&GO Events - Twój pomiar czasu www.yogoevents.pl';
+        $pdf->Cell(190, 5, $footer_text, 0, 0, 'L');
+        $page_num = 'Strona ' . $pdf->getAliasNumPage() . ' / ' . $pdf->getAliasNbPages();
+        $pdf->Cell(87, 5, $page_num, 0, 0, 'R');
     }
 
     /**
