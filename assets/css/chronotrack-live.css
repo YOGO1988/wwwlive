@@ -1,23 +1,60 @@
 /**
  * ChronoTrack Live Results - Frontend Styles
+ * Version: 4.0.8 - Professional Design
  */
 
-/* Container */
-.chronotrack-results-container {
-    max-width: 1400px;
-    margin: 20px auto;
-    padding: 20px;
-    background: #fff;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+/* =============================================
+   VARIABLES & BASE
+   ============================================= */
+:root {
+    --ct-primary:     #1a3a6e;   /* dark navy */
+    --ct-primary-lt:  #2451a0;   /* medium blue */
+    --ct-accent:      #e8192c;   /* red accent */
+    --ct-gold:        #f5a623;   /* gold for highlights */
+    --ct-success:     #1a8a4a;   /* dark green for times */
+    --ct-bg:          #f0f3f8;   /* page background */
+    --ct-card:        #ffffff;
+    --ct-border:      #d0d9e8;
+    --ct-text:        #1c2433;
+    --ct-text-muted:  #6b7a99;
+    --ct-row-alt:     #f5f7fb;
+    --ct-row-hover:   #e8edf7;
+    --ct-shadow:      0 2px 12px rgba(26, 58, 110, 0.10);
+    --ct-radius:      8px;
 }
 
-/* Header */
+/* =============================================
+   CONTAINER
+   ============================================= */
+.chronotrack-results-container {
+    max-width: 1500px;
+    margin: 16px auto;
+    padding: 0;
+    background: var(--ct-bg);
+    border-radius: var(--ct-radius);
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    color: var(--ct-text);
+}
+
+/* =============================================
+   HEADER
+   ============================================= */
 .chronotrack-header {
+    background: linear-gradient(135deg, var(--ct-primary) 0%, var(--ct-primary-lt) 100%);
+    color: #fff;
     text-align: center;
-    margin-bottom: 30px;
-    padding-bottom: 20px;
-    border-bottom: 2px solid #eee;
+    padding: 28px 24px 22px;
+    border-radius: var(--ct-radius) var(--ct-radius) 0 0;
+    position: relative;
+    overflow: hidden;
+}
+
+.chronotrack-header::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: url("data:image/svg+xml,%3Csvg width='40' height='40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 40L40 0H20L0 20V40zM40 40V20L20 40H40z' fill='rgba(255,255,255,0.04)'/%3E%3C/svg%3E");
+    pointer-events: none;
 }
 
 .chronotrack-logos {
@@ -25,7 +62,7 @@
     justify-content: center;
     align-items: center;
     gap: 40px;
-    margin-bottom: 20px;
+    margin-bottom: 16px;
     flex-wrap: wrap;
 }
 
@@ -33,81 +70,205 @@
 .chronotrack-sponsor-logo img {
     display: block;
     object-fit: contain;
+    filter: drop-shadow(0 2px 6px rgba(0,0,0,0.3));
 }
 
 .chronotrack-event-name {
-    font-size: 2.5em;
-    margin: 10px 0;
-    color: #333;
+    font-size: 2.2em;
+    font-weight: 800;
+    margin: 0 0 8px;
+    color: #fff;
+    letter-spacing: -0.5px;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.2);
 }
 
 .chronotrack-event-date {
-    font-size: 1.2em;
-    color: #666;
+    font-size: 1.05em;
+    color: rgba(255,255,255,0.80);
+    font-weight: 500;
+    letter-spacing: 0.3px;
 }
 
-/* Controls */
+/* =============================================
+   TOOLBAR / CONTROLS
+   ============================================= */
 .chronotrack-controls {
     display: flex;
     align-items: center;
-    gap: 15px;
-    margin-bottom: 20px;
+    gap: 10px;
+    padding: 14px 20px;
+    background: var(--ct-card);
+    border-bottom: 1px solid var(--ct-border);
     flex-wrap: wrap;
 }
 
 .chronotrack-view-toggle {
-    padding: 10px 20px;
-    border: 2px solid #007cba;
-    background: #fff;
-    color: #007cba;
-    border-radius: 4px;
+    padding: 9px 22px;
+    border: 2px solid var(--ct-primary);
+    background: transparent;
+    color: var(--ct-primary);
+    border-radius: 6px;
     cursor: pointer;
-    font-size: 16px;
-    font-weight: 600;
-    transition: all 0.3s ease;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.2px;
+    transition: background 0.18s, color 0.18s;
 }
 
 .chronotrack-view-toggle:hover {
-    background: #f0f0f0;
+    background: var(--ct-row-hover);
 }
 
 .chronotrack-view-toggle.active {
-    background: #007cba;
+    background: var(--ct-primary);
     color: #fff;
+}
+
+.chronotrack-manual-refresh {
+    padding: 9px 16px;
+    border: 1px solid var(--ct-border);
+    background: var(--ct-card);
+    color: var(--ct-text-muted);
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: background 0.15s, color 0.15s;
+}
+
+.chronotrack-manual-refresh:hover {
+    background: var(--ct-row-alt);
+    color: var(--ct-text);
 }
 
 .chronotrack-last-update {
     margin-left: auto;
-    color: #666;
-    font-size: 14px;
+    color: var(--ct-text-muted);
+    font-size: 12px;
+    font-style: italic;
 }
 
-/* Filters */
+/* =============================================
+   DISTANCE FILTERS & PDF BUTTONS
+   ============================================= */
+.chronotrack-distance-filters {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 20px;
+    background: var(--ct-card);
+    border-bottom: 1px solid var(--ct-border);
+    flex-wrap: wrap;
+}
+
+.chronotrack-distance-filter-btn {
+    padding: 7px 18px;
+    border: 2px solid var(--ct-border);
+    background: #fff;
+    color: var(--ct-text);
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    transition: all 0.18s;
+}
+
+.chronotrack-distance-filter-btn:hover {
+    border-color: var(--ct-primary);
+    color: var(--ct-primary);
+}
+
+.chronotrack-distance-filter-btn.active {
+    background: var(--ct-primary);
+    border-color: var(--ct-primary);
+    color: #fff;
+}
+
+.chronotrack-pdf-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 14px;
+    background: var(--ct-accent);
+    color: #fff;
+    border: none;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    transition: background 0.18s, transform 0.1s;
+    margin-left: 2px;
+}
+
+.chronotrack-pdf-btn:hover {
+    background: #c0102a;
+    transform: translateY(-1px);
+}
+
+.chronotrack-pdf-btn:active {
+    transform: translateY(0);
+}
+
+/* =============================================
+   SEARCH & FILTERS BAR
+   ============================================= */
 .chronotrack-filters {
     display: flex;
-    gap: 15px;
-    margin-bottom: 20px;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 20px;
+    background: var(--ct-card);
+    border-bottom: 2px solid var(--ct-border);
     flex-wrap: wrap;
 }
 
 .chronotrack-search {
-    flex: 1;
-    min-width: 250px;
-    padding: 10px 15px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    font-size: 14px;
+    flex: 2;
+    min-width: 320px;       /* 50% larger than old 250px effective minimum */
+    padding: 10px 16px;
+    border: 2px solid var(--ct-border);
+    border-radius: 6px;
+    font-size: 15px;
+    background: #fff;
+    color: var(--ct-text);
+    transition: border-color 0.18s, box-shadow 0.18s;
+}
+
+.chronotrack-search:focus {
+    outline: none;
+    border-color: var(--ct-primary);
+    box-shadow: 0 0 0 3px rgba(26, 58, 110, 0.12);
+}
+
+.chronotrack-search::placeholder {
+    color: var(--ct-text-muted);
 }
 
 .chronotrack-filter {
-    padding: 10px 15px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
+    padding: 10px 14px;
+    border: 2px solid var(--ct-border);
+    border-radius: 6px;
     font-size: 14px;
     background: #fff;
+    color: var(--ct-text);
+    cursor: pointer;
+    transition: border-color 0.18s;
+    min-width: 130px;
 }
 
-/* Views */
+.chronotrack-filter:focus {
+    outline: none;
+    border-color: var(--ct-primary);
+}
+
+/* Category filter pushed to the far right */
+#chronotrack-category-filter {
+    margin-left: auto;
+    min-width: 180px;
+}
+
+/* =============================================
+   VIEWS
+   ============================================= */
 .chronotrack-view {
     display: none;
 }
@@ -116,155 +277,233 @@
     display: block;
 }
 
-/* Table */
+/* =============================================
+   TABLE
+   ============================================= */
 .chronotrack-table-wrapper {
     overflow-x: auto;
+    background: var(--ct-card);
+    border-radius: 0 0 var(--ct-radius) var(--ct-radius);
 }
 
 .chronotrack-results-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 14px;
+    font-size: 13.5px;
 }
 
 .chronotrack-results-table thead {
-    background: #f5f5f5;
+    background: var(--ct-primary);
+    position: sticky;
+    top: 0;
+    z-index: 10;
 }
 
 .chronotrack-results-table th {
-    padding: 12px 8px;
+    padding: 13px 10px;
     text-align: left;
-    font-weight: 600;
-    color: #333;
-    border-bottom: 2px solid #ddd;
+    font-weight: 700;
+    color: #fff;
+    font-size: 12px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    border-bottom: 3px solid rgba(255,255,255,0.1);
     white-space: nowrap;
+    background: transparent;
 }
 
+.chronotrack-results-table th:first-child { border-radius: 0; }
+
 .chronotrack-results-table td {
-    padding: 10px 8px;
-    border-bottom: 1px solid #eee;
+    padding: 10px 10px;
+    border-bottom: 1px solid var(--ct-border);
+    vertical-align: middle;
+}
+
+.chronotrack-results-table tbody tr:nth-child(even) {
+    background: var(--ct-row-alt);
 }
 
 .chronotrack-results-table tbody tr:hover {
-    background: #f9f9f9;
+    background: var(--ct-row-hover);
+    transition: background 0.12s;
 }
 
-.chronotrack-results-table .col-position {
-    width: 60px;
+/* Medal rows for top 3 */
+.chronotrack-results-table tbody tr:first-child td { background: #fffbe6 !important; }
+.chronotrack-results-table tbody tr:nth-child(2) td { background: #f7f7f7 !important; }
+.chronotrack-results-table tbody tr:nth-child(3) td { background: #fdf4ec !important; }
+
+.chronotrack-results-table .col-position,
+.chronotrack-results-table .col-overall_place {
+    width: 56px;
+    text-align: center;
+    font-weight: 800;
+    font-size: 15px;
+    color: var(--ct-primary);
+}
+
+.chronotrack-results-table .col-bib,
+.chronotrack-results-table .col-entry_bib {
+    width: 64px;
     text-align: center;
     font-weight: 600;
-    font-size: 16px;
+    color: var(--ct-text-muted);
 }
 
-.chronotrack-results-table .col-bib {
-    width: 70px;
-    text-align: center;
-}
-
-.chronotrack-results-table .col-name {
+.chronotrack-results-table .col-name,
+.chronotrack-results-table .col-full_name {
     min-width: 200px;
+    max-width: 280px;
 }
 
-.chronotrack-results-table .col-time {
-    font-weight: 600;
-    color: #007cba;
+.time-cell {
+    font-weight: 700;
+    color: var(--ct-success);
     white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.5px;
+}
+
+.pos-cell {
+    font-weight: 600;
+    color: var(--ct-primary-lt);
 }
 
 .chronotrack-no-results {
     text-align: center;
-    padding: 40px !important;
-    color: #999;
+    padding: 60px 20px !important;
+    color: var(--ct-text-muted);
     font-style: italic;
+    font-size: 15px;
 }
 
-/* META View */
+/* Flag images */
+.ct-flag {
+    display: inline-block;
+    vertical-align: middle;
+    margin-right: 6px;
+    border: 1px solid rgba(0,0,0,0.08);
+    border-radius: 2px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.12);
+    flex-shrink: 0;
+}
+
+/* =============================================
+   META VIEW
+   ============================================= */
 .chronotrack-meta-info {
-    background: #fff3cd;
-    padding: 15px;
-    border-radius: 4px;
-    margin-bottom: 15px;
-    border-left: 4px solid #ffc107;
+    background: linear-gradient(135deg, #1a3a6e 0%, #2451a0 100%);
+    padding: 14px 20px;
+    border-radius: 0;
+    margin-bottom: 0;
 }
 
 .chronotrack-meta-info p {
     margin: 0;
-    color: #856404;
+    color: rgba(255,255,255,0.9);
     font-weight: 600;
+    font-size: 13px;
+    letter-spacing: 0.3px;
 }
 
 .chronotrack-meta-table .col-finish-time {
-    width: 100px;
-    font-weight: 600;
-    color: #28a745;
+    width: 90px;
+    font-weight: 700;
+    color: var(--ct-success);
 }
 
-/* Modal */
+/* =============================================
+   MODAL
+   ============================================= */
 .chronotrack-modal {
     display: none;
     position: fixed;
     z-index: 999999;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
+    left: 0; top: 0;
+    width: 100%; height: 100%;
     overflow: auto;
-    background-color: rgba(0,0,0,0.5);
+    background-color: rgba(10, 20, 50, 0.65);
+    backdrop-filter: blur(2px);
 }
 
 .chronotrack-modal-content {
     background-color: #fefefe;
-    margin: 5% auto;
-    padding: 30px;
-    border: 1px solid #888;
-    border-radius: 8px;
+    margin: 4% auto;
+    padding: 0;
+    border: none;
+    border-radius: 12px;
     width: 90%;
-    max-width: 900px;
-    max-height: 80vh;
+    max-width: 920px;
+    max-height: 85vh;
     overflow-y: auto;
     position: relative;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+}
+
+.chronotrack-modal-header {
+    background: linear-gradient(135deg, var(--ct-primary) 0%, var(--ct-primary-lt) 100%);
+    padding: 18px 24px;
+    border-radius: 12px 12px 0 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
 }
 
 .chronotrack-modal-close {
-    color: #aaa;
-    float: right;
-    font-size: 32px;
-    font-weight: bold;
-    line-height: 20px;
+    color: rgba(255,255,255,0.8);
+    font-size: 28px;
+    font-weight: 300;
+    line-height: 1;
     cursor: pointer;
+    transition: color 0.15s;
+    background: none;
+    border: none;
+    padding: 0;
 }
 
-.chronotrack-modal-close:hover,
-.chronotrack-modal-close:focus {
-    color: #000;
+.chronotrack-modal-close:hover { color: #fff; }
+
+/* =============================================
+   PARTICIPANT DETAILS
+   ============================================= */
+.chronotrack-participant-details {
+    padding: 24px;
 }
 
-/* Participant Details */
 .chronotrack-participant-details h2 {
-    margin-top: 0;
-    color: #333;
-    border-bottom: 3px solid #007cba;
-    padding-bottom: 10px;
+    margin: 0 0 20px;
+    color: var(--ct-primary);
+    font-size: 1.6em;
+    font-weight: 800;
+    border-bottom: 3px solid var(--ct-primary);
+    padding-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }
 
 .chronotrack-details-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
     gap: 20px;
-    margin-top: 20px;
 }
 
 .chronotrack-details-section {
-    background: #f9f9f9;
+    background: var(--ct-row-alt);
     padding: 20px;
-    border-radius: 4px;
+    border-radius: 8px;
+    border: 1px solid var(--ct-border);
 }
 
 .chronotrack-details-section h3 {
-    margin-top: 0;
-    color: #555;
-    font-size: 18px;
-    border-bottom: 2px solid #ddd;
+    margin: 0 0 14px;
+    color: var(--ct-primary);
+    font-size: 15px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 2px solid var(--ct-border);
     padding-bottom: 8px;
 }
 
@@ -275,37 +514,41 @@
 
 .chronotrack-details-table th {
     text-align: left;
-    padding: 8px 10px;
+    padding: 7px 10px;
     font-weight: 600;
-    color: #666;
+    color: var(--ct-text-muted);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
     width: 50%;
 }
 
 .chronotrack-details-table td {
-    padding: 8px 10px;
-    border-bottom: 1px solid #eee;
+    padding: 7px 10px;
+    border-bottom: 1px solid var(--ct-border);
+    font-size: 14px;
+    color: var(--ct-text);
 }
 
-.chronotrack-details-table tr:last-child td {
-    border-bottom: none;
-}
+.chronotrack-details-table tr:last-child td { border-bottom: none; }
 
 .chronotrack-position {
-    font-size: 20px;
-    font-weight: 700;
-    color: #007cba;
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--ct-primary);
 }
 
 .chronotrack-time {
-    font-size: 18px;
-    font-weight: 600;
-    color: #28a745;
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--ct-success);
+    font-variant-numeric: tabular-nums;
 }
 
-/* Splits Table */
-.chronotrack-splits-section {
-    grid-column: 1 / -1;
-}
+/* =============================================
+   SPLITS TABLE
+   ============================================= */
+.chronotrack-splits-section { grid-column: 1 / -1; }
 
 .chronotrack-splits-table {
     width: 100%;
@@ -313,117 +556,107 @@
     margin-top: 10px;
 }
 
-.chronotrack-splits-table thead {
-    background: #e9ecef;
-}
+.chronotrack-splits-table thead { background: var(--ct-border); }
 
 .chronotrack-splits-table th {
     padding: 10px;
     text-align: left;
-    font-weight: 600;
-    border-bottom: 2px solid #ddd;
+    font-weight: 700;
+    border-bottom: 2px solid var(--ct-border);
+    font-size: 12px;
+    text-transform: uppercase;
 }
 
 .chronotrack-splits-table td {
     padding: 8px 10px;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid var(--ct-border);
 }
 
-.chronotrack-splits-table .checkpoint-name {
-    font-weight: 600;
-}
+.position-change { display: inline-block; margin-left: 8px; font-weight: 700; font-size: 11px; }
+.position-change.position-up { color: var(--ct-success); }
+.position-change.position-down { color: var(--ct-accent); }
+.position-change.position-same { color: var(--ct-text-muted); }
 
-.chronotrack-splits-table .checkpoint-position {
-    text-align: center;
-}
-
-.position-change {
-    display: inline-block;
-    margin-left: 10px;
-    font-weight: 600;
-    font-size: 12px;
-}
-
-.position-change.position-up {
-    color: #28a745;
-}
-
-.position-change.position-down {
-    color: #dc3545;
-}
-
-.position-change.position-same {
-    color: #6c757d;
-}
-
-.chronotrack-position-legend {
-    margin-top: 15px;
-    padding: 10px;
-    background: #fff;
-    border-radius: 4px;
-    font-size: 13px;
-}
-
-/* Loading */
+/* =============================================
+   LOADING SPINNER
+   ============================================= */
 .chronotrack-loading {
     text-align: center;
-    padding: 40px;
+    padding: 50px;
+    background: var(--ct-card);
+}
+
+.chronotrack-loading p {
+    color: var(--ct-text-muted);
+    margin: 12px 0 0;
+    font-size: 14px;
 }
 
 .chronotrack-spinner {
-    border: 4px solid #f3f3f3;
-    border-top: 4px solid #007cba;
+    border: 4px solid var(--ct-border);
+    border-top: 4px solid var(--ct-primary);
     border-radius: 50%;
-    width: 40px;
-    height: 40px;
-    animation: chronotrack-spin 1s linear infinite;
-    margin: 0 auto 20px;
+    width: 44px;
+    height: 44px;
+    animation: ct-spin 0.8s linear infinite;
+    margin: 0 auto;
 }
 
-@keyframes chronotrack-spin {
+@keyframes ct-spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
 }
 
-/* Actions */
+/* =============================================
+   LINKS & ACTIONS
+   ============================================= */
 .chronotrack-view-details {
-    color: #007cba;
+    color: var(--ct-primary);
     text-decoration: none;
-    font-weight: 600;
-    font-size: 13px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    transition: color 0.15s;
 }
 
 .chronotrack-view-details:hover {
+    color: var(--ct-accent);
     text-decoration: underline;
 }
 
-/* Responsive */
-@media (max-width: 768px) {
-    .chronotrack-event-name {
-        font-size: 1.8em;
-    }
+/* Count display */
+#chronotrack-visible-count-wrap {
+    font-size: 12px;
+    color: var(--ct-text-muted);
+    padding: 6px 20px;
+    background: var(--ct-card);
+    border-bottom: 1px solid var(--ct-border);
+}
 
-    .chronotrack-controls {
+/* =============================================
+   RESPONSIVE
+   ============================================= */
+@media (max-width: 900px) {
+    .chronotrack-event-name { font-size: 1.5em; }
+
+    .chronotrack-controls { flex-direction: row; }
+
+    .chronotrack-filters {
         flex-direction: column;
         align-items: stretch;
     }
 
-    .chronotrack-view-toggle {
-        width: 100%;
-    }
-
-    .chronotrack-last-update {
-        margin-left: 0;
-        text-align: center;
-    }
-
-    .chronotrack-filters {
-        flex-direction: column;
-    }
-
     .chronotrack-search {
         width: 100%;
+        min-width: unset;
     }
+
+    .chronotrack-filter { width: 100%; }
+
+    #chronotrack-category-filter { margin-left: 0; }
+
+    .chronotrack-last-update { margin-left: 0; }
 
     .chronotrack-results-table {
         font-size: 12px;
@@ -431,16 +664,21 @@
 
     .chronotrack-results-table th,
     .chronotrack-results-table td {
-        padding: 6px 4px;
+        padding: 7px 5px;
     }
 
     .chronotrack-modal-content {
-        width: 95%;
-        margin: 10% auto;
-        padding: 20px;
+        width: 96%;
+        margin: 6% auto;
     }
 
-    .chronotrack-details-grid {
-        grid-template-columns: 1fr;
-    }
+    .chronotrack-details-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 480px) {
+    .chronotrack-header { padding: 18px 14px; }
+    .chronotrack-event-name { font-size: 1.2em; }
+    .chronotrack-controls,
+    .chronotrack-filters,
+    .chronotrack-distance-filters { padding: 10px 12px; }
 }

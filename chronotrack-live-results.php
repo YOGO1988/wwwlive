@@ -3,7 +3,7 @@
  * Plugin Name: ChronoTrack Live Results
  * Plugin URI: https://yogoevents.pl
  * Description: Live race results from ChronoTrack with automatic page generation and multi-event support
- * Version: 3.8.1
+ * Version: 4.0.8
  * Author: YOGO Events
  * Author URI: https://yogoevents.pl
  * Text Domain: chronotrack-live
@@ -20,7 +20,7 @@ if (!defined('ABSPATH')) {
 }
 
 // Define plugin constants
-define('CHRONOTRACK_LIVE_VERSION', '3.8.1');
+define('CHRONOTRACK_LIVE_VERSION', '4.0.8');
 define('CHRONOTRACK_LIVE_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('CHRONOTRACK_LIVE_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('CHRONOTRACK_LIVE_PLUGIN_FILE', __FILE__);
@@ -102,11 +102,27 @@ class ChronoTrack_Live_Results {
             CHRONOTRACK_LIVE_VERSION
         );
 
+        // Enqueue jsPDF and autoTable from CDN for client-side PDF generation
+        wp_enqueue_script(
+            'jspdf',
+            'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
+            array(),
+            '2.5.1',
+            true
+        );
+        wp_enqueue_script(
+            'jspdf-autotable',
+            'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js',
+            array('jspdf'),
+            '3.8.2',
+            true
+        );
+
         // Enqueue JavaScript
         wp_enqueue_script(
             'chronotrack-live',
             CHRONOTRACK_LIVE_PLUGIN_URL . 'assets/js/chronotrack-live.js',
-            array('jquery'),
+            array('jquery', 'jspdf', 'jspdf-autotable'),
             CHRONOTRACK_LIVE_VERSION,
             true
         );

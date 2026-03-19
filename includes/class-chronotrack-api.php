@@ -186,9 +186,23 @@ class ChronoTrack_API {
                             // Extract distance/race name
                             $distance = $entry['race_distance'] ?? $entry['race_name'] ?? $entry['reg_choice_name'] ?? '';
 
+                            // Extract country code
+                            $country = '';
+                            foreach (array('location_country', 'athlete_country', 'entry_country', 'results_country', 'country_code', 'country') as $cf) {
+                                if (!empty($entry[$cf])) {
+                                    $country = strtoupper(trim($entry[$cf]));
+                                    // Normalize to 2-letter ISO code
+                                    if (strlen($country) > 3) {
+                                        $country = $this->country_name_to_code($country);
+                                    }
+                                    break;
+                                }
+                            }
+
                             $all_entries[$bib] = array(
                                 'city' => $city,
                                 'club' => $club,
+                                'country' => $country,
                                 'athlete_city' => $city,
                                 'athlete_club' => $club,
                                 'location_city' => $entry['location_city'] ?? '',
@@ -367,6 +381,20 @@ class ChronoTrack_API {
         // Club - prefer entry data
         $club = $entry['club'] ?? $result['results_club'] ?? '';
 
+        // Country - prefer entry data, fallback to result
+        $country = $entry['country'] ?? '';
+        if (empty($country)) {
+            foreach (array('results_country', 'location_country', 'athlete_country', 'country_code') as $cf) {
+                if (!empty($result[$cf])) {
+                    $country = strtoupper(trim($result[$cf]));
+                    if (strlen($country) > 3) {
+                        $country = $this->country_name_to_code($country);
+                    }
+                    break;
+                }
+            }
+        }
+
         // Distance - prefer entry data
         $distance = $entry['distance'] ?? $result['results_race_name'] ?? $result['race_distance'] ?? '';
 
@@ -410,10 +438,51 @@ class ChronoTrack_API {
             'net_time_seconds' => $this->parse_time_to_seconds($result['results_time'] ?? ''),
             'pace' => $this->format_pace($result['results_pace'] ?? ''),
             'formatted_pace' => $this->format_pace($result['results_pace'] ?? ''),  // Alternative
+            'country' => $country,
             'split_times' => $split_times,
             'finish_timestamp' => current_time('mysql'),
             'status' => $result['results_status'] ?? 'OK',
         );
+    }
+
+    /**
+     * Convert country name to 2-letter ISO code
+     */
+    private function country_name_to_code($name) {
+        $map = array(
+            'POLAND' => 'PL', 'POLSKA' => 'PL',
+            'GERMANY' => 'DE', 'NIEMCY' => 'DE',
+            'FRANCE' => 'FR', 'FRANCJA' => 'FR',
+            'UNITED KINGDOM' => 'GB', 'GREAT BRITAIN' => 'GB', 'UK' => 'GB',
+            'CZECH REPUBLIC' => 'CZ', 'CZECHY' => 'CZ', 'CZECHIA' => 'CZ',
+            'SLOVAKIA' => 'SK', 'SŁOWACJA' => 'SK',
+            'AUSTRIA' => 'AT',
+            'HUNGARY' => 'HU', 'WĘGRY' => 'HU',
+            'UKRAINE' => 'UA', 'UKRAINA' => 'UA',
+            'RUSSIA' => 'RU', 'ROSJA' => 'RU',
+            'BELARUS' => 'BY', 'BIAŁORUŚ' => 'BY',
+            'LITHUANIA' => 'LT', 'LITWA' => 'LT',
+            'LATVIA' => 'LV', 'ŁOTWA' => 'LV',
+            'ESTONIA' => 'EE',
+            'SWEDEN' => 'SE', 'SZWECJA' => 'SE',
+            'NORWAY' => 'NO', 'NORWEGIA' => 'NO',
+            'DENMARK' => 'DK', 'DANIA' => 'DK',
+            'FINLAND' => 'FI', 'FINLANDIA' => 'FI',
+            'NETHERLANDS' => 'NL', 'HOLANDIA' => 'NL',
+            'BELGIUM' => 'BE', 'BELGIA' => 'BE',
+            'SPAIN' => 'ES', 'HISZPANIA' => 'ES',
+            'ITALY' => 'IT', 'WŁOCHY' => 'IT',
+            'PORTUGAL' => 'PT', 'PORTUGALIA' => 'PT',
+            'ROMANIA' => 'RO', 'RUMUNIA' => 'RO',
+            'BULGARIA' => 'BG',
+            'CROATIA' => 'HR', 'CHORWACJA' => 'HR',
+            'SERBIA' => 'RS',
+            'UNITED STATES' => 'US', 'USA' => 'US',
+            'CANADA' => 'CA',
+            'AUSTRALIA' => 'AU',
+        );
+        $upper = strtoupper(trim($name));
+        return $map[$upper] ?? substr($upper, 0, 2);
     }
 
     /**

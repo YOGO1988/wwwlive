@@ -165,17 +165,25 @@ class ChronoTrack_Ajax {
         $formatted = array();
 
         foreach ($results as $result) {
+            // Extract country from raw_data if available
+            $country = '';
+            if (!empty($result->raw_data)) {
+                $raw = is_array($result->raw_data) ? $result->raw_data : json_decode($result->raw_data, true);
+                $country = $raw['country'] ?? '';
+            }
+
             $formatted[] = array(
                 'id' => $result->id,
                 'participant_id' => $result->participant_id,
                 'bib_number' => $result->bib_number,
                 'first_name' => $result->first_name,
                 'last_name' => $result->last_name,
-                'full_name' => $result->first_name . ' ' . $result->last_name,
+                'full_name' => $result->last_name . ' ' . $result->first_name,
                 'age' => $result->age,
                 'gender' => $result->gender,
                 'city' => $result->city,
                 'club' => $result->club,
+                'country' => $country,
                 'distance' => $result->distance ?? '',
                 'category' => $result->category,
                 'position' => $result->position,
@@ -214,13 +222,20 @@ class ChronoTrack_Ajax {
      * Format participant details for JSON response
      */
     private function format_participant_details($result) {
+        $country = '';
+        if (!empty($result->raw_data)) {
+            $raw = is_array($result->raw_data) ? $result->raw_data : json_decode($result->raw_data, true);
+            $country = $raw['country'] ?? '';
+        }
+
         return array(
             'id' => $result->id,
             'participant_id' => $result->participant_id,
             'bib_number' => $result->bib_number,
             'first_name' => $result->first_name,
             'last_name' => $result->last_name,
-            'full_name' => $result->first_name . ' ' . $result->last_name,
+            'full_name' => $result->last_name . ' ' . $result->first_name,
+            'country' => $country,
             'age' => $result->age,
             'gender' => $result->gender,
             'city' => $result->city,
