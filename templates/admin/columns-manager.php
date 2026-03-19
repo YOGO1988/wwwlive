@@ -29,42 +29,71 @@ foreach ($available_attrs as $col) {
     }
 }
 
-// CRITICAL: Add split_times dynamically based on event's split_times_config
-if ($event && !empty($event->split_times_config)) {
-    $split_config = is_string($event->split_times_config)
-        ? json_decode($event->split_times_config, true)
-        : $event->split_times_config;
+// AUTOMATIC: Fetch split times from ChronoTrack API
+// This will get ALL checkpoints/intervals configured for this event
+$api = chronotrack_live_results()->api;
 
-    if (is_array($split_config)) {
-        foreach ($split_config as $checkpoint) {
-            if (!empty($checkpoint['name'])) {
-                // Add split_time:CheckpointName to available attributes
-                $all_api_attributes[] = 'split_time:' . $checkpoint['name'];
+// Try to get split times from API by fetching a small sample of results
+error_log("Columns Manager: Fetching split times from API for event {$event_id}");
+
+try {
+    // Fetch just 1 page (up to 100 results) to extract interval names
+    $api_results = $api->fetch_results_page($event_id, 1, 100);
+
+    if (!empty($api_results)) {
+        error_log("Columns Manager: Found " . count($api_results) . " results, extracting split times");
+
+        // Extract unique interval names from all results
+        $found_intervals = array();
+
+        foreach ($api_results as $result) {
+            if (isset($result['split_times']) && is_array($result['split_times'])) {
+                foreach ($result['split_times'] as $split) {
+                    if (!empty($split['interval_name'])) {
+                        $interval_name = $split['interval_name'];
+                        if (!isset($found_intervals[$interval_name])) {
+                            $found_intervals[$interval_name] = true;
+                            $attr = 'split_time:' . $interval_name;
+                            if (!in_array($attr, $all_api_attributes)) {
+                                $all_api_attributes[] = $attr;
+                                error_log("Columns Manager: Added split_time attribute: {$attr}");
+                            }
+                        }
+                    }
+                }
             }
         }
-    }
-}
 
-// Also fetch split times from actual results to catch any not in config
-$sample_results = $db->get_results($event_id, 1); // Get just 1 result as sample
-if (!empty($sample_results)) {
-    $sample = $sample_results[0];
-    if (!empty($sample->split_times)) {
-        $split_times = is_string($sample->split_times)
-            ? json_decode($sample->split_times, true)
-            : $sample->split_times;
+        error_log("Columns Manager: Found " . count($found_intervals) . " unique split time intervals");
+    } else {
+        error_log("Columns Manager: No results found from API, checking database cache");
 
-        if (is_array($split_times)) {
-            foreach ($split_times as $split) {
-                if (!empty($split['interval_name'])) {
-                    $attr = 'split_time:' . $split['interval_name'];
-                    if (!in_array($attr, $all_api_attributes)) {
-                        $all_api_attributes[] = $attr;
+        // Fallback: try database cache if API returns nothing
+        $sample_results = $db->get_results($event_id, 10); // Get up to 10 results
+        if (!empty($sample_results)) {
+            foreach ($sample_results as $sample) {
+                if (!empty($sample->split_times)) {
+                    $split_times = is_string($sample->split_times)
+                        ? json_decode($sample->split_times, true)
+                        : $sample->split_times;
+
+                    if (is_array($split_times)) {
+                        foreach ($split_times as $split) {
+                            if (!empty($split['interval_name'])) {
+                                $attr = 'split_time:' . $split['interval_name'];
+                                if (!in_array($attr, $all_api_attributes)) {
+                                    $all_api_attributes[] = $attr;
+                                }
+                            }
+                        }
                     }
                 }
             }
         }
     }
+} catch (Exception $e) {
+    error_log("Columns Manager: Error fetching split times from API: " . $e->getMessage());
+    // Continue without split times - not fatal
 }
 
 $all_api_attributes = array_unique($all_api_attributes);

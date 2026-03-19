@@ -130,45 +130,6 @@ $is_edit = $event !== null;
                 </td>
             </tr>
 
-            <tr>
-                <th scope="row">
-                    <label><?php _e('Split Times Configuration', 'chronotrack-live'); ?></label>
-                </th>
-                <td>
-                    <div id="split-times-config">
-                        <?php
-                        $split_config = $is_edit && !empty($event->split_times_config) ? $event->split_times_config : array();
-                        if (empty($split_config)) {
-                            $split_config = array(array('name' => '', 'show_in_main' => false));
-                        }
-                        foreach ($split_config as $index => $split):
-                        ?>
-                        <div class="split-time-row" style="margin-bottom: 10px;">
-                            <input type="text"
-                                   name="split_checkpoints[]"
-                                   value="<?php echo esc_attr($split['name']); ?>"
-                                   placeholder="<?php _e('Checkpoint name (e.g., T1, 10km, etc.)', 'chronotrack-live'); ?>"
-                                   style="width: 300px;">
-                            <label>
-                                <input type="checkbox"
-                                       name="split_show_main[<?php echo $index; ?>]"
-                                       value="1"
-                                       <?php checked($split['show_in_main'] ?? false); ?>>
-                                <?php _e('Show in main results', 'chronotrack-live'); ?>
-                            </label>
-                            <button type="button" class="button remove-split"><?php _e('Remove', 'chronotrack-live'); ?></button>
-                        </div>
-                        <?php endforeach; ?>
-                    </div>
-                    <button type="button" id="add-split" class="button">
-                        <?php _e('Add Checkpoint', 'chronotrack-live'); ?>
-                    </button>
-                    <p class="description">
-                        <?php _e('Configure checkpoints for split times. Check "Show in main results" to display in the main table (e.g., for triathlon transitions).', 'chronotrack-live'); ?>
-                    </p>
-                </td>
-            </tr>
-
         </table>
 
         <p class="submit">
@@ -182,8 +143,6 @@ $is_edit = $event !== null;
 
 <script>
 jQuery(document).ready(function($) {
-    let splitIndex = <?php echo count($split_config); ?>;
-
     // Fetch event info from API
     $('#fetch-from-api').on('click', function() {
         const eventId = $('#event_id').val().trim();
@@ -236,21 +195,6 @@ jQuery(document).ready(function($) {
                 $button.prop('disabled', false).text('<?php _e('Pobierz z API', 'chronotrack-live'); ?>');
             }
         });
-    });
-
-    $('#add-split').on('click', function() {
-        const row = $('<div class="split-time-row" style="margin-bottom: 10px;"></div>');
-        row.html(
-            '<input type="text" name="split_checkpoints[]" placeholder="<?php _e('Checkpoint name', 'chronotrack-live'); ?>" style="width: 300px;"> ' +
-            '<label><input type="checkbox" name="split_show_main[' + splitIndex + ']" value="1"> <?php _e('Show in main results', 'chronotrack-live'); ?></label> ' +
-            '<button type="button" class="button remove-split"><?php _e('Remove', 'chronotrack-live'); ?></button>'
-        );
-        $('#split-times-config').append(row);
-        splitIndex++;
-    });
-
-    $(document).on('click', '.remove-split', function() {
-        $(this).closest('.split-time-row').remove();
     });
 });
 </script>
