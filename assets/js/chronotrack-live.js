@@ -28,6 +28,23 @@
         init: function() {
             console.log('=== ChronoTrack Live Init START ===');
 
+            // Global AJAX error handler for nonce expiration
+            $(document).ajaxError((event, jqXHR, ajaxSettings, thrownError) => {
+                // Check if error is 403 Forbidden (nonce expired)
+                if (jqXHR.status === 403) {
+                    console.error('❌ 403 Forbidden - Nonce expired!');
+
+                    // Show user-friendly message
+                    const message = 'Sesja wygasła. Strona zostanie odświeżona za 3 sekundy...';
+                    alert(message);
+
+                    // Auto-reload page after 3 seconds
+                    setTimeout(() => {
+                        location.reload();
+                    }, 3000);
+                }
+            });
+
             const container = $('.chronotrack-results-container');
             if (container.length === 0) {
                 console.log('❌ No ChronoTrack container found');
