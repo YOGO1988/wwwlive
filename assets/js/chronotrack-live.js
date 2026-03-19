@@ -1333,47 +1333,54 @@
                 let valA = a[column];
                 let valB = b[column];
 
-                // Handle numeric columns (all possible numeric field names from ChronoTrack API)
-                const numericColumns = [
-                    'bib_number', 'entry_bib',           // Numer startowy
-                    'position', 'overall_place',         // Miejsce open
-                    'category_position', 'division_place', // Miejsce w kategorii
-                    'gender_position', 'sex_place',      // Miejsce w płci
-                    'age', 'athlete_age',                // Wiek
-                    'interval_position'                  // Miejsce na punkcie kontrolnym
-                ];
-
-                if (numericColumns.includes(column)) {
-                    // CRITICAL FIX: Accept 0 as valid value! Only reject null/undefined/empty string
-                    valA = (valA !== null && valA !== undefined && valA !== '' && valA !== '-') ? parseInt(valA) : Infinity;
-                    valB = (valB !== null && valB !== undefined && valB !== '' && valB !== '-') ? parseInt(valB) : Infinity;
-
-                    // Debug numeric sorting
-                    if (column === 'entry_bib' || column === 'overall_place') {
-                        console.log('🔢 Numeric:', column, 'A:', a[column], '→', valA, 'B:', b[column], '→', valB);
-                    }
-                }
-                // Handle time columns (convert to seconds)
-                else if (column === 'finish_time' || column === 'net_time') {
+                // CRITICAL: Handle split_time:PK, split_time:PK2, etc.
+                if (column && column.startsWith && column.startsWith('split_time:')) {
                     valA = this.parseTimeToSeconds(valA);
                     valB = this.parseTimeToSeconds(valB);
                 }
-                // Handle string columns (club, name, etc.)
-                else {
-                    const strA = (valA || '').toString().trim().toLowerCase();
-                    const strB = (valB || '').toString().trim().toLowerCase();
+                // Handle numeric columns
+                else if (['bib_number', 'entry_bib', 'position', 'overall_place',
+                          'category_position', 'division_place', 'gender_position',
+                          'sex_place', 'age', 'athlete_age', 'interval_position'].includes(column)) {
+                    valA = (valA !== null && valA !== undefined && valA !== '' && valA !== '-') ? parseInt(valA) : Infinity;
+                    valB = (valB !== null && valB !== undefined && valB !== '' && valB !== '-') ? parseInt(valB) : Infinity;
+                }
+                // Handle time columns
+                else if (column === 'finish_time' || column === 'net_time' || column === 'formatted_time') {
+                    valA = this.parseTimeToSeconds(valA);
+                    valB = this.parseTimeToSeconds(valB);
+                }
+                // CRITICAL: Handle name sorting by LAST NAME (not first name)
+                else if (column === 'full_name' || column === 'athlete_last_name,athlete_first_name') {
+                    // Sort by last name first, then first name
+                    const lastNameA = (a.last_name || '').trim();
+                    const firstNameA = (a.first_name || '').trim();
+                    const lastNameB = (b.last_name || '').trim();
+                    const firstNameB = (b.first_name || '').trim();
 
-                    // Special handling for club - empty clubs always go to end
-                    if (column === 'club') {
-                        // If A is empty but B is not, A goes to end
-                        if (!strA && strB) return 1;
-                        // If B is empty but A is not, B goes to end
-                        if (strA && !strB) return -1;
-                        // If both empty or both have value, compare normally
+                    // Polish alphabet collation
+                    const compareResult = this.comparePolish(lastNameA, lastNameB);
+                    if (compareResult !== 0) {
+                        valA = 0;
+                        valB = compareResult;
+                    } else {
+                        // Last names equal, compare first names
+                        valA = 0;
+                        valB = this.comparePolish(firstNameA, firstNameB);
                     }
+                }
+                // Handle other string columns
+                else {
+                    const strA = (valA || '').toString().trim();
+                    const strB = (valB || '').toString().trim();
 
-                    valA = strA;
-                    valB = strB;
+                    // Empty values go to end
+                    if (!strA && strB) return 1;
+                    if (strA && !strB) return -1;
+
+                    // Polish alphabet collation
+                    valA = 0;
+                    valB = this.comparePolish(strA, strB);
                 }
 
                 if (valA < valB) return -1 * direction;
@@ -1393,6 +1400,38 @@
                 return parseInt(parts[0]) * 3600 + parseInt(parts[1]) * 60 + parseInt(parts[2]);
             }
             return 999999;
+        },
+
+        /**
+         * Compare strings with Polish alphabet collation
+         * Polish alphabet order: A Ą B C Ć D E Ę F G H I J K L Ł M N Ń O Ó P R S Ś T U W Y Z Ź Ż
+         */
+        comparePolish: function(strA, strB) {
+            // Polish alphabet mapping
+            const polishOrder = {
+                'a': 1, 'ą': 2, 'b': 3, 'c': 4, 'ć': 5, 'd': 6, 'e': 7, 'ę': 8,
+                'f': 9, 'g': 10, 'h': 11, 'i': 12, 'j': 13, 'k': 14, 'l': 15,
+                'ł': 16, 'm': 17, 'n': 18, 'ń': 19, 'o': 20, 'ó': 21, 'p': 22,
+                'q': 23, 'r': 24, 's': 25, 'ś': 26, 't': 27, 'u': 28, 'v': 29,
+                'w': 30, 'x': 31, 'y': 32, 'z': 33, 'ź': 34, 'ż': 35
+            };
+
+            const a = strA.toLowerCase();
+            const b = strB.toLowerCase();
+
+            const minLen = Math.min(a.length, b.length);
+
+            for (let i = 0; i < minLen; i++) {
+                const orderA = polishOrder[a[i]] || a.charCodeAt(i);
+                const orderB = polishOrder[b[i]] || b.charCodeAt(i);
+
+                if (orderA !== orderB) {
+                    return orderA - orderB;
+                }
+            }
+
+            // If all characters match, shorter string comes first
+            return a.length - b.length;
         },
 
         showError: function(message) {
