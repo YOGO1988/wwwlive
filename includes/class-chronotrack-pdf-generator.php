@@ -453,11 +453,16 @@ class ChronoTrack_PDF_Generator {
         }
         $html .= '</tr></thead>';
 
-        // Table body with nobr rows
+        // Table body with STRIPED ROWS (manual bgcolor - TCPDF doesn't support nth-child)
         $html .= '<tbody>';
+        $row_number = 0;
         foreach ($results as $row_index => $result) {
+            $row_number++;
+            // STRIPED ROWS: odd=white, even=gray
+            $bgcolor = ($row_number % 2 == 1) ? '#FFFFFF' : '#F5F5F5';
+
             // CRITICAL: Use nobr="true" to prevent row from breaking across pages
-            $html .= '<tr nobr="true">';
+            $html .= '<tr nobr="true" bgcolor="' . $bgcolor . '">';
             foreach ($columns as $col) {
                 $value = $this->get_column_value($result, $col);
                 $html .= '<td>' . htmlspecialchars($value, ENT_QUOTES, 'UTF-8') . '</td>';
