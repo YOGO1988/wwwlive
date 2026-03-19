@@ -309,12 +309,44 @@ class ChronoTrack_API {
 
     /**
      * Fetch results from ChronoTrack API with pagination
+     *
+     * @param string $event_id ChronoTrack Event ID
+     * @param string $mode 'full' = fetch entries + results (first load or manual refresh)
+     *                     'live' = only fetch results, use cached entries (10s auto-refresh)
      */
-    public function fetch_results($event_id) {
-        error_log("ChronoTrack API: Fetching results for event {$event_id}");
+    public function fetch_results($event_id, $mode = 'full') {
+        error_log("ChronoTrack API: Fetching results for event {$event_id} (mode: {$mode})");
 
-        // First, fetch participant entries to get city and club data
-        $entries_by_bib = $this->fetch_entries($event_id);
+        // OPTIMIZATION: Skip expensive entries fetch for live updates
+        $entries_by_bib = array();
+        if ($mode === 'full') {
+            // First load or manual refresh - fetch participant entries to get city and club data
+            error_log("ChronoTrack API: Fetching entries (personal data: city, club, country)");
+            $entries_by_bib = $this->fetch_entries($event_id);
+        } else {
+            // Live mode - use cached entries from database
+            error_log("ChronoTrack API: LIVE MODE - Skipping entries fetch (using cached data)");
+            $db = chronotrack_live_results()->db;
+            $cached_results = $db->get_results($event_id);
+
+            // Build entries cache from database
+            foreach ($cached_results as $cached) {
+                $bib = $cached->bib_number;
+                if (!empty($bib)) {
+                    $entries_by_bib[$bib] = array(
+                        'city' => $cached->city ?? '',
+                        'club' => $cached->club ?? '',
+                        'athlete_city' => $cached->city ?? '',
+                        'athlete_club' => $cached->club ?? '',
+                        'location_city' => $cached->city ?? '',
+                        'country_name' => $cached->country ?? '',
+                        'country' => $cached->country ?? '',
+                        'nationality' => $cached->nationality ?? '',
+                    );
+                }
+            }
+            error_log("ChronoTrack API: Loaded " . count($entries_by_bib) . " cached entries from database");
+        }
 
         $all_results_by_bib = array();
         $page = 1;

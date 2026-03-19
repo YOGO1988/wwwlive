@@ -146,18 +146,25 @@ class ChronoTrack_Ajax {
 
     /**
      * Refresh results from ChronoTrack API
+     *
+     * Supports two modes:
+     * - 'full': Fetch entries + results (manual refresh, first load)
+     * - 'live': Only fetch results, use cached entries (auto 10s refresh)
      */
     public function refresh_results() {
         check_ajax_referer('chronotrack_nonce', 'nonce');
 
         $event_id = sanitize_text_field($_POST['event_id'] ?? '');
+        $mode = sanitize_text_field($_POST['mode'] ?? 'live'); // Default to live mode for auto-refresh
 
         if (empty($event_id)) {
             wp_send_json_error(array('message' => __('Event ID is required.', 'chronotrack-live')));
         }
 
+        error_log("AJAX refresh_results: event_id={$event_id}, mode={$mode}");
+
         $api = chronotrack_live_results()->api;
-        $results = $api->fetch_results($event_id);
+        $results = $api->fetch_results($event_id, $mode);
 
         if (is_wp_error($results)) {
             wp_send_json_error(array('message' => $results->get_error_message()));

@@ -123,8 +123,8 @@
             // Manual refresh button (both old button and new icon)
             $(document).on('click', '.chronotrack-manual-refresh, .chronotrack-manual-refresh-icon', (e) => {
                 e.preventDefault();
-                console.log('🔄 Manual refresh triggered - fetching from API');
-                this.refreshFromAPI();
+                console.log('🔄 Manual refresh triggered - FULL MODE (fetch all data)');
+                this.refreshFromAPI('full'); // Full refresh: entries + results
             });
 
             // Toggle auto-refresh
@@ -249,7 +249,7 @@
             });
         },
 
-        refreshFromAPI: function() {
+        refreshFromAPI: function(mode = 'live') {
             // Prevent concurrent requests
             if (this.isLoading) {
                 console.log('⏳ Already loading, skipping...');
@@ -259,7 +259,12 @@
             this.isLoading = true;
             this.showLoading();
 
-            console.log('📡 Refreshing from API for event:', this.eventId);
+            console.log('📡 Refreshing from API for event:', this.eventId, '| Mode:', mode);
+            if (mode === 'live') {
+                console.log('⚡ LIVE MODE: Only fetching results (times/positions), using cached personal data');
+            } else {
+                console.log('🔄 FULL MODE: Fetching entries + results (personal data + times/positions)');
+            }
 
             $.ajax({
                 url: chronotrackData.ajaxUrl,
@@ -267,6 +272,7 @@
                 data: {
                     action: 'chronotrack_refresh_results',
                     event_id: this.eventId,
+                    mode: mode, // 'live' or 'full'
                     nonce: chronotrackData.nonce
                 },
                 timeout: 60000, // 60 seconds for API fetch
@@ -1186,15 +1192,15 @@
 
             // IMMEDIATELY fetch fresh data from API (don't wait 15s!)
             setTimeout(() => {
-                console.log('🚀 AGGRESSIVE: Fetching from API immediately after cache load...');
-                this.refreshFromAPI();
+                console.log('🚀 AGGRESSIVE: FULL FETCH (entries + results) on initial load');
+                this.refreshFromAPI('full'); // Full mode for first fetch
             }, 1000); // Wait 1 second after cache load, then fetch from API
 
             // Fetch fresh data from API every 15 seconds
             console.log('⏰ Setting up interval to fetch from API every', interval, 'ms');
             this.refreshInterval = setInterval(() => {
-                console.log('🔄 Auto-refresh interval triggered - calling refreshFromAPI()');
-                this.refreshFromAPI();  // Fetch from API
+                console.log('🔄 Auto-refresh interval triggered - LIVE MODE (only results)');
+                this.refreshFromAPI('live');  // Live mode: only results, cached personal data
             }, interval);
 
             console.log('✅ Auto-refresh interval set! Interval ID:', this.refreshInterval);
@@ -1222,13 +1228,13 @@
             this.stopAutoRefresh();
             const finalInterval = Math.min(newInterval, 10000); // Max 10 seconds
             this.refreshInterval = setInterval(() => {
-                this.refreshFromAPI();  // Fetch from API, not cache
+                this.refreshFromAPI('live');  // Live mode: only results (times/positions)
             }, finalInterval);
 
-            // Keep full check at 60 seconds
+            // Keep full check at 60 seconds (check for new participants)
             this.fullCheckInterval = setInterval(() => {
-                console.log('🔄 Full check (60s interval)');
-                this.refreshFromAPI();  // Fetch from API, not cache
+                console.log('🔄 Full check (60s interval) - checking for new participants');
+                this.refreshFromAPI('full');  // Full mode: check for new participants
             }, 60000);
         },
 
