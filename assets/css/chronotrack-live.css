@@ -407,12 +407,14 @@ body.chronotrack-page .container {
     border: 1px solid #888;
     border-radius: 8px;
     width: 85%;
-    max-width: 650px;
+    max-width: 800px; /* Increased from 650px to fit split times table */
     max-height: 80vh; /* Reduced more to account for increased padding */
     overflow-y: auto;
+    overflow-x: hidden; /* Prevent horizontal scroll - content will wrap */
     position: relative;
     z-index: 999999999 !important;
     font-size: 13px; /* Smaller base font size */
+    box-sizing: border-box; /* Ensure padding is included in width */
 }
 
 .chronotrack-modal-close {
@@ -520,6 +522,7 @@ body.chronotrack-page .container {
     width: 100%;
     border-collapse: collapse;
     font-size: 11px;
+    table-layout: fixed; /* Prevent table from overflowing */
 }
 
 .chronotrack-details-table th {
@@ -528,11 +531,14 @@ body.chronotrack-page .container {
     font-weight: 600;
     color: #666;
     width: 50%;
+    word-wrap: break-word; /* Wrap long text */
 }
 
 .chronotrack-details-table td {
     padding: 4px 6px;
     border-bottom: 1px solid #eee;
+    word-wrap: break-word; /* Wrap long text */
+    overflow-wrap: break-word; /* Modern browsers */
 }
 
 .chronotrack-details-table tr:last-child td {

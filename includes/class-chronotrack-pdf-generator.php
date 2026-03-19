@@ -154,7 +154,8 @@ class ChronoTrack_PDF_Generator {
         // Event name (orange, bold)
         $pdf->SetFont('dejavusans', 'B', 14);
         $pdf->SetTextColor(255, 102, 0); // #FF6600 orange
-        $pdf->Cell(0, 6, strtoupper($event->event_name), 0, 1, 'L');
+        // Use mb_strtoupper for proper UTF-8 handling (Piątka → PIĄTKA, not PIąTKA)
+        $pdf->Cell(0, 6, mb_strtoupper($event->event_name, 'UTF-8'), 0, 1, 'L');
 
         // Subtitle: distance, location, date (black)
         $pdf->SetFont('dejavusans', '', 11);
@@ -173,10 +174,10 @@ class ChronoTrack_PDF_Generator {
         // Logo 1 (YOGO) - rightmost position
         // Skip logos if causing errors - PDF generation should not fail because of logos
         try {
-            $logo1_width = 80;
-            $logo1_height = 35;
+            $logo1_width = 40; // Reduced from 80 to 40mm
+            $logo1_height = 18; // Reduced from 35 to 18mm (proportional)
             $logo1_x = $page_width - $right_margin - $logo1_width;
-            $logo1_y = 10;
+            $logo1_y = 8; // Moved up slightly from 10 to 8mm
 
             $this->add_logo($pdf, self::YOGO_LOGO_URL, $logo1_x, $logo1_y, $logo1_width, $logo1_height);
         } catch (Exception $e) {
@@ -186,10 +187,10 @@ class ChronoTrack_PDF_Generator {
         // Logo 2 (Event logo) - left of YOGO logo
         if (!empty($event->event_logo_url)) {
             try {
-                $logo2_width = 80;
-                $logo2_height = 35;
+                $logo2_width = 40; // Reduced from 80 to 40mm
+                $logo2_height = 18; // Reduced from 35 to 18mm
                 $logo2_x = $logo1_x - $logo2_width - 5; // 5mm gap between logos
-                $logo2_y = 10;
+                $logo2_y = 8; // Moved up from 10 to 8mm
 
                 $this->add_logo($pdf, $event->event_logo_url, $logo2_x, $logo2_y, $logo2_width, $logo2_height);
             } catch (Exception $e) {
@@ -253,63 +254,62 @@ class ChronoTrack_PDF_Generator {
     }
 
     /**
-     * Add results table
+     * Add results table using HTML (better rendering, no empty pages)
      */
     private function add_results_table($pdf, $results, $columns) {
-        // Prepare table header
-        $header = array();
-        foreach ($columns as $col) {
-            $header[] = $col->column_name;
-        }
-
-        // Prepare table data
-        $data = array();
-        foreach ($results as $result) {
-            $row = array();
-            foreach ($columns as $col) {
-                $row[] = $this->get_column_value($result, $col);
+        // Build HTML table
+        $html = '<style>
+            table {
+                border-collapse: collapse;
+                width: 100%;
+                font-size: 8pt;
             }
-            $data[] = $row;
+            th {
+                background-color: #FF6600;
+                color: #FFFFFF;
+                font-weight: bold;
+                text-align: center;
+                padding: 5px 3px;
+                border: 1px solid #000000;
+            }
+            td {
+                text-align: center;
+                padding: 4px 2px;
+                border: 1px solid #CCCCCC;
+            }
+            tr:nth-child(even) {
+                background-color: #F5F5F5;
+            }
+            tr:nth-child(odd) {
+                background-color: #FFFFFF;
+            }
+        </style>';
+
+        $html .= '<table>';
+
+        // Table header
+        $html .= '<thead><tr>';
+        foreach ($columns as $col) {
+            $html .= '<th>' . htmlspecialchars($col->column_name, ENT_QUOTES, 'UTF-8') . '</th>';
         }
-
-        // Calculate column widths
-        $page_width = $pdf->getPageWidth();
-        $usable_width = $page_width - 20; // minus left and right margins
-        $col_widths = $this->calculate_column_widths($columns, $usable_width);
-
-        // Table header style
-        $pdf->SetFillColor(255, 102, 0); // Orange #FF6600
-        $pdf->SetTextColor(255, 255, 255); // White text
-        $pdf->SetFont('dejavusans', 'B', 8);
-
-        // Draw header
-        $x = $pdf->GetX();
-        $y = $pdf->GetY();
-
-        foreach ($header as $i => $col_name) {
-            $pdf->MultiCell($col_widths[$i], 7, $col_name, 1, 'C', true, 0, '', '', true, 0, false, true, 7, 'M');
-        }
-        $pdf->Ln();
+        $html .= '</tr></thead>';
 
         // Table body
-        $pdf->SetTextColor(0, 0, 0); // Black text
-        $pdf->SetFont('dejavusans', '', 8);
-
-        $fill = false;
-        foreach ($data as $row) {
-            // Alternate row colors
-            if ($fill) {
-                $pdf->SetFillColor(211, 211, 211); // Light grey
-            } else {
-                $pdf->SetFillColor(255, 255, 255); // White
+        $html .= '<tbody>';
+        foreach ($results as $result) {
+            $html .= '<tr>';
+            foreach ($columns as $col) {
+                $value = $this->get_column_value($result, $col);
+                $html .= '<td>' . htmlspecialchars($value, ENT_QUOTES, 'UTF-8') . '</td>';
             }
-
-            foreach ($row as $i => $cell) {
-                $pdf->MultiCell($col_widths[$i], 6, $cell, 1, 'C', true, 0, '', '', true, 0, false, true, 6, 'M');
-            }
-            $pdf->Ln();
-            $fill = !$fill;
+            $html .= '</tr>';
         }
+        $html .= '</tbody>';
+
+        $html .= '</table>';
+
+        // Write HTML table (TCPDF handles page breaks correctly)
+        $pdf->writeHTML($html, true, false, true, false, '');
     }
 
     /**
