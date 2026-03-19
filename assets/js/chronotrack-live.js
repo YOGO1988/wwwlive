@@ -1008,6 +1008,13 @@
                 console.log('📏 Auto-selected first distance (largest):', this.selectedDistance);
             }
 
+            // CRITICAL FIX: Use flexbox layout to keep PDF button in fixed position
+            const distanceButtonsWrapper = $('<div>')
+                .css({
+                    'display': 'inline-block',
+                    'margin-right': '20px'
+                });
+
             // Add buttons for each distance (no "Wszystkie" button)
             sortedDistances.forEach((distance) => {
                 const btn = $('<button>')
@@ -1015,24 +1022,27 @@
                     .addClass(this.selectedDistance === distance ? 'active' : '')
                     .attr('data-distance', distance)
                     .text(distance + ' (' + (distanceCounts[distance] || 0) + ')');
-                container.append(btn);
+                distanceButtonsWrapper.append(btn);
             });
 
+            container.append(distanceButtonsWrapper);
+
             // Add "Generuj PDF" button if there's a selected distance (accessible to all users)
+            // CRITICAL: Button stays in same position regardless of number of distances
             if (this.selectedDistance) {
                 const pdfBtn = $('<button>')
                     .addClass('chronotrack-generate-pdf-btn')
                     .html('📄 Generuj PDF')
                     .attr('data-distance', this.selectedDistance)
                     .css({
-                        'margin-left': '20px',
                         'background': '#0066cc',
                         'color': '#fff',
                         'border': '1px solid #0066cc',
                         'padding': '8px 16px',
                         'border-radius': '4px',
                         'cursor': 'pointer',
-                        'font-size': '14px'
+                        'font-size': '14px',
+                        'vertical-align': 'top'
                     });
                 container.append(pdfBtn);
             }
@@ -1305,15 +1315,6 @@
                 return;
             }
 
-            // Debug: show sample values
-            if (this.allResults.length > 0) {
-                console.log('📊 Sample data for column "' + column + '":', {
-                    first: this.allResults[0][column],
-                    second: this.allResults[1] ? this.allResults[1][column] : 'N/A',
-                    type: typeof this.allResults[0][column]
-                });
-            }
-
             // Toggle sort direction if clicking same column
             if (this.sortColumn === column) {
                 this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
@@ -1327,13 +1328,68 @@
             $('.chronotrack-results-table thead th[data-column="' + column + '"]')
                 .addClass('sort-' + this.sortDirection);
 
+            // Helper function to extract value for sorting
+            const getSortValue = (result, columnName) => {
+                // CRITICAL: Handle split_time:PK, split_time:PK2, etc.
+                if (columnName && columnName.startsWith && columnName.startsWith('split_time:')) {
+                    const intervalName = columnName.substring(11); // Remove "split_time:" prefix
+                    let splitTimes = result.split_times;
+
+                    // Parse JSON if needed
+                    if (typeof splitTimes === 'string') {
+                        try {
+                            splitTimes = JSON.parse(splitTimes);
+                        } catch (e) {
+                            return '';
+                        }
+                    }
+
+                    // Find matching interval
+                    if (splitTimes && Array.isArray(splitTimes)) {
+                        const split = splitTimes.find(s =>
+                            s.interval_name === intervalName || s.name === intervalName
+                        );
+                        if (split) {
+                            return split.formatted_time || split.time || '';
+                        }
+                    }
+                    return '';
+                }
+
+                // Try direct access first
+                if (result[columnName] !== null && result[columnName] !== undefined && result[columnName] !== '') {
+                    return result[columnName];
+                }
+
+                // CRITICAL: Try alternative field names for common columns
+                const alternatives = {
+                    'entry_bib': ['bib_number', 'entry_bib'],
+                    'bib_number': ['bib_number', 'entry_bib'],
+                    'overall_place': ['position', 'overall_place'],
+                    'position': ['position', 'overall_place'],
+                    'athlete_last_name,athlete_first_name': ['full_name'],
+                    'full_name': ['full_name']
+                };
+
+                if (alternatives[columnName]) {
+                    for (let i = 0; i < alternatives[columnName].length; i++) {
+                        const alt = alternatives[columnName][i];
+                        if (result[alt] !== null && result[alt] !== undefined && result[alt] !== '') {
+                            return result[alt];
+                        }
+                    }
+                }
+
+                return '';
+            };
+
             // Sort allResults
             const direction = this.sortDirection === 'asc' ? 1 : -1;
             this.allResults.sort((a, b) => {
-                let valA = a[column];
-                let valB = b[column];
+                let valA = getSortValue(a, column);
+                let valB = getSortValue(b, column);
 
-                // CRITICAL: Handle split_time:PK, split_time:PK2, etc.
+                // CRITICAL: Handle split_time columns (already extracted above)
                 if (column && column.startsWith && column.startsWith('split_time:')) {
                     valA = this.parseTimeToSeconds(valA);
                     valB = this.parseTimeToSeconds(valB);

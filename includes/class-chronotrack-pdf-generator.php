@@ -473,17 +473,13 @@ class ChronoTrack_PDF_Generator {
 
         $html .= '</table>';
 
-        // CRITICAL: Disable auto page break during table to prevent mid-row breaks
-        $auto_page_break = $pdf->getAutoPageBreak();
-        $pdf->SetAutoPageBreak(false);
+        // CRITICAL FIX: KEEP auto page break ENABLED to allow multi-page tables
+        // The nobr="true" attribute on rows prevents mid-row breaks
+        // Disabling auto page break causes table to be cut off at bottom of page!
+        $pdf->SetAutoPageBreak(true, 15);
 
         // Write HTML table
         $pdf->writeHTML($html, true, false, true, false, '');
-
-        // Re-enable auto page break
-        if ($auto_page_break) {
-            $pdf->SetAutoPageBreak(true, 15);
-        }
     }
 
     /**
