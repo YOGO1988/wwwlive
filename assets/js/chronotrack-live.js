@@ -523,24 +523,18 @@
 
                     // Handle special case for full_name
                     if (attr === 'full_name' || attr === 'athlete_last_name,athlete_first_name') {
-                        // Add country flag AFTER name if available
-                        let flagEmoji = '';
-                        if (result.country && typeof CountryFlags !== 'undefined') {
-                            flagEmoji = CountryFlags.getFlag(result.country);
-                            if (flagEmoji) {
-                                flagEmoji = ' ' + flagEmoji; // Add space BEFORE flag
-                            }
-                        }
+                        // CRITICAL FIX: DO NOT add flags here - flags are added in createResultRow()
+                        // Adding flags here causes them to be escaped by escapeHtml()
 
-                        // CRITICAL FIX: Always format as "Nazwisko Imię 🇵🇱"
+                        // Always format as "Nazwisko Imię"
                         if (result.last_name || result.first_name) {
                             const lastName = (result.last_name || '').trim();
                             const firstName = (result.first_name || '').trim();
-                            return lastName + (lastName && firstName ? ' ' : '') + firstName + flagEmoji;
+                            return lastName + (lastName && firstName ? ' ' : '') + firstName;
                         }
                         // Fallback to full_name if no first/last name available
                         if (result.full_name) {
-                            return result.full_name + flagEmoji;
+                            return result.full_name;
                         }
                     }
 
@@ -992,9 +986,9 @@
                     .attr('data-distance', this.selectedDistance)
                     .css({
                         'margin-left': '20px',
-                        'background': '#28a745',
+                        'background': '#0066cc',
                         'color': '#fff',
-                        'border': '1px solid #28a745',
+                        'border': '1px solid #0066cc',
                         'padding': '8px 16px',
                         'border-radius': '4px',
                         'cursor': 'pointer',
@@ -1412,7 +1406,7 @@
                 data: {
                     action: 'chronotrack_generate_pdf',
                     nonce: chronotrackData.nonce,
-                    event_id: chronotrackData.eventId,
+                    event_id: this.eventId,
                     distance: this.selectedDistance
                 },
                 success: (response) => {

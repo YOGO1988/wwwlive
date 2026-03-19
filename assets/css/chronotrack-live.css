@@ -126,9 +126,9 @@ body.chronotrack-page .container {
 
 .chronotrack-view-toggle {
     padding: 10px 20px;
-    border: 2px solid #ff8844;
+    border: 2px solid #0066cc;
     background: #fff;
-    color: #ff8844;
+    color: #0066cc;
     border-radius: 4px;
     cursor: pointer;
     font-size: 16px;
@@ -141,7 +141,7 @@ body.chronotrack-page .container {
 }
 
 .chronotrack-view-toggle.active {
-    background: #ff8844;
+    background: #0066cc;
     color: #fff;
 }
 
