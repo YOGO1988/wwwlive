@@ -23,6 +23,155 @@ class ChronoTrack_PDF_Generator {
      * @return string|WP_Error Path to generated PDF or error
      */
     public function generate_pdf($event_id, $distance) {
+        // Try Python generator first (better quality)
+        $python_result = $this->generate_pdf_python($event_id, $distance);
+        if (!is_wp_error($python_result)) {
+            return $python_result;
+        }
+
+        // Fallback to PHP TCPDF if Python fails
+        error_log("PDF: Python generator failed, falling back to TCPDF: " . $python_result->get_error_message());
+        return $this->generate_pdf_tcpdf($event_id, $distance);
+    }
+
+    /**
+     * Generate PDF using Python ReportLab (RECOMMENDED - better quality)
+     */
+    private function generate_pdf_python($event_id, $distance) {
+        // Check if Python 3 is available
+        $python_path = exec('which python3');
+        if (empty($python_path)) {
+            return new WP_Error('python_not_found', 'Python 3 not found on server');
+        }
+
+        // Get event data
+        $db = chronotrack_live_results()->db;
+        $event = $db->get_event($event_id);
+
+        if (!$event) {
+            return new WP_Error('event_not_found', __('Event not found.', 'chronotrack-live'));
+        }
+
+        // Get results
+        $results = $db->get_results($event_id);
+        if (empty($results)) {
+            return new WP_Error('no_results', __('No results found for this event.', 'chronotrack-live'));
+        }
+
+        // Filter by distance
+        $filtered_results = array_filter($results, function($result) use ($distance) {
+            return isset($result->distance) && $result->distance === $distance;
+        });
+
+        if (empty($filtered_results)) {
+            return new WP_Error('no_results_distance', __('No results found for this distance.', 'chronotrack-live'));
+        }
+
+        // Get column configuration
+        $columns = $db->get_event_columns($event_id, true);
+
+        // Prepare data for Python
+        $python_data = array(
+            'event_name' => $event->event_name,
+            'event_date' => date_i18n('d.m.Y', strtotime($event->event_date)),
+            'location' => $event->event_location ?? '',
+            'distance' => $distance,
+            'columns' => array(),
+            'results' => array(),
+            'output_path' => '',
+            'event_logo_url' => $event->event_logo_url ?? '',
+        );
+
+        // Add columns
+        foreach ($columns as $col) {
+            $python_data['columns'][] = array(
+                'name' => $col->column_name,
+                'api_attributes' => $col->api_attributes ?? array(),
+            );
+        }
+
+        // Add results
+        foreach ($filtered_results as $result) {
+            $result_data = array();
+
+            // Convert object to array
+            foreach ($result as $key => $value) {
+                $result_data[$key] = $value;
+            }
+
+            // Parse split_times if it's a JSON string
+            if (isset($result_data['split_times']) && is_string($result_data['split_times'])) {
+                $result_data['split_times'] = json_decode($result_data['split_times'], true);
+            }
+
+            $python_data['results'][] = $result_data;
+        }
+
+        // Generate filename
+        $filename = $this->get_filename($event, $distance);
+        $upload_dir = wp_upload_dir();
+        $pdf_dir = $upload_dir['basedir'] . '/chronotrack-pdfs/';
+
+        // Create directory
+        if (!file_exists($pdf_dir)) {
+            wp_mkdir_p($pdf_dir);
+        }
+
+        $python_data['output_path'] = $pdf_dir . $filename;
+
+        // Call Python script
+        $script_path = CHRONOTRACK_LIVE_PLUGIN_DIR . 'scripts/generate_pdf.py';
+        $json_data = json_encode($python_data);
+
+        $command = sprintf(
+            '%s %s 2>&1',
+            escapeshellarg($python_path),
+            escapeshellarg($script_path)
+        );
+
+        $descriptorspec = array(
+            0 => array("pipe", "r"),  // stdin
+            1 => array("pipe", "w"),  // stdout
+            2 => array("pipe", "w")   // stderr
+        );
+
+        $process = proc_open($command, $descriptorspec, $pipes);
+
+        if (is_resource($process)) {
+            // Write JSON to stdin
+            fwrite($pipes[0], $json_data);
+            fclose($pipes[0]);
+
+            // Read output
+            $output = stream_get_contents($pipes[1]);
+            fclose($pipes[1]);
+
+            $errors = stream_get_contents($pipes[2]);
+            fclose($pipes[2]);
+
+            $return_value = proc_close($process);
+
+            if ($return_value === 0) {
+                $result = json_decode($output, true);
+                if ($result && isset($result['success']) && $result['success']) {
+                    return $result['pdf_path'];
+                } else {
+                    $error_msg = isset($result['error']) ? $result['error'] : 'Unknown error';
+                    return new WP_Error('python_generation_failed', $error_msg);
+                }
+            } else {
+                error_log("PDF Python Error: " . $errors);
+                return new WP_Error('python_execution_failed', "Python script failed: $errors");
+            }
+        }
+
+        return new WP_Error('python_process_failed', 'Failed to start Python process');
+    }
+
+    /**
+     * Generate PDF using PHP TCPDF (FALLBACK)
+     */
+    private function generate_pdf_tcpdf($event_id, $distance) {
         // Check if TCPDF is available
         if (!$this->load_tcpdf()) {
             return new WP_Error('tcpdf_missing', __('TCPDF library not found. Please install TCPDF.', 'chronotrack-live'));
