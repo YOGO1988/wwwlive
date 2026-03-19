@@ -120,8 +120,8 @@
                 }
             });
 
-            // Manual refresh button (both old button and new icon)
-            $(document).on('click', '.chronotrack-manual-refresh, .chronotrack-manual-refresh-icon', (e) => {
+            // Manual refresh button (admin only)
+            $(document).on('click', '.chronotrack-manual-refresh', (e) => {
                 e.preventDefault();
                 console.log('🔄 Manual refresh triggered - FULL MODE (fetch all data)');
                 this.refreshFromAPI('full'); // Full refresh: entries + results
