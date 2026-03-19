@@ -329,7 +329,9 @@ class ChronoTrack_API {
         $response = $this->make_api_request($endpoint, $params);
 
         if ($response && isset($response['event_results']) && !empty($response['event_results'])) {
-            $results = array();
+            // Group split times by bib number
+            // Each row in API response is ONE interval for ONE athlete
+            $results_by_bib = array();
 
             foreach ($response['event_results'] as $result) {
                 $bib = $result['results_bib'] ?? '';
@@ -337,38 +339,38 @@ class ChronoTrack_API {
                     continue;
                 }
 
-                // Extract split times
-                $split_times = array();
                 $interval_name = $result['results_interval_name'] ?? '';
 
-                // Skip main result interval
-                if (!in_array($interval_name, array('Full Course', 'Finish', '')) && !empty($interval_name)) {
-                    // This is a split time
-                    $distance_meters = 0;
-                    if (preg_match('/(\d+)\s*m/', $interval_name, $matches)) {
-                        $distance_meters = intval($matches[1]);
-                    } elseif (preg_match('/(\d+(?:\.\d+)?)\s*km/', $interval_name, $matches)) {
-                        $distance_meters = floatval($matches[1]) * 1000;
-                    }
-
-                    $split_times[] = array(
-                        'interval_name' => $interval_name,
-                        'formatted_time' => $this->format_time($result['results_gun_time'] ?? ''),
-                        'position' => intval($result['results_rank'] ?? 0),
-                        'distance_km' => $distance_meters > 0 ? number_format($distance_meters / 1000, 1) . ' km' : '',
-                    );
+                // Skip main result intervals - we only want split times
+                if (in_array($interval_name, array('Full Course', 'Finish', '')) || empty($interval_name)) {
+                    continue;
                 }
 
-                // Only include if we found split times
-                if (!empty($split_times)) {
-                    $results[] = array(
+                // This is a split time - add it to the bib's split times array
+                if (!isset($results_by_bib[$bib])) {
+                    $results_by_bib[$bib] = array(
                         'bib' => $bib,
-                        'split_times' => $split_times,
+                        'split_times' => array(),
                     );
                 }
+
+                // Extract distance from interval name
+                $distance_meters = 0;
+                if (preg_match('/(\d+)\s*m/', $interval_name, $matches)) {
+                    $distance_meters = intval($matches[1]);
+                } elseif (preg_match('/(\d+(?:\.\d+)?)\s*km/', $interval_name, $matches)) {
+                    $distance_meters = floatval($matches[1]) * 1000;
+                }
+
+                $results_by_bib[$bib]['split_times'][] = array(
+                    'interval_name' => $interval_name,
+                    'formatted_time' => $this->format_time($result['results_time'] ?? ''),
+                    'position' => intval($result['results_rank'] ?? 0),
+                    'distance_km' => $distance_meters > 0 ? number_format($distance_meters / 1000, 1) . ' km' : '',
+                );
             }
 
-            return $results;
+            return array_values($results_by_bib);
         }
 
         return array();
