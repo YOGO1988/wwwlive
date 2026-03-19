@@ -3,7 +3,7 @@
  * Plugin Name: ChronoTrack Live Results
  * Plugin URI: https://yogoevents.pl
  * Description: Live race results from ChronoTrack with automatic page generation and multi-event support
- * Version: 4.0.8
+ * Version: 4.0.9
  * Author: YOGO Events
  * Author URI: https://yogoevents.pl
  * Text Domain: chronotrack-live
@@ -20,7 +20,7 @@ if (!defined('ABSPATH')) {
 }
 
 // Define plugin constants
-define('CHRONOTRACK_LIVE_VERSION', '4.0.8');
+define('CHRONOTRACK_LIVE_VERSION', '4.0.9');
 define('CHRONOTRACK_LIVE_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('CHRONOTRACK_LIVE_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('CHRONOTRACK_LIVE_PLUGIN_FILE', __FILE__);
@@ -109,6 +109,14 @@ class ChronoTrack_Live_Results {
         wp_enqueue_style(
             'chronotrack-live',
             CHRONOTRACK_LIVE_PLUGIN_URL . 'assets/css/chronotrack-live.css',
+            array(),
+            CHRONOTRACK_LIVE_VERSION
+        );
+
+        // Enqueue country flags CSS
+        wp_enqueue_style(
+            'chronotrack-country-flags',
+            CHRONOTRACK_LIVE_PLUGIN_URL . 'assets/css/country-flags-icons.css',
             array(),
             CHRONOTRACK_LIVE_VERSION
         );

@@ -299,10 +299,19 @@ class ChronoTrack_Ajax {
 
         // Generate PDF
         $pdf = chronotrack_live_results()->pdf;
-        $result = $pdf->generate_pdf($event_id, $distance);
 
-        if (is_wp_error($result)) {
-            wp_send_json_error(array('message' => $result->get_error_message()));
+        try {
+            $result = $pdf->generate_pdf($event_id, $distance);
+
+            if (is_wp_error($result)) {
+                error_log("PDF AJAX Error: " . $result->get_error_message());
+                wp_send_json_error(array('message' => $result->get_error_message()));
+                return;
+            }
+        } catch (Exception $e) {
+            error_log("PDF AJAX Fatal Error: " . $e->getMessage());
+            error_log("PDF AJAX Stack trace: " . $e->getTraceAsString());
+            wp_send_json_error(array('message' => 'Wystąpił błąd podczas generowania PDF: ' . $e->getMessage()));
             return;
         }
 

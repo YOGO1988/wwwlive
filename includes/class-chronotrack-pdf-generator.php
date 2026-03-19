@@ -71,10 +71,22 @@ class ChronoTrack_PDF_Generator {
         error_log("PDF: Starting PDF generation for event {$event->event_name}, distance {$distance}");
         error_log("PDF: Results count: " . count($results));
 
+        // Increase memory limit for PDF generation
+        $current_limit = ini_get('memory_limit');
+        error_log("PDF: Current memory limit: {$current_limit}");
+        @ini_set('memory_limit', '256M');
+
+        // Increase execution time
+        @set_time_limit(300);
+
         try {
             // Create new PDF document (Landscape A4)
             error_log("PDF: Creating TCPDF instance");
             $pdf = new TCPDF('L', 'mm', 'A4', true, 'UTF-8', false);
+
+            // Disable TCPDF errors to prevent PHP warnings from breaking PDF
+            $pdf->setImageScale(PDF_IMAGE_SCALE_RATIO);
+            $pdf->SetAutoPageBreak(TRUE, 10);
 
             // Set document information
             $pdf->SetCreator('YO&GO Events - ChronoTrack Live Results');
@@ -159,21 +171,30 @@ class ChronoTrack_PDF_Generator {
         $right_margin = 10;
 
         // Logo 1 (YOGO) - rightmost position
-        $logo1_width = 80;
-        $logo1_height = 35;
-        $logo1_x = $page_width - $right_margin - $logo1_width;
-        $logo1_y = 10;
+        // Skip logos if causing errors - PDF generation should not fail because of logos
+        try {
+            $logo1_width = 80;
+            $logo1_height = 35;
+            $logo1_x = $page_width - $right_margin - $logo1_width;
+            $logo1_y = 10;
 
-        $this->add_logo($pdf, self::YOGO_LOGO_URL, $logo1_x, $logo1_y, $logo1_width, $logo1_height);
+            $this->add_logo($pdf, self::YOGO_LOGO_URL, $logo1_x, $logo1_y, $logo1_width, $logo1_height);
+        } catch (Exception $e) {
+            error_log("PDF: Failed to add YOGO logo, continuing without it: " . $e->getMessage());
+        }
 
         // Logo 2 (Event logo) - left of YOGO logo
         if (!empty($event->event_logo_url)) {
-            $logo2_width = 80;
-            $logo2_height = 35;
-            $logo2_x = $logo1_x - $logo2_width - 5; // 5mm gap between logos
-            $logo2_y = 10;
+            try {
+                $logo2_width = 80;
+                $logo2_height = 35;
+                $logo2_x = $logo1_x - $logo2_width - 5; // 5mm gap between logos
+                $logo2_y = 10;
 
-            $this->add_logo($pdf, $event->event_logo_url, $logo2_x, $logo2_y, $logo2_width, $logo2_height);
+                $this->add_logo($pdf, $event->event_logo_url, $logo2_x, $logo2_y, $logo2_width, $logo2_height);
+            } catch (Exception $e) {
+                error_log("PDF: Failed to add event logo, continuing without it: " . $e->getMessage());
+            }
         }
 
         // Add some space after header

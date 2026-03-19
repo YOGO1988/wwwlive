@@ -1,118 +1,131 @@
 /**
- * Country name to flag emoji mapping
+ * Country name to ISO code mapping for flag icons
  * ChronoTrack API returns full country names, not ISO codes
  */
 
 const CountryFlags = {
-    // Mapping of country names to flag emojis
-    countryToFlag: {
+    // Mapping of country names to ISO 3166-1 alpha-2 codes (lowercase)
+    countryToCode: {
         // Polish names
-        'Polska': '🇵🇱',
-        'Poland': '🇵🇱',
+        'Polska': 'pl',
+        'Poland': 'pl',
 
         // Common countries
-        'Germany': '🇩🇪',
-        'Niemcy': '🇩🇪',
-        'United States': '🇺🇸',
-        'USA': '🇺🇸',
-        'Stany Zjednoczone': '🇺🇸',
-        'United Kingdom': '🇬🇧',
-        'UK': '🇬🇧',
-        'Wielka Brytania': '🇬🇧',
-        'France': '🇫🇷',
-        'Francja': '🇫🇷',
-        'Italy': '🇮🇹',
-        'Włochy': '🇮🇹',
-        'Spain': '🇪🇸',
-        'Hiszpania': '🇪🇸',
-        'Czech Republic': '🇨🇿',
-        'Czechy': '🇨🇿',
-        'Slovakia': '🇸🇰',
-        'Słowacja': '🇸🇰',
-        'Ukraine': '🇺🇦',
-        'Ukraina': '🇺🇦',
-        'Belarus': '🇧🇾',
-        'Białoruś': '🇧🇾',
-        'Lithuania': '🇱🇹',
-        'Litwa': '🇱🇹',
-        'Latvia': '🇱🇻',
-        'Łotwa': '🇱🇻',
-        'Estonia': '🇪🇪',
-        'Estonia': '🇪🇪',
-        'Russia': '🇷🇺',
-        'Rosja': '🇷🇺',
-        'Netherlands': '🇳🇱',
-        'Holandia': '🇳🇱',
-        'Belgium': '🇧🇪',
-        'Belgia': '🇧🇪',
-        'Switzerland': '🇨🇭',
-        'Szwajcaria': '🇨🇭',
-        'Austria': '🇦🇹',
-        'Austria': '🇦🇹',
-        'Hungary': '🇭🇺',
-        'Węgry': '🇭🇺',
-        'Romania': '🇷🇴',
-        'Rumunia': '🇷🇴',
-        'Bulgaria': '🇧🇬',
-        'Bułgaria': '🇧🇬',
-        'Sweden': '🇸🇪',
-        'Szwecja': '🇸🇪',
-        'Norway': '🇳🇴',
-        'Norwegia': '🇳🇴',
-        'Denmark': '🇩🇰',
-        'Dania': '🇩🇰',
-        'Finland': '🇫🇮',
-        'Finlandia': '🇫🇮',
-        'Portugal': '🇵🇹',
-        'Portugalia': '🇵🇹',
-        'Greece': '🇬🇷',
-        'Grecja': '🇬🇷',
-        'Ireland': '🇮🇪',
-        'Irlandia': '🇮🇪',
-        'Canada': '🇨🇦',
-        'Kanada': '🇨🇦',
-        'Australia': '🇦🇺',
-        'Australia': '🇦🇺',
-        'New Zealand': '🇳🇿',
-        'Nowa Zelandia': '🇳🇿',
-        'Japan': '🇯🇵',
-        'Japonia': '🇯🇵',
-        'China': '🇨🇳',
-        'Chiny': '🇨🇳',
-        'South Korea': '🇰🇷',
-        'Korea Południowa': '🇰🇷',
-        'Brazil': '🇧🇷',
-        'Brazylia': '🇧🇷',
-        'Argentina': '🇦🇷',
-        'Argentyna': '🇦🇷',
-        'Mexico': '🇲🇽',
-        'Meksyk': '🇲🇽',
-        'South Africa': '🇿🇦',
-        'RPA': '🇿🇦',
-        'Kenya': '🇰🇪',
-        'Kenia': '🇰🇪',
-        'Ethiopia': '🇪🇹',
-        'Etiopia': '🇪🇹',
+        'Germany': 'de',
+        'Niemcy': 'de',
+        'United States': 'us',
+        'USA': 'us',
+        'Stany Zjednoczone': 'us',
+        'United Kingdom': 'gb',
+        'UK': 'gb',
+        'Wielka Brytania': 'gb',
+        'France': 'fr',
+        'Francja': 'fr',
+        'Italy': 'it',
+        'Włochy': 'it',
+        'Spain': 'es',
+        'Hiszpania': 'es',
+        'Czech Republic': 'cz',
+        'Czechy': 'cz',
+        'Slovakia': 'sk',
+        'Słowacja': 'sk',
+        'Ukraine': 'ua',
+        'Ukraina': 'ua',
+        'Belarus': 'by',
+        'Białoruś': 'by',
+        'Lithuania': 'lt',
+        'Litwa': 'lt',
+        'Latvia': 'lv',
+        'Łotwa': 'lv',
+        'Estonia': 'ee',
+        'Eesti': 'ee',
+        'Russia': 'ru',
+        'Rosja': 'ru',
+        'Netherlands': 'nl',
+        'Holandia': 'nl',
+        'Belgium': 'be',
+        'Belgia': 'be',
+        'Switzerland': 'ch',
+        'Szwajcaria': 'ch',
+        'Austria': 'at',
+        'Hungary': 'hu',
+        'Węgry': 'hu',
+        'Romania': 'ro',
+        'Rumunia': 'ro',
+        'Bulgaria': 'bg',
+        'Bułgaria': 'bg',
+        'Sweden': 'se',
+        'Szwecja': 'se',
+        'Norway': 'no',
+        'Norwegia': 'no',
+        'Denmark': 'dk',
+        'Dania': 'dk',
+        'Finland': 'fi',
+        'Finlandia': 'fi',
+        'Portugal': 'pt',
+        'Portugalia': 'pt',
+        'Greece': 'gr',
+        'Grecja': 'gr',
+        'Ireland': 'ie',
+        'Irlandia': 'ie',
+        'Canada': 'ca',
+        'Kanada': 'ca',
+        'Australia': 'au',
+        'New Zealand': 'nz',
+        'Nowa Zelandia': 'nz',
+        'Japan': 'jp',
+        'Japonia': 'jp',
+        'China': 'cn',
+        'Chiny': 'cn',
+        'South Korea': 'kr',
+        'Korea Południowa': 'kr',
+        'Brazil': 'br',
+        'Brazylia': 'br',
+        'Argentina': 'ar',
+        'Argentyna': 'ar',
+        'Mexico': 'mx',
+        'Meksyk': 'mx',
+        'South Africa': 'za',
+        'RPA': 'za',
+        'Kenya': 'ke',
+        'Kenia': 'ke',
+        'Ethiopia': 'et',
+        'Etiopia': 'et',
     },
 
     /**
-     * Get flag emoji for country name
+     * Get flag HTML for country name
      * @param {string} countryName - Full country name (English or Polish)
-     * @returns {string} Flag emoji or empty string if not found
+     * @returns {string} HTML with flag icon or empty string if not found
      */
     getFlag: function(countryName) {
         if (!countryName) return '';
 
+        const code = this.getCountryCode(countryName);
+        if (!code) return '';
+
+        // Return HTML with flag CSS class
+        return `<span class="country-flag flag-${code}" title="${countryName}"></span>`;
+    },
+
+    /**
+     * Get ISO country code for country name
+     * @param {string} countryName - Full country name (English or Polish)
+     * @returns {string} ISO 3166-1 alpha-2 code (lowercase) or empty string
+     */
+    getCountryCode: function(countryName) {
+        if (!countryName) return '';
+
         // Try exact match
-        if (this.countryToFlag[countryName]) {
-            return this.countryToFlag[countryName];
+        if (this.countryToCode[countryName]) {
+            return this.countryToCode[countryName];
         }
 
         // Try case-insensitive match
         const lowerCountry = countryName.toLowerCase();
-        for (const [name, flag] of Object.entries(this.countryToFlag)) {
+        for (const [name, code] of Object.entries(this.countryToCode)) {
             if (name.toLowerCase() === lowerCountry) {
-                return flag;
+                return code;
             }
         }
 
@@ -121,12 +134,15 @@ const CountryFlags = {
     },
 
     /**
-     * Get flag with fallback (shows 🌍 if country not found)
+     * Get flag with fallback (shows globe if country not found)
      * @param {string} countryName - Full country name
-     * @returns {string} Flag emoji or globe emoji
+     * @returns {string} HTML with flag icon or globe emoji
      */
     getFlagWithFallback: function(countryName) {
         const flag = this.getFlag(countryName);
-        return flag || '🌍'; // Globe emoji as fallback
+        if (flag) return flag;
+
+        // Fallback: globe emoji
+        return '<span class="flag-unknown" title="Unknown country">🌍</span>';
     }
 };

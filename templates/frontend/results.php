@@ -81,11 +81,11 @@ $columns = $db->get_event_columns($event->event_id, true);
                     </div>
                     <div class="chronotrack-stat-item">
                         <span class="chronotrack-stat-label" style="color: #666; font-weight: 600;">NA TRASIE:</span>
-                        <span class="chronotrack-stat-value" id="stat-on-course" style="font-weight: 700; color: #ff9800;">-</span>
+                        <span class="chronotrack-stat-value" id="stat-on-course" style="font-weight: 700; color: #2196F3;">-</span>
                     </div>
                     <div class="chronotrack-stat-item">
                         <span class="chronotrack-stat-label" style="color: #666; font-weight: 600;">UKOŃCZYŁO:</span>
-                        <span class="chronotrack-stat-value" id="stat-finished" style="font-weight: 700; color: #4caf50;">-</span>
+                        <span class="chronotrack-stat-value" id="stat-finished" style="font-weight: 700; color: #2196F3;">-</span>
                     </div>
                 </div>
             </div>

@@ -215,9 +215,9 @@ body.chronotrack-page .container {
 }
 
 .chronotrack-distance-filter-btn.active {
-    background: #28a745;
+    background: #0066cc;
     color: #fff;
-    border-color: #28a745;
+    border-color: #0066cc;
 }
 
 /* Filters */
@@ -229,7 +229,7 @@ body.chronotrack-page .container {
 }
 
 .chronotrack-search {
-    width: 250px;
+    width: 375px;
     max-width: 100%;
     padding: 10px 15px;
     border: 1px solid #ddd;
@@ -243,6 +243,7 @@ body.chronotrack-page .container {
     border-radius: 4px;
     font-size: 14px;
     background: #fff;
+    margin-left: auto;
 }
 
 /* Views */
