@@ -280,11 +280,14 @@ class ChronoTrack_PDF_Generator {
                 line-height: 1.3;
                 background-color: #FFFFFF;
             }
+            tr {
+                page-break-inside: avoid !important;
+            }
         </style>';
 
-        $html .= '<table>';
+        $html .= '<table nobr="true">';
 
-        // Table header
+        // Table header - repeat on every page
         $html .= '<thead><tr>';
         foreach ($columns as $col) {
             $html .= '<th>' . htmlspecialchars($col->column_name, ENT_QUOTES, 'UTF-8') . '</th>';
@@ -294,7 +297,8 @@ class ChronoTrack_PDF_Generator {
         // Table body
         $html .= '<tbody>';
         foreach ($results as $result) {
-            $html .= '<tr>';
+            // CRITICAL: Use nobr="true" to prevent row from breaking across pages
+            $html .= '<tr nobr="true">';
             foreach ($columns as $col) {
                 $value = $this->get_column_value($result, $col);
                 $html .= '<td>' . htmlspecialchars($value, ENT_QUOTES, 'UTF-8') . '</td>';
@@ -305,7 +309,7 @@ class ChronoTrack_PDF_Generator {
 
         $html .= '</table>';
 
-        // Write HTML table (TCPDF handles page breaks correctly)
+        // Write HTML table with proper page break handling
         $pdf->writeHTML($html, true, false, true, false, '');
     }
 

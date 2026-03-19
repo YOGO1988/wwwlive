@@ -531,17 +531,29 @@
                     // Format: split_time:IntervalName (np. split_time:5km)
                     if (attr.startsWith('split_time:')) {
                         const intervalName = attr.substring(11); // Remove "split_time:" prefix
-                        if (result.split_times && Array.isArray(result.split_times)) {
+
+                        // CRITICAL FIX: Parse split_times if it's a JSON string
+                        let splitTimes = result.split_times;
+                        if (typeof splitTimes === 'string') {
+                            try {
+                                splitTimes = JSON.parse(splitTimes);
+                            } catch (e) {
+                                console.error('Failed to parse split_times:', e);
+                                return '';
+                            }
+                        }
+
+                        if (splitTimes && Array.isArray(splitTimes)) {
                             // Find split time with matching interval name
-                            const split = result.split_times.find(s =>
+                            const split = splitTimes.find(s =>
                                 s.interval_name === intervalName ||
                                 s.name === intervalName
                             );
-                            if (split && split.formatted_time) {
-                                return split.formatted_time;
+                            if (split) {
+                                return split.formatted_time || split.time || '';
                             }
                         }
-                        return '-'; // No split time found
+                        return ''; // No split time found - return empty (not dash)
                     }
 
                     // Handle special case for full_name
