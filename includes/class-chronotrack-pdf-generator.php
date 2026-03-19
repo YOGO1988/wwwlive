@@ -341,6 +341,32 @@ class ChronoTrack_PDF_Generator {
 
         // Try each attribute in order until we find a value
         foreach ($attributes as $attr) {
+            // CRITICAL: Handle split_time:IntervalName attributes
+            if (strpos($attr, 'split_time:') === 0) {
+                $interval_name = substr($attr, 11); // Remove 'split_time:' prefix
+
+                if (!empty($result->split_times)) {
+                    $split_times = is_string($result->split_times)
+                        ? json_decode($result->split_times, true)
+                        : $result->split_times;
+
+                    if (is_array($split_times)) {
+                        foreach ($split_times as $split) {
+                            if (isset($split['interval_name']) && $split['interval_name'] === $interval_name) {
+                                // Return formatted time if available, otherwise raw time
+                                if (!empty($split['formatted_time'])) {
+                                    return $split['formatted_time'];
+                                } elseif (!empty($split['time'])) {
+                                    return $split['time'];
+                                }
+                            }
+                        }
+                    }
+                }
+                // If no split time found, continue to next attribute
+                continue;
+            }
+
             // Handle special case for full_name
             if ($attr === 'full_name' || $attr === 'athlete_last_name,athlete_first_name') {
                 $last_name = isset($result->last_name) ? trim($result->last_name) : '';
@@ -353,6 +379,24 @@ class ChronoTrack_PDF_Generator {
                 if (isset($result->full_name)) {
                     return $result->full_name;
                 }
+            }
+
+            // Handle pace/tempo (formatted_pace or pace_formatted or pace)
+            if ($attr === 'formatted_pace' || $attr === 'pace_formatted' || $attr === 'pace') {
+                // Try formatted_pace first
+                if (!empty($result->formatted_pace)) {
+                    return $result->formatted_pace;
+                }
+                // Then pace_formatted
+                if (!empty($result->pace_formatted)) {
+                    return $result->pace_formatted;
+                }
+                // Then raw pace
+                if (!empty($result->pace)) {
+                    return $result->pace;
+                }
+                // If no pace found, continue to next attribute
+                continue;
             }
 
             // Handle category_position with bracket_positions fallback
@@ -398,8 +442,8 @@ class ChronoTrack_PDF_Generator {
             if (preg_match('/(msc|mce|nr|start|kat)/i', $name_lower)) {
                 $proportions[] = 0.5;
             }
-            // Times and pace - medium
-            else if (preg_match('/(czas|tempo|min|km|brutto|netto)/i', $name_lower)) {
+            // Times, pace, and split times - medium
+            else if (preg_match('/(czas|tempo|min|km|brutto|netto|pk|pk\d|meta)/i', $name_lower)) {
                 $proportions[] = 0.9;
             }
             // Names - wider
