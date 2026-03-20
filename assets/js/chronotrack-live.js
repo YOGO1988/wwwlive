@@ -1019,7 +1019,7 @@
             });
 
             // Add "Generuj PDF" button if there's a selected distance
-            // CRITICAL: Use margin-left: auto with flexbox to keep button on the right edge
+            // CRITICAL: Fixed width prevents layout shift when text changes to "Generowanie PDF..."
             if (this.selectedDistance) {
                 const pdfBtn = $('<button>')
                     .addClass('chronotrack-generate-pdf-btn')
@@ -1027,13 +1027,15 @@
                     .attr('data-distance', this.selectedDistance)
                     .css({
                         'margin-left': 'auto',  // Push to right edge with flexbox
+                        'min-width': '180px',   // Fixed width prevents jumping
                         'background': '#0066cc',
                         'color': '#fff',
                         'border': '1px solid #0066cc',
                         'padding': '8px 16px',
                         'border-radius': '4px',
                         'cursor': 'pointer',
-                        'font-size': '14px'
+                        'font-size': '14px',
+                        'white-space': 'nowrap'  // Prevent text wrapping
                     });
                 container.append(pdfBtn);
             }

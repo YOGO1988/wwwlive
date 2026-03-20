@@ -8,6 +8,29 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+/**
+ * Custom TCPDF class with automatic footer on every page
+ */
+class ChronoTrack_PDF extends TCPDF {
+
+    public function Footer() {
+        // Position at 15 mm from bottom
+        $this->SetY(-15);
+
+        // Set font
+        $this->SetFont('dejavusans', '', 7);
+        $this->SetTextColor(0, 0, 0);
+
+        // Footer text on left
+        $footer_text = 'Wygenerował: YO&GO Events - Twój pomiar czasu www.yogoevents.pl';
+        $this->Cell(190, 5, $footer_text, 0, 0, 'L');
+
+        // Page number on right
+        $page_num = 'Strona ' . $this->getAliasNumPage() . ' / ' . $this->getAliasNbPages();
+        $this->Cell(87, 5, $page_num, 0, 0, 'R');
+    }
+}
+
 class ChronoTrack_PDF_Generator {
 
     /**
@@ -229,13 +252,13 @@ class ChronoTrack_PDF_Generator {
         @set_time_limit(300);
 
         try {
-            // Create new PDF document (Landscape A4)
+            // Create new PDF document (Landscape A4) with custom footer
             error_log("PDF: Creating TCPDF instance");
-            $pdf = new TCPDF('L', 'mm', 'A4', true, 'UTF-8', false);
+            $pdf = new ChronoTrack_PDF('L', 'mm', 'A4', true, 'UTF-8', false);
 
             // Disable TCPDF errors to prevent PHP warnings from breaking PDF
             $pdf->setImageScale(PDF_IMAGE_SCALE_RATIO);
-            $pdf->SetAutoPageBreak(TRUE, 10);
+            $pdf->SetAutoPageBreak(TRUE, 15); // 15mm bottom margin for footer
 
             // Set document information
             $pdf->SetCreator('YO&GO Events - ChronoTrack Live Results');
@@ -243,9 +266,9 @@ class ChronoTrack_PDF_Generator {
             $pdf->SetTitle($event->event_name . ' - ' . $distance);
             $pdf->SetSubject('Wyniki zawodów');
 
-            // Remove default header/footer
+            // Remove default header but KEEP custom footer
             $pdf->setPrintHeader(false);
-            $pdf->setPrintFooter(false);
+            $pdf->setPrintFooter(true);  // CRITICAL: Enable footer on all pages
 
             // Set margins
             $pdf->SetMargins(10, 28, 10); // left, top, right
@@ -320,12 +343,12 @@ class ChronoTrack_PDF_Generator {
         $right_margin = 10;
 
         // Logo 1 (YOGO) - rightmost position
-        // Skip logos if causing errors - PDF generation should not fail because of logos
+        // CRITICAL: Match header height (max 12mm to fit in header area)
         try {
-            $logo1_width = 40; // Reduced from 80 to 40mm
-            $logo1_height = 18; // Reduced from 35 to 18mm (proportional)
+            $logo1_height = 12; // Match header height
+            $logo1_width = 26;  // Proportional width (approx 2.2:1 ratio)
             $logo1_x = $page_width - $right_margin - $logo1_width;
-            $logo1_y = 8; // Moved up slightly from 10 to 8mm
+            $logo1_y = 10; // Align with header text
 
             $this->add_logo($pdf, self::YOGO_LOGO_URL, $logo1_x, $logo1_y, $logo1_width, $logo1_height);
         } catch (Exception $e) {
@@ -335,10 +358,10 @@ class ChronoTrack_PDF_Generator {
         // Logo 2 (Event logo) - left of YOGO logo
         if (!empty($event->event_logo_url)) {
             try {
-                $logo2_width = 40; // Reduced from 80 to 40mm
-                $logo2_height = 18; // Reduced from 35 to 18mm
+                $logo2_height = 12; // Match header height
+                $logo2_width = 26;  // Proportional width
                 $logo2_x = $logo1_x - $logo2_width - 5; // 5mm gap between logos
-                $logo2_y = 8; // Moved up from 10 to 8mm
+                $logo2_y = 10; // Align with header text
 
                 $this->add_logo($pdf, $event->event_logo_url, $logo2_x, $logo2_y, $logo2_width, $logo2_height);
             } catch (Exception $e) {
@@ -415,6 +438,7 @@ class ChronoTrack_PDF_Generator {
         }
 
         // Build HTML table with explicit column widths
+        // CRITICAL: Only horizontal borders (top/bottom), NO vertical borders
         $html = '<style>
             table {
                 border-collapse: collapse;
@@ -429,13 +453,15 @@ class ChronoTrack_PDF_Generator {
                 font-weight: bold;
                 text-align: center;
                 padding: 3px 2px;
-                border: 1px solid #000000;
+                border-top: 1px solid #000000;
+                border-bottom: 1px solid #000000;
                 line-height: 1.2;
             }
             td {
                 text-align: center;
                 padding: 2px 1px;
-                border: 1px solid #CCCCCC;
+                border-top: 0.5px solid #CCCCCC;
+                border-bottom: 0.5px solid #CCCCCC;
                 line-height: 1.3;
             }
             tr {
@@ -475,46 +501,13 @@ class ChronoTrack_PDF_Generator {
         $html .= '</table>';
 
         // Keep auto page break enabled for multi-page tables
-        $pdf->SetAutoPageBreak(true, 20); // Increased bottom margin for footer
+        // Footer is automatically added by ChronoTrack_PDF::Footer() on every page
+        $pdf->SetAutoPageBreak(true, 20); // 20mm bottom margin for footer
 
         // Write HTML table
         $pdf->writeHTML($html, true, false, true, false, '');
 
-        // CRITICAL: Add footer at bottom of CURRENT page (after table ends)
-        $currentY = $pdf->GetY();
-        $pageHeight = $pdf->getPageHeight();
-
-        // Only add footer if we're not too close to bottom (leave space)
-        if ($currentY < ($pageHeight - 25)) {
-            $pdf->SetY($pageHeight - 20);
-        }
-
-        // Footer
-        $pdf->SetFont('dejavusans', '', 7);
-        $pdf->SetTextColor(0, 0, 0);
-        $footer_text = 'Wygenerował: YO&GO Events - Twój pomiar czasu www.yogoevents.pl';
-        $pdf->Cell(190, 5, $footer_text, 0, 0, 'L');
-        $page_num = 'Strona ' . $pdf->getAliasNumPage() . ' / ' . $pdf->getAliasNbPages();
-        $pdf->Cell(87, 5, $page_num, 0, 0, 'R');
-    }
-
-    /**
-     * Add footer to PDF
-     */
-    private function add_footer($pdf) {
-        // This will be called by TCPDF's footer mechanism
-        // For now, we'll add it manually at the end of content
-        $pdf->SetY(-15);
-        $pdf->SetFont('dejavusans', '', 7);
-        $pdf->SetTextColor(0, 0, 0);
-
-        // Footer text
-        $footer_text = 'Wygenerował: YO&GO Events - Twój pomiar czasu www.yogoevents.pl';
-        $pdf->Cell(0, 10, $footer_text, 0, 0, 'L');
-
-        // Page number
-        $page_num = 'Strona ' . $pdf->getAliasNumPage() . ' / ' . $pdf->getAliasNbPages();
-        $pdf->Cell(0, 10, $page_num, 0, 0, 'R');
+        // Footer is added automatically by TCPDF on all pages (no manual footer needed)
     }
 
     /**
