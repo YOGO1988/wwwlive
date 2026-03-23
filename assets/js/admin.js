@@ -176,25 +176,43 @@
         }
 
         function getAvailableAttributes() {
-            const attributes = [
-                'overall_place', 'position', 'results_rank',
-                'entry_bib', 'bib_number', 'results_bib',
-                'full_name', 'athlete_last_name', 'athlete_first_name',
-                'athlete_city', 'city',
-                'club', 'athlete_club',
-                'age', 'entry_race_age', 'results_age',
-                'category', 'bracket_name', 'results_primary_bracket_name',
-                'category_position', 'division_place', 'results_division_rank',
-                'gender_position', 'results_sex_rank',
-                'finish_time', 'gun_time', 'formatted_gun_time',
-                'net_time', 'formatted_net_time', 'results_time',
-                'pace', 'formatted_pace', 'results_pace',
-                'gender', 'athlete_sex', 'results_sex',
-                'race_name', 'results_race_name',
-                'status', 'results_status'
-            ];
+            // CRITICAL: Get attributes from existing select (populated by PHP with split_time)
+            // instead of hardcoded list
+            const existingOptions = [];
 
-            return attributes.map(attr =>
+            // Find first existing select to get all available options
+            const firstSelect = $('.chronotrack-attr-select').first();
+            if (firstSelect.length > 0) {
+                firstSelect.find('option').each(function() {
+                    const val = $(this).val();
+                    if (val) {  // Skip empty option
+                        existingOptions.push(val);
+                    }
+                });
+            }
+
+            // Fallback to hardcoded list if no existing select found (shouldn't happen)
+            if (existingOptions.length === 0) {
+                existingOptions.push(
+                    'overall_place', 'position', 'results_rank',
+                    'entry_bib', 'bib_number', 'results_bib',
+                    'full_name', 'athlete_last_name', 'athlete_first_name',
+                    'athlete_city', 'city',
+                    'club', 'athlete_club',
+                    'age', 'entry_race_age', 'results_age',
+                    'category', 'bracket_name', 'results_primary_bracket_name',
+                    'category_position', 'division_place', 'results_division_rank',
+                    'gender_position', 'results_sex_rank',
+                    'finish_time', 'gun_time', 'formatted_gun_time',
+                    'net_time', 'formatted_net_time', 'results_time',
+                    'pace', 'formatted_pace', 'results_pace',
+                    'gender', 'athlete_sex', 'results_sex',
+                    'race_name', 'results_race_name',
+                    'status', 'results_status'
+                );
+            }
+
+            return existingOptions.map(attr =>
                 `<option value="${escapeHtml(attr)}">${escapeHtml(attr)}</option>`
             ).join('');
         }

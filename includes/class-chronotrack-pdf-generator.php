@@ -76,8 +76,8 @@ if (class_exists('TCPDF')) {
                 }
             }
 
-            // Add space after header
-            $this->Ln(3);
+            // Minimal space after header (closer to data)
+            $this->Ln(1);  // Reduced from 3mm to 1mm
         }
 
         public function Footer() {
