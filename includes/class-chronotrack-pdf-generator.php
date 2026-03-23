@@ -17,9 +17,68 @@ if (file_exists($tcpdf_path)) {
 // Only define custom TCPDF class if TCPDF is loaded
 if (class_exists('TCPDF')) {
     /**
-     * Custom TCPDF class with automatic footer on every page
+     * Custom TCPDF class with automatic header and footer on every page
      */
     class ChronoTrack_PDF extends TCPDF {
+
+        // Store event data for header
+        public $event_name = '';
+        public $event_subtitle = '';
+        public $yogo_logo_url = '';
+        public $event_logo_url = '';
+
+        public function Header() {
+            // Only add header if we have event data
+            if (empty($this->event_name)) {
+                return;
+            }
+
+            // Get current Y position
+            $y = $this->GetY();
+
+            // Event name (orange, bold)
+            $this->SetFont('dejavusans', 'B', 14);
+            $this->SetTextColor(255, 102, 0); // #FF6600 orange
+            $this->Cell(0, 6, mb_strtoupper($this->event_name, 'UTF-8'), 0, 1, 'L');
+
+            // Subtitle: distance, location, date (black)
+            $this->SetFont('dejavusans', '', 11);
+            $this->SetTextColor(0, 0, 0);
+            $this->Cell(0, 5, $this->event_subtitle, 0, 1, 'L');
+
+            // Add logos in top right corner
+            $page_width = $this->getPageWidth();
+            $right_margin = 10;
+
+            // Logo 1 (YOGO) - rightmost position
+            if (!empty($this->yogo_logo_url)) {
+                try {
+                    $logo1_height = 12;
+                    $logo1_width = 26;
+                    $logo1_x = $page_width - $right_margin - $logo1_width;
+                    $logo1_y = $y;
+                    $this->Image($this->yogo_logo_url, $logo1_x, $logo1_y, $logo1_width, $logo1_height, '', '', '', false, 300, '', false, false, 0);
+                } catch (Exception $e) {
+                    // Ignore logo errors
+                }
+            }
+
+            // Logo 2 (Event logo) - left of YOGO logo
+            if (!empty($this->event_logo_url)) {
+                try {
+                    $logo2_height = 12;
+                    $logo2_width = 26;
+                    $logo2_x = $page_width - $right_margin - 26 - 5 - $logo2_width;
+                    $logo2_y = $y;
+                    $this->Image($this->event_logo_url, $logo2_x, $logo2_y, $logo2_width, $logo2_height, '', '', '', false, 300, '', false, false, 0);
+                } catch (Exception $e) {
+                    // Ignore logo errors
+                }
+            }
+
+            // Add space after header
+            $this->Ln(3);
+        }
 
         public function Footer() {
             // Position at 15 mm from bottom
@@ -267,9 +326,32 @@ class ChronoTrack_PDF_Generator {
             // Use custom class if available, otherwise fallback to TCPDF
             if (class_exists('ChronoTrack_PDF')) {
                 $pdf = new ChronoTrack_PDF('L', 'mm', 'A4', true, 'UTF-8', false);
+
+                // Set event data for automatic header
+                $event_date = date_i18n('d.m.Y', strtotime($event->event_date));
+                $location = $event->event_location ?? '';
+                $pdf->event_name = $event->event_name;
+                $pdf->event_subtitle = sprintf('Wyniki OPEN | %s | %s | %s', $distance, $location, $event_date);
+
+                // Download logos to temp files for use in header
+                if (!empty(self::YOGO_LOGO_URL)) {
+                    $temp_yogo = download_url(self::YOGO_LOGO_URL);
+                    if (!is_wp_error($temp_yogo) && file_exists($temp_yogo)) {
+                        $pdf->yogo_logo_url = $temp_yogo;
+                    }
+                }
+                if (!empty($event->event_logo_url)) {
+                    $temp_event = download_url($event->event_logo_url);
+                    if (!is_wp_error($temp_event) && file_exists($temp_event)) {
+                        $pdf->event_logo_url = $temp_event;
+                    }
+                }
+
+                $use_custom_header = true;
                 $use_custom_footer = true;
             } else {
                 $pdf = new TCPDF('L', 'mm', 'A4', true, 'UTF-8', false);
+                $use_custom_header = false;
                 $use_custom_footer = false;
             }
 
@@ -283,9 +365,9 @@ class ChronoTrack_PDF_Generator {
             $pdf->SetTitle($event->event_name . ' - ' . $distance);
             $pdf->SetSubject('Wyniki zawodów');
 
-            // Remove default header but KEEP custom footer
-            $pdf->setPrintHeader(false);
-            $pdf->setPrintFooter($use_custom_footer);  // Enable footer only if custom class available
+            // Enable custom header and footer (will appear on all pages automatically)
+            $pdf->setPrintHeader($use_custom_header);
+            $pdf->setPrintFooter($use_custom_footer);
 
             // Set margins
             $pdf->SetMargins(10, 28, 10); // left, top, right
@@ -295,15 +377,13 @@ class ChronoTrack_PDF_Generator {
             error_log("PDF: Setting font");
             $pdf->SetFont('dejavusans', '', 8);
 
-            // Add a page
+            // Add a page (header and footer added automatically by TCPDF)
             error_log("PDF: Adding first page");
             $pdf->AddPage();
 
-            // Add custom header with logos
-            error_log("PDF: Adding header");
-            $this->add_header($pdf, $event, $distance);
+            // Header and footer are now added automatically on ALL pages via TCPDF Header()/Footer()
 
-            // Add results table (includes footer)
+            // Add results table
             error_log("PDF: Adding results table");
             $this->add_results_table($pdf, $results, $columns);
         } catch (Exception $e) {
@@ -311,8 +391,6 @@ class ChronoTrack_PDF_Generator {
             error_log("PDF: Stack trace: " . $e->getTraceAsString());
             throw $e; // Re-throw to be caught by generate_pdf()
         }
-
-        // Footer is now added inside add_results_table() at the bottom of the last page
 
         // Generate filename
         $filename = $this->get_filename($event, $distance);
@@ -329,6 +407,14 @@ class ChronoTrack_PDF_Generator {
         // Output PDF to file
         $pdf->Output($filepath, 'F');
 
+        // Clean up temp logo files
+        if (isset($pdf->yogo_logo_url) && file_exists($pdf->yogo_logo_url)) {
+            @unlink($pdf->yogo_logo_url);
+        }
+        if (isset($pdf->event_logo_url) && file_exists($pdf->event_logo_url)) {
+            @unlink($pdf->event_logo_url);
+        }
+
         return $filepath;
     }
 
@@ -336,7 +422,7 @@ class ChronoTrack_PDF_Generator {
      * Add custom header with event info and logos
      */
     private function add_header($pdf, $event, $distance) {
-        // Get current Y position
+        // Get current Y position (top margin = 28mm)
         $y = $pdf->GetY();
 
         // Event name (orange, bold)
@@ -355,30 +441,29 @@ class ChronoTrack_PDF_Generator {
         $subtitle = sprintf('Wyniki OPEN | %s | %s | %s', $distance, $location, $event_date);
         $pdf->Cell(0, 5, $subtitle, 0, 1, 'L');
 
-        // Add logos in top right corner
+        // Add logos in top right corner - ALIGNED WITH HEADER TEXT
         $page_width = $pdf->getPageWidth();
         $right_margin = 10;
 
-        // Logo 1 (YOGO) - rightmost position
-        // CRITICAL: Match header height (max 12mm to fit in header area)
+        // Logo 1 (YOGO) - rightmost position, SAME HEIGHT as header text start
         try {
             $logo1_height = 12; // Match header height
             $logo1_width = 26;  // Proportional width (approx 2.2:1 ratio)
             $logo1_x = $page_width - $right_margin - $logo1_width;
-            $logo1_y = 10; // Align with header text
+            $logo1_y = $y;  // CRITICAL: Same Y as header text (not fixed 10mm)
 
             $this->add_logo($pdf, self::YOGO_LOGO_URL, $logo1_x, $logo1_y, $logo1_width, $logo1_height);
         } catch (Exception $e) {
             error_log("PDF: Failed to add YOGO logo, continuing without it: " . $e->getMessage());
         }
 
-        // Logo 2 (Event logo) - left of YOGO logo
+        // Logo 2 (Event logo) - left of YOGO logo, SAME HEIGHT as header text
         if (!empty($event->event_logo_url)) {
             try {
                 $logo2_height = 12; // Match header height
                 $logo2_width = 26;  // Proportional width
                 $logo2_x = $logo1_x - $logo2_width - 5; // 5mm gap between logos
-                $logo2_y = 10; // Align with header text
+                $logo2_y = $y;  // CRITICAL: Same Y as header text
 
                 $this->add_logo($pdf, $event->event_logo_url, $logo2_x, $logo2_y, $logo2_width, $logo2_height);
             } catch (Exception $e) {
@@ -481,6 +566,10 @@ class ChronoTrack_PDF_Generator {
                 border-bottom: 0.5px solid #CCCCCC;
                 line-height: 1.3;
             }
+            .small-text {
+                font-size: 5.5pt;
+                line-height: 1.2;
+            }
             tr {
                 page-break-inside: avoid !important;
             }
@@ -507,9 +596,17 @@ class ChronoTrack_PDF_Generator {
             $html .= '<tr nobr="true" bgcolor="' . $bgcolor . '">';
             foreach ($columns as $index => $col) {
                 $value = $this->get_column_value($result, $col);
+                $escaped_value = htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
+
+                // CRITICAL: Reduce font size for long text (> 25 characters)
+                // Common for long club names like "MKS WIERNA MAŁOGOSZCZ SEKCJA BIEGOWA"
+                if (mb_strlen($value, 'UTF-8') > 25) {
+                    $escaped_value = '<span class="small-text">' . $escaped_value . '</span>';
+                }
+
                 // CRITICAL: Apply same width to data cells as headers
                 $html .= '<td class="col' . $index . '" style="width:' . round($col_widths[$index], 2) . 'mm;">' .
-                         htmlspecialchars($value, ENT_QUOTES, 'UTF-8') . '</td>';
+                         $escaped_value . '</td>';
             }
             $html .= '</tr>';
         }

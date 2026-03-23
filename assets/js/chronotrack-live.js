@@ -1083,8 +1083,9 @@
 
             this.populateFilters(results);  // Update category filter for selected distance
 
-            // Filter results
+            // Filter results and update statistics for this distance
             this.filterResults();
+            this.updateStats();  // CRITICAL: Update statistics for selected distance
         },
 
         checkEventStatusAndStartRefresh: function() {
@@ -1270,10 +1271,16 @@
                 return;
             }
 
-            const started = this.allResults.length; // All results = all who started
+            // CRITICAL: Filter by selected distance
+            let filteredResults = this.allResults;
+            if (this.selectedDistance) {
+                filteredResults = this.allResults.filter(r => r.distance === this.selectedDistance);
+            }
+
+            const started = filteredResults.length; // All results for this distance = all who started
 
             // Count finished (have finish time and it's not empty/dash)
-            const finished = this.allResults.filter(r => {
+            const finished = filteredResults.filter(r => {
                 const time = r.finish_time || r.net_time;
                 return time && time !== '-' && time !== '00:00:00' && time !== '';
             }).length;
@@ -1281,7 +1288,7 @@
             // On course = started - finished (started but not finished yet)
             const onCourse = started - finished;
 
-            console.log('📊 Stats calculated:', {started, finished, onCourse});
+            console.log('📊 Stats calculated for distance "' + (this.selectedDistance || 'ALL') + '":', {started, finished, onCourse});
 
             // Update UI - changed from stat-registered to stat-started
             $('#stat-started').text(started);
