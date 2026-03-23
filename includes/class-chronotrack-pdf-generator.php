@@ -8,26 +8,35 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-/**
- * Custom TCPDF class with automatic footer on every page
- */
-class ChronoTrack_PDF extends TCPDF {
+// Load TCPDF library if available
+$tcpdf_path = dirname(__FILE__) . '/../lib/tcpdf/tcpdf.php';
+if (file_exists($tcpdf_path)) {
+    require_once $tcpdf_path;
+}
 
-    public function Footer() {
-        // Position at 15 mm from bottom
-        $this->SetY(-15);
+// Only define custom TCPDF class if TCPDF is loaded
+if (class_exists('TCPDF')) {
+    /**
+     * Custom TCPDF class with automatic footer on every page
+     */
+    class ChronoTrack_PDF extends TCPDF {
 
-        // Set font
-        $this->SetFont('dejavusans', '', 7);
-        $this->SetTextColor(0, 0, 0);
+        public function Footer() {
+            // Position at 15 mm from bottom
+            $this->SetY(-15);
 
-        // Footer text on left
-        $footer_text = 'Wygenerował: YO&GO Events - Twój pomiar czasu www.yogoevents.pl';
-        $this->Cell(190, 5, $footer_text, 0, 0, 'L');
+            // Set font
+            $this->SetFont('dejavusans', '', 7);
+            $this->SetTextColor(0, 0, 0);
 
-        // Page number on right
-        $page_num = 'Strona ' . $this->getAliasNumPage() . ' / ' . $this->getAliasNbPages();
-        $this->Cell(87, 5, $page_num, 0, 0, 'R');
+            // Footer text on left
+            $footer_text = 'Wygenerował: YO&GO Events - Twój pomiar czasu www.yogoevents.pl';
+            $this->Cell(190, 5, $footer_text, 0, 0, 'L');
+
+            // Page number on right
+            $page_num = 'Strona ' . $this->getAliasNumPage() . ' / ' . $this->getAliasNbPages();
+            $this->Cell(87, 5, $page_num, 0, 0, 'R');
+        }
     }
 }
 
@@ -254,7 +263,15 @@ class ChronoTrack_PDF_Generator {
         try {
             // Create new PDF document (Landscape A4) with custom footer
             error_log("PDF: Creating TCPDF instance");
-            $pdf = new ChronoTrack_PDF('L', 'mm', 'A4', true, 'UTF-8', false);
+
+            // Use custom class if available, otherwise fallback to TCPDF
+            if (class_exists('ChronoTrack_PDF')) {
+                $pdf = new ChronoTrack_PDF('L', 'mm', 'A4', true, 'UTF-8', false);
+                $use_custom_footer = true;
+            } else {
+                $pdf = new TCPDF('L', 'mm', 'A4', true, 'UTF-8', false);
+                $use_custom_footer = false;
+            }
 
             // Disable TCPDF errors to prevent PHP warnings from breaking PDF
             $pdf->setImageScale(PDF_IMAGE_SCALE_RATIO);
@@ -268,7 +285,7 @@ class ChronoTrack_PDF_Generator {
 
             // Remove default header but KEEP custom footer
             $pdf->setPrintHeader(false);
-            $pdf->setPrintFooter(true);  // CRITICAL: Enable footer on all pages
+            $pdf->setPrintFooter($use_custom_footer);  // Enable footer only if custom class available
 
             // Set margins
             $pdf->SetMargins(10, 28, 10); // left, top, right
