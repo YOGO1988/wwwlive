@@ -368,8 +368,8 @@ class ChronoTrack_PDF_Generator {
             $pdf->setPrintHeader($use_custom_header);
             $pdf->setPrintFooter($use_custom_footer);
 
-            // Set margins
-            $pdf->SetMargins(10, 28, 10); // left, top, right
+            // Set margins - REDUCED top margin from 28mm to 16mm
+            $pdf->SetMargins(10, 16, 10); // left, top, right
             $pdf->SetAutoPageBreak(true, 15); // bottom margin
 
             // Set font for Polish characters
