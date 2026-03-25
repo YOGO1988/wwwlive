@@ -36,15 +36,15 @@ if (class_exists('TCPDF')) {
             // Get current Y position
             $y = $this->GetY();
 
-            // Event name (orange, bold)
+            // Event name (orange, bold) - reduced height
             $this->SetFont('dejavusans', 'B', 14);
             $this->SetTextColor(255, 102, 0); // #FF6600 orange
-            $this->Cell(0, 6, mb_strtoupper($this->event_name, 'UTF-8'), 0, 1, 'L');
+            $this->Cell(0, 5, mb_strtoupper($this->event_name, 'UTF-8'), 0, 1, 'L');  // 5mm (was 6mm)
 
-            // Subtitle: distance, location, date (black)
+            // Subtitle: distance, location, date (black) - reduced height
             $this->SetFont('dejavusans', '', 11);
             $this->SetTextColor(0, 0, 0);
-            $this->Cell(0, 5, $this->event_subtitle, 0, 1, 'L');
+            $this->Cell(0, 4, $this->event_subtitle, 0, 1, 'L');  // 4mm (was 5mm)
 
             // Add logos in top right corner
             $page_width = $this->getPageWidth();
@@ -76,8 +76,7 @@ if (class_exists('TCPDF')) {
                 }
             }
 
-            // Minimal space after header (closer to data)
-            $this->Ln(1);  // Reduced from 3mm to 1mm
+            // NO extra space after header - data starts immediately
         }
 
         public function Footer() {
