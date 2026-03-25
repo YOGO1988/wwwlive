@@ -760,6 +760,7 @@
         updateSplitTimeColumnVisibility: function() {
             // Hide split_time columns that have no data for currently visible rows
             if (!this.columns || this.columns.length === 0) {
+                console.log('⚠️ No columns configured, skipping column visibility update');
                 return; // No dynamic columns configured
             }
 
@@ -769,8 +770,10 @@
 
             const thead = tbody.closest('table').find('thead');
 
+            console.log('🔍 Checking split_time column visibility for', this.columns.length, 'columns');
+
             // For each column, check if it's a split_time column and if any visible row has data
-            this.columns.forEach((column, colIndex) => {
+            this.columns.forEach((column) => {
                 const isSplitTimeColumn = column.api_attributes &&
                     column.api_attributes.some(attr => attr.startsWith('split_time:'));
 
@@ -778,28 +781,35 @@
                     return; // Not a split_time column, keep visible
                 }
 
+                const columnClass = 'col-' + column.id;
+                console.log('🔍 Checking split_time column:', column.id, 'class:', columnClass);
+
                 // Check if any visible row has data for this split_time column
                 let hasData = false;
                 tbody.find('tr:visible').each(function() {
-                    const cell = $(this).find('td').eq(colIndex);
+                    const cell = $(this).find('.' + columnClass);
                     const cellText = cell.text().trim();
                     // Check if cell has actual time data (not empty, not '-')
                     if (cellText && cellText !== '-' && cellText !== '') {
                         hasData = true;
+                        console.log('✅ Column', columnClass, 'has data:', cellText);
                         return false; // Break loop
                     }
                 });
 
                 // Show/hide column header and all cells
-                const columnClass = 'col-' + column.id;
                 if (hasData) {
+                    console.log('✅ Showing column:', columnClass);
                     thead.find('.' + columnClass).show();
                     tbody.find('.' + columnClass).show();
                 } else {
+                    console.log('❌ Hiding empty column:', columnClass);
                     thead.find('.' + columnClass).hide();
                     tbody.find('.' + columnClass).hide();
                 }
             });
+
+            console.log('✅ Column visibility update complete');
         },
 
         showAllSplitTimeColumns: function() {
