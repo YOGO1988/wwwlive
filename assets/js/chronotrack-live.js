@@ -694,6 +694,7 @@
                 const row = $(this);
                 const name = row.find('.col-name, .col-full_name').text().toLowerCase();
                 const bib = row.find('.col-bib, .col-entry_bib').text().toLowerCase();
+                const club = row.find('.col-club').text().toLowerCase();
                 const rowCategory = row.find('.col-category').text();
                 const rowDistance = row.attr('data-distance') || '';
 
@@ -710,8 +711,8 @@
 
                 let show = true;
 
-                // Search filter
-                if (searchTerm && !name.includes(searchTerm) && !bib.includes(searchTerm)) {
+                // Search filter - search by name, bib number, OR club name
+                if (searchTerm && !name.includes(searchTerm) && !bib.includes(searchTerm) && !club.includes(searchTerm)) {
                     show = false;
                 }
 
