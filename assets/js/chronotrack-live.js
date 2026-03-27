@@ -1635,21 +1635,10 @@
                     console.log('✅ PDF generation response:', response);
 
                     if (response.success) {
-                        // Create download link
-                        const downloadLink = $('<a>')
-                            .attr('href', response.data.download_url)
-                            .attr('download', response.data.filename)
-                            .css('display', 'none')
-                            .appendTo('body');
+                        // Open PDF in new tab for preview (user can download from there)
+                        window.open(response.data.download_url, '_blank');
 
-                        // Trigger download
-                        downloadLink[0].click();
-
-                        // Clean up
-                        setTimeout(() => downloadLink.remove(), 100);
-
-                        // Show success message
-                        alert('PDF wygenerowany pomyślnie! Pobieranie rozpoczęte.');
+                        console.log('✅ PDF opened in new tab:', response.data.download_url);
                     } else {
                         alert('Błąd: ' + (response.data.message || 'Nie udało się wygenerować PDF.'));
                     }

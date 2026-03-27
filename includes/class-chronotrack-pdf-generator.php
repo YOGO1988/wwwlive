@@ -24,8 +24,9 @@ if (class_exists('TCPDF')) {
         // Store event data for header
         public $event_name = '';
         public $event_subtitle = '';
-        public $yogo_logo_url = '';
-        public $event_logo_url = '';
+        public $yogo_logo_url = '';      // ALWAYS shown (rightmost)
+        public $event_logo_url = '';     // Optional (middle)
+        public $sponsor_logo_url = '';   // Optional (leftmost)
 
         public function Header() {
             // Only add header if we have event data
@@ -47,30 +48,41 @@ if (class_exists('TCPDF')) {
             $this->Cell(0, 4, $this->event_subtitle, 0, 1, 'L');  // 4mm (was 5mm)
 
             // Add logos in top right corner
+            // Order from right to left: YOGO (always) -> Event (optional) -> Sponsor (optional)
             $page_width = $this->getPageWidth();
             $right_margin = 10;
+            $logo_width = 26;
+            $logo_height = 12;
+            $logo_spacing = 5;
+            $current_x = $page_width - $right_margin;
 
-            // Logo 1 (YOGO) - rightmost position
+            // Logo 1 (YOGO) - rightmost position (ALWAYS shown)
             if (!empty($this->yogo_logo_url)) {
                 try {
-                    $logo1_height = 12;
-                    $logo1_width = 26;
-                    $logo1_x = $page_width - $right_margin - $logo1_width;
-                    $logo1_y = $y;
-                    $this->Image($this->yogo_logo_url, $logo1_x, $logo1_y, $logo1_width, $logo1_height, '', '', '', false, 300, '', false, false, 0);
+                    $current_x -= $logo_width;
+                    $this->Image($this->yogo_logo_url, $current_x, $y, $logo_width, $logo_height, '', '', '', false, 300, '', false, false, 0);
+                    $current_x -= $logo_spacing;
                 } catch (Exception $e) {
                     // Ignore logo errors
                 }
             }
 
-            // Logo 2 (Event logo) - left of YOGO logo
+            // Logo 2 (Event logo) - middle position (OPTIONAL)
             if (!empty($this->event_logo_url)) {
                 try {
-                    $logo2_height = 12;
-                    $logo2_width = 26;
-                    $logo2_x = $page_width - $right_margin - 26 - 5 - $logo2_width;
-                    $logo2_y = $y;
-                    $this->Image($this->event_logo_url, $logo2_x, $logo2_y, $logo2_width, $logo2_height, '', '', '', false, 300, '', false, false, 0);
+                    $current_x -= $logo_width;
+                    $this->Image($this->event_logo_url, $current_x, $y, $logo_width, $logo_height, '', '', '', false, 300, '', false, false, 0);
+                    $current_x -= $logo_spacing;
+                } catch (Exception $e) {
+                    // Ignore logo errors
+                }
+            }
+
+            // Logo 3 (Sponsor logo) - leftmost position (OPTIONAL)
+            if (!empty($this->sponsor_logo_url)) {
+                try {
+                    $current_x -= $logo_width;
+                    $this->Image($this->sponsor_logo_url, $current_x, $y, $logo_width, $logo_height, '', '', '', false, 300, '', false, false, 0);
                 } catch (Exception $e) {
                     // Ignore logo errors
                 }
@@ -333,16 +345,27 @@ class ChronoTrack_PDF_Generator {
                 $pdf->event_subtitle = sprintf('Wyniki OPEN | %s | %s | %s', $distance, $location, $event_date);
 
                 // Download logos to temp files for use in header
+                // Logo 1: YOGO (ALWAYS shown)
                 if (!empty(self::YOGO_LOGO_URL)) {
                     $temp_yogo = download_url(self::YOGO_LOGO_URL);
                     if (!is_wp_error($temp_yogo) && file_exists($temp_yogo)) {
                         $pdf->yogo_logo_url = $temp_yogo;
                     }
                 }
-                if (!empty($event->event_logo_url)) {
+
+                // Logo 2: Event logo (OPTIONAL, skip if same as YOGO)
+                if (!empty($event->event_logo_url) && $event->event_logo_url !== self::YOGO_LOGO_URL) {
                     $temp_event = download_url($event->event_logo_url);
                     if (!is_wp_error($temp_event) && file_exists($temp_event)) {
                         $pdf->event_logo_url = $temp_event;
+                    }
+                }
+
+                // Logo 3: Sponsor logo (OPTIONAL, new feature)
+                if (!empty($event->sponsor_logo_url)) {
+                    $temp_sponsor = download_url($event->sponsor_logo_url);
+                    if (!is_wp_error($temp_sponsor) && file_exists($temp_sponsor)) {
+                        $pdf->sponsor_logo_url = $temp_sponsor;
                     }
                 }
 
