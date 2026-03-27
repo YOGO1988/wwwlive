@@ -94,26 +94,56 @@ class ChronoTrack_API {
         $event_data = $response['event'];
 
         // Convert event_start_time to MySQL datetime format
+        // CRITICAL: Handle timezone properly to avoid time shifts
         $event_date = '';
+        $timezone = $event_data['location_time_zone'] ?? 'UTC';
+
         if (!empty($event_data['event_start_time'])) {
             $start_time = $event_data['event_start_time'];
 
-            // If it's a Unix timestamp (numeric)
-            if (is_numeric($start_time)) {
-                $event_date = date('Y-m-d H:i:s', intval($start_time));
-            }
-            // If it's already a datetime string
-            else if (strtotime($start_time)) {
-                $event_date = date('Y-m-d H:i:s', strtotime($start_time));
+            try {
+                // If it's a Unix timestamp (numeric)
+                if (is_numeric($start_time)) {
+                    // Create DateTime in event's timezone
+                    $dt = new DateTime('@' . intval($start_time));
+                    $dt->setTimezone(new DateTimeZone($timezone));
+                    $event_date = $dt->format('Y-m-d H:i:s');
+                }
+                // If it's already a datetime string
+                else if (strtotime($start_time)) {
+                    // Parse in event's timezone
+                    $dt = new DateTime($start_time, new DateTimeZone($timezone));
+                    $event_date = $dt->format('Y-m-d H:i:s');
+                }
+            } catch (Exception $e) {
+                error_log("ChronoTrack: Timezone conversion error: " . $e->getMessage());
+                // Fallback to old method if timezone fails
+                if (is_numeric($start_time)) {
+                    $event_date = date('Y-m-d H:i:s', intval($start_time));
+                } else if (strtotime($start_time)) {
+                    $event_date = date('Y-m-d H:i:s', strtotime($start_time));
+                }
             }
         }
 
         // Fallback: try event_date if event_start_time failed
         if (empty($event_date) && !empty($event_data['event_date'])) {
-            if (is_numeric($event_data['event_date'])) {
-                $event_date = date('Y-m-d H:i:s', intval($event_data['event_date']));
-            } else if (strtotime($event_data['event_date'])) {
-                $event_date = date('Y-m-d H:i:s', strtotime($event_data['event_date']));
+            try {
+                if (is_numeric($event_data['event_date'])) {
+                    $dt = new DateTime('@' . intval($event_data['event_date']));
+                    $dt->setTimezone(new DateTimeZone($timezone));
+                    $event_date = $dt->format('Y-m-d H:i:s');
+                } else if (strtotime($event_data['event_date'])) {
+                    $dt = new DateTime($event_data['event_date'], new DateTimeZone($timezone));
+                    $event_date = $dt->format('Y-m-d H:i:s');
+                }
+            } catch (Exception $e) {
+                error_log("ChronoTrack: Timezone conversion error (fallback): " . $e->getMessage());
+                if (is_numeric($event_data['event_date'])) {
+                    $event_date = date('Y-m-d H:i:s', intval($event_data['event_date']));
+                } else if (strtotime($event_data['event_date'])) {
+                    $event_date = date('Y-m-d H:i:s', strtotime($event_data['event_date']));
+                }
             }
         }
 
@@ -127,7 +157,7 @@ class ChronoTrack_API {
             'event_id' => $event_data['event_id'] ?? '',
             'event_name' => $event_data['event_name'] ?? '',
             'event_date' => $event_date,
-            'timezone' => $event_data['location_time_zone'] ?? '',
+            'timezone' => $timezone,
             'location' => $location,
             'status' => ($event_data['event_is_published'] ?? '0') === '1' ? 'active' : 'inactive',
         );
