@@ -276,16 +276,19 @@ class ChronoTrack_API {
                             $city = $entry['location_city'] ?? $entry['athlete_city'] ?? '';
 
                             // Extract club from various possible fields
+                            // Ignore yes/no question responses: Tak, Nie, Yes, No (ONLY if they are the complete answer)
+                            $invalid_club_names = array('Tak', 'Nie', 'Yes', 'No');
+
                             $club = '';
-                            if (!empty($entry['club']) && $entry['club'] !== 'Tak') {
+                            if (!empty($entry['club']) && !in_array($entry['club'], $invalid_club_names, true)) {
                                 $club = $entry['club'];
-                            } elseif (!empty($entry['athlete_club']) && $entry['athlete_club'] !== 'Tak') {
+                            } elseif (!empty($entry['athlete_club']) && !in_array($entry['athlete_club'], $invalid_club_names, true)) {
                                 $club = $entry['athlete_club'];
                             } else {
-                                // Check custom_element fields for club (ignore "Tak" responses)
+                                // Check custom_element fields for club (ignore yes/no responses)
                                 foreach ($entry as $key => $value) {
-                                    if (strpos($key, 'custom_element') === 0 && !empty($value) && $value !== 'Tak') {
-                                        // Likely club field - ignore "Tak" (yes/no questions)
+                                    if (strpos($key, 'custom_element') === 0 && !empty($value) && !in_array($value, $invalid_club_names, true)) {
+                                        // Likely club field - ignore yes/no question answers
                                         if (empty($club)) {
                                             $club = $value;
                                         }

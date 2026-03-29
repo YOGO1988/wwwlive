@@ -52,12 +52,7 @@ $columns = $db->get_event_columns($event->event_id, true);
 
     <!-- View Toggle -->
     <div class="chronotrack-controls">
-        <button class="chronotrack-view-toggle active" data-view="standings">
-            Klasyfikacja
-        </button>
-        <button class="chronotrack-view-toggle" data-view="meta">
-            META (Linia mety)
-        </button>
+        <!-- Removed META view - only show standings -->
 
         <div class="chronotrack-live-wrapper">
             <div class="chronotrack-live-indicator">
@@ -166,36 +161,7 @@ $columns = $db->get_event_columns($event->event_id, true);
         </div>
     </div>
 
-    <!-- Results Table - META (Finish Line) View -->
-    <div class="chronotrack-view chronotrack-view-meta">
-        <div class="chronotrack-meta-info">
-            <p>Najnowsi zawodnicy na mecie - od ostatniego wbiegającego</p>
-        </div>
-        <div class="chronotrack-table-wrapper">
-            <table class="chronotrack-results-table chronotrack-meta-table">
-                <thead>
-                    <tr>
-                        <th class="col-finish-time">Godzina mety</th>
-                        <th class="col-bib">Nr</th>
-                        <th class="col-name">Imię i nazwisko</th>
-                        <th class="col-category">Kategoria</th>
-                        <th class="col-club">Klub</th>
-                        <th class="col-time">Czas</th>
-                        <th class="col-position">Miejsce</th>
-                        <th class="col-actions"></th>
-                    </tr>
-                </thead>
-                <tbody id="chronotrack-meta-body">
-                    <tr>
-                        <td colspan="20" class="chronotrack-no-results">
-                            Brak zawodników na mecie
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-    </div>
-
+    <!-- META view removed - not needed -->
     <!-- Participant Details Modal -->
     <div id="chronotrack-modal" class="chronotrack-modal" style="display: none;">
         <div class="chronotrack-modal-content">

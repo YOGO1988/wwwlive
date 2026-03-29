@@ -211,6 +211,12 @@
                             this.renderMetaResults(response.data.results);
                         } else {
                             this.renderResults(response.data.results);
+
+                            // CRITICAL: Default sort by position on first load
+                            if (!this.sortColumn && this.allResults.length > 0) {
+                                console.log('📊 First load - sorting by position');
+                                this.sortByColumn('position');
+                            }
                         }
 
                         // CRITICAL FIX: Render distance buttons AFTER results are rendered
@@ -342,15 +348,35 @@
                 return;
             }
 
-            // Store results for sorting
+            // CRITICAL: Filter out participants without finish time (on course, DNS, etc.)
+            // Only show participants who have crossed the finish line
+            const finishedResults = results.filter(r => {
+                const time = r.finish_time || r.net_time;
+                return time && time !== '-' && time !== '00:00:00' && time !== '';
+            });
+
+            console.log('📊 Filtered results:', results.length, '→', finishedResults.length, '(removed', results.length - finishedResults.length, 'without finish)');
+
+            // Store ALL results for stats (including on-course), but use filtered for display
             this.allResults = results;
+
+            if (finishedResults.length === 0) {
+                tbody.html('<tr><td colspan="20" class="chronotrack-no-results">Brak ukończonych wyników</td></tr>');
+                return;
+            }
 
             // CRITICAL FIX: If forceRebuild is true (from sorting), clear table and rebuild from scratch
             if (forceRebuild) {
                 console.log('🔄 Force rebuild - clearing table and rebuilding in sorted order');
                 tbody.empty();
 
-                results.forEach((result) => {
+                // Use FILTERED results (only finished) for display
+                const filteredForDisplay = this.allResults.filter(r => {
+                    const time = r.finish_time || r.net_time;
+                    return time && time !== '-' && time !== '00:00:00' && time !== '';
+                });
+
+                filteredForDisplay.forEach((result) => {
                     const newRow = this.createResultRow(result);
                     tbody.append(newRow);
                 });
@@ -364,7 +390,7 @@
                     this.updateSplitTimeColumnVisibility();
                 }
 
-                console.log('✅ Rebuilt table with', results.length, 'results in sorted order');
+                console.log('✅ Rebuilt table with', filteredForDisplay.length, 'finished results in sorted order');
                 return;
             }
 
@@ -396,8 +422,8 @@
                 console.log('📊 All fields available:', Object.keys(results[0]));
             }
 
-            // Update or add each result
-            results.forEach((result, index) => {
+            // Update or add each result (ONLY finished participants)
+            finishedResults.forEach((result, index) => {
                 const bib = result.bib_number;
 
                 // Skip if we already processed this bib (prevent duplicates)
