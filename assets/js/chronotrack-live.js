@@ -532,14 +532,17 @@
                         const flagCell = $('<td>').addClass('col-flag').css({'text-align': 'center', 'font-size': '20px'}).html(flagEmoji);
                         row.append(flagCell);
                     }
-                    // Special formatting for gender POSITION column (Msc M/K)
-                    // Align position based on athlete's gender: K (left), M (right)
+                    // Special formatting for gender POSITION column (Msc K/M)
+                    // Align position based on athlete's gender to create center line effect:
+                    // K (women) = RIGHT align (numbers near center/right)
+                    // M (men) = LEFT align (numbers near center/left)
+                    // This creates visual dividing line with numbers close together
                     else if (column.id === 'gender_position' || column.id === 'sex_place' || column.id === 'sex_position' ||
                              column.id.toLowerCase().includes('gender_position') || column.id.toLowerCase().includes('sex_place')) {
                         // Get athlete's gender from result data
                         const athleteGender = result.gender || result.sex || result.athlete_sex || '';
-                        // K (Kobiety) = left, M (Mężczyźni) = right
-                        const align = (athleteGender === 'K' || athleteGender === 'F' || athleteGender === 'Female') ? 'left' : 'right';
+                        // K (Kobiety) = RIGHT (near center), M (Mężczyźni) = LEFT (near center)
+                        const align = (athleteGender === 'K' || athleteGender === 'F' || athleteGender === 'Female') ? 'right' : 'left';
                         cell.text(this.cleanValue(value)).css({'text-align': align, 'padding-left': '8px', 'padding-right': '8px'});
                         row.append(cell);
                         console.log('🎨 Gender POSITION column detected:', column.id, '=', value, 'athlete gender:', athleteGender, 'align:', align);

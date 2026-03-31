@@ -632,15 +632,18 @@ class ChronoTrack_PDF_Generator {
                 }
 
                 // CRITICAL: Gender position column alignment (Msc K/M)
-                // Align based on athlete's gender: K (left), M (right)
+                // Align to create center line effect:
+                // K (women) = RIGHT (numbers near center/right)
+                // M (men) = LEFT (numbers near center/left)
+                // This creates visual dividing line with numbers close together
                 $text_align = 'center'; // Default alignment
                 $column_id = $col->column_id ?? '';
                 if ($column_id === 'gender_position' || $column_id === 'sex_place' || $column_id === 'sex_position' ||
                     stripos($column_id, 'gender_position') !== false || stripos($column_id, 'sex_place') !== false) {
                     // Get athlete's gender
                     $athlete_gender = $result->gender ?? $result->sex ?? $result->athlete_sex ?? '';
-                    // K (Kobiety) = left, M (Mężczyźni) = right
-                    $text_align = ($athlete_gender === 'K' || $athlete_gender === 'F' || $athlete_gender === 'Female') ? 'left' : 'right';
+                    // K (Kobiety) = RIGHT (near center), M (Mężczyźni) = LEFT (near center)
+                    $text_align = ($athlete_gender === 'K' || $athlete_gender === 'F' || $athlete_gender === 'Female') ? 'right' : 'left';
                 }
 
                 // CRITICAL: Apply same width to data cells as headers + alignment
