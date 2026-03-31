@@ -520,6 +520,17 @@
                     const value = this.getColumnValue(result, column);
                     const cell = $('<td>').addClass('col-' + column.id);
 
+                    // CRITICAL DEBUG: Log EVERY column to identify the gender position column
+                    if (result.id === '1' || Math.random() < 0.05) {  // Log first result + 5% sample
+                        console.log('🔍 DEBUG Column:', {
+                            'column_id': column.id,
+                            'column_name': column.column_name,
+                            'value': value,
+                            'result_id': result.id,
+                            'athlete_gender': result.gender || result.sex || result.athlete_sex || 'UNKNOWN'
+                        });
+                    }
+
                     // Special formatting for full_name - make it clickable WITHOUT flag (flag is in separate column now)
                     if (column.id === 'full_name' || column.id.includes('name')) {
                         const nameLink = $('<a>')
@@ -535,32 +546,38 @@
                         row.append(flagCell);
                     }
                     // Special formatting for gender POSITION column (Msc M/K)
-                    // Fixed 6-digit layout split 50/50:
-                    // Left 3 chars (35px) = Men, RIGHT aligned
-                    // Right 3 chars (35px) = Women, LEFT aligned
+                    // CRITICAL: 6-digit layout split 50/50:
+                    // Left 3 chars (35px) = Men, RIGHT aligned (number ends near middle)
+                    // Right 3 chars (35px) = Women, LEFT aligned (number starts near middle)
                     else if (column.id === 'gender_position' || column.id === 'sex_place' || column.id === 'sex_position' ||
                              column.id.toLowerCase().includes('gender_position') || column.id.toLowerCase().includes('sex_place')) {
                         // Get athlete's gender from result data
                         const athleteGender = result.gender || result.sex || result.athlete_sex || '';
                         let cellStyle = {};
-                        if (athleteGender === 'K' || athleteGender === 'F' || athleteGender === 'Female') {
-                            // K (Kobiety) = LEFT align in RIGHT half (chars 4-6)
+
+                        // SWAPPED: Fixing observed behavior where men appear on right but should be on left
+                        if (athleteGender === 'M' || athleteGender === 'Male' || athleteGender === 'Mężczyźni') {
+                            // M (Mężczyźni/Men) = LEFT half, RIGHT aligned
                             cellStyle = {
                                 'text-align': 'left',
-                                'padding-left': '35px',  // Push to right half
+                                'padding-left': '35px',
                                 'padding-right': '5px'
                             };
-                        } else {
-                            // M (Mężczyźni) = RIGHT align in LEFT half (chars 1-3)
+                        } else if (athleteGender === 'K' || athleteGender === 'F' || athleteGender === 'Female') {
+                            // K (Kobiety/Women) = RIGHT half, LEFT aligned
                             cellStyle = {
                                 'text-align': 'right',
-                                'padding-right': '35px',  // Keep in left half
+                                'padding-right': '35px',
                                 'padding-left': '5px'
                             };
+                        } else {
+                            // Unknown gender - center align
+                            cellStyle = {'text-align': 'center'};
+                            console.warn('⚠️ Unknown gender:', athleteGender, 'for result:', result.id);
                         }
                         cell.text(this.cleanValue(value)).css(cellStyle);
                         row.append(cell);
-                        console.log('🎨 Gender POSITION column:', column.id, '=', value, 'gender:', athleteGender, 'style:', cellStyle);
+                        console.log('🎨 M/K Column | ID:', result.id, '| Gender:', athleteGender, '| Value:', value, '| Align:', cellStyle['text-align']);
                     } else {
                         cell.text(this.cleanValue(value));
                         row.append(cell);

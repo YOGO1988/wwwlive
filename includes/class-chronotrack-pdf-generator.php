@@ -629,9 +629,7 @@ class ChronoTrack_PDF_Generator {
                 }
 
                 // CRITICAL: Gender position column alignment (Msc M/K)
-                // Fixed 6-digit layout split 50/50:
-                // Left half = Men, RIGHT aligned
-                // Right half = Women, LEFT aligned
+                // SWAPPED: Men LEFT, Women RIGHT (fixing observed inversion)
                 $text_align = 'center'; // Default alignment
                 $padding_style = '';
                 $column_id = $col->column_id ?? '';
@@ -641,14 +639,14 @@ class ChronoTrack_PDF_Generator {
                     $athlete_gender = $result->gender ?? $result->sex ?? $result->athlete_sex ?? '';
                     // Calculate half of column width for splitting
                     $half_width = round($col_widths[$index] / 2, 2);
-                    if ($athlete_gender === 'K' || $athlete_gender === 'F' || $athlete_gender === 'Female') {
-                        // K (Kobiety) = LEFT align in RIGHT half
+                    if ($athlete_gender === 'M' || $athlete_gender === 'Male' || $athlete_gender === 'Mężczyźni') {
+                        // M (Mężczyźni) = LEFT half
                         $text_align = 'left';
-                        $padding_style = 'padding-left: ' . $half_width . 'mm; padding-right: 1mm;';
-                    } else {
-                        // M (Mężczyźni) = RIGHT align in LEFT half
+                        $padding_style = 'padding-left: ' . $half_width . 'mm; padding-right: 0.5mm;';
+                    } else if ($athlete_gender === 'K' || $athlete_gender === 'F' || $athlete_gender === 'Female') {
+                        // K (Kobiety) = RIGHT half
                         $text_align = 'right';
-                        $padding_style = 'padding-right: ' . $half_width . 'mm; padding-left: 1mm;';
+                        $padding_style = 'padding-right: ' . $half_width . 'mm; padding-left: 0.5mm;';
                     }
                 }
 
