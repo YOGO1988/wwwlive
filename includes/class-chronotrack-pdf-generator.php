@@ -629,10 +629,9 @@ class ChronoTrack_PDF_Generator {
                 }
 
                 // CRITICAL: Gender position column alignment (Msc M/K)
-                // Align to create center line effect:
-                // M (men) = LEFT with right padding → numbers near center/left
-                // K (women) = RIGHT with left padding → numbers near center/right
-                // This creates visual dividing line with numbers CLOSE together
+                // Fixed 6-digit layout split 50/50:
+                // Left half = Men, RIGHT aligned
+                // Right half = Women, LEFT aligned
                 $text_align = 'center'; // Default alignment
                 $padding_style = '';
                 $column_id = $col->column_id ?? '';
@@ -640,14 +639,16 @@ class ChronoTrack_PDF_Generator {
                     stripos($column_id, 'gender_position') !== false || stripos($column_id, 'sex_place') !== false) {
                     // Get athlete's gender
                     $athlete_gender = $result->gender ?? $result->sex ?? $result->athlete_sex ?? '';
+                    // Calculate half of column width for splitting
+                    $half_width = round($col_widths[$index] / 2, 2);
                     if ($athlete_gender === 'K' || $athlete_gender === 'F' || $athlete_gender === 'Female') {
-                        // K (Kobiety) = RIGHT with large left padding (pushes toward center/right)
-                        $text_align = 'right';
-                        $padding_style = 'padding-left: 40%; padding-right: 1mm;';
-                    } else {
-                        // M (Mężczyźni) = LEFT with large right padding (pushes toward center/left)
+                        // K (Kobiety) = LEFT align in RIGHT half
                         $text_align = 'left';
-                        $padding_style = 'padding-right: 40%; padding-left: 1mm;';
+                        $padding_style = 'padding-left: ' . $half_width . 'mm; padding-right: 1mm;';
+                    } else {
+                        // M (Mężczyźni) = RIGHT align in LEFT half
+                        $text_align = 'right';
+                        $padding_style = 'padding-right: ' . $half_width . 'mm; padding-left: 1mm;';
                     }
                 }
 
@@ -775,12 +776,20 @@ class ChronoTrack_PDF_Generator {
      */
     private function calculate_column_widths($columns, $available_width) {
         $proportions = array();
+        $fixed_widths = array(); // Store fixed widths for specific columns
 
-        foreach ($columns as $col) {
+        foreach ($columns as $index => $col) {
             $name_lower = strtolower($col->column_name);
 
+            // CRITICAL: Gender position column (M/K) - FIXED width for 6-digit layout
+            if (preg_match('/(m\/k|k\/m)/i', $name_lower) ||
+                ($col->column_id ?? '') === 'gender_position' ||
+                ($col->column_id ?? '') === 'sex_place') {
+                $proportions[] = 0;  // Will be replaced with fixed width
+                $fixed_widths[$index] = 15; // 15mm for 6 digits (~2.5mm per digit)
+            }
             // Numbers and positions - narrow
-            if (preg_match('/(msc|mce|nr|start|kat)/i', $name_lower)) {
+            else if (preg_match('/(msc|mce|nr|start|kat)/i', $name_lower)) {
                 $proportions[] = 0.5;
             }
             // Times, pace, and split times - medium
@@ -802,11 +811,21 @@ class ChronoTrack_PDF_Generator {
         }
 
         // Calculate actual widths
+        // First, subtract fixed widths from available width
+        $total_fixed_width = array_sum($fixed_widths);
+        $remaining_width = $available_width - $total_fixed_width;
+
         $total_proportion = array_sum($proportions);
         $widths = array();
 
-        foreach ($proportions as $proportion) {
-            $widths[] = ($proportion / $total_proportion) * $available_width;
+        foreach ($proportions as $index => $proportion) {
+            if (isset($fixed_widths[$index])) {
+                // Use fixed width for specific columns
+                $widths[] = $fixed_widths[$index];
+            } else {
+                // Calculate proportional width from remaining space
+                $widths[] = ($proportion / $total_proportion) * $remaining_width;
+            }
         }
 
         return $widths;

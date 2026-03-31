@@ -535,25 +535,32 @@
                         row.append(flagCell);
                     }
                     // Special formatting for gender POSITION column (Msc M/K)
-                    // Align position based on athlete's gender to create center line effect:
-                    // M (men) = LEFT align with large right padding → numbers near center/left
-                    // K (women) = RIGHT align with large left padding → numbers near center/right
-                    // This creates visual dividing line with numbers CLOSE together
+                    // Fixed 6-digit layout split 50/50:
+                    // Left 3 chars (35px) = Men, RIGHT aligned
+                    // Right 3 chars (35px) = Women, LEFT aligned
                     else if (column.id === 'gender_position' || column.id === 'sex_place' || column.id === 'sex_position' ||
                              column.id.toLowerCase().includes('gender_position') || column.id.toLowerCase().includes('sex_place')) {
                         // Get athlete's gender from result data
                         const athleteGender = result.gender || result.sex || result.athlete_sex || '';
-                        let cellStyle = {'text-align': 'center'};
+                        let cellStyle = {};
                         if (athleteGender === 'K' || athleteGender === 'F' || athleteGender === 'Female') {
-                            // K (Kobiety) = RIGHT with large left padding (pushes toward center/right)
-                            cellStyle = {'text-align': 'right', 'padding-left': '40%', 'padding-right': '2px'};
+                            // K (Kobiety) = LEFT align in RIGHT half (chars 4-6)
+                            cellStyle = {
+                                'text-align': 'left',
+                                'padding-left': '35px',  // Push to right half
+                                'padding-right': '5px'
+                            };
                         } else {
-                            // M (Mężczyźni) = LEFT with large right padding (pushes toward center/left)
-                            cellStyle = {'text-align': 'left', 'padding-right': '40%', 'padding-left': '2px'};
+                            // M (Mężczyźni) = RIGHT align in LEFT half (chars 1-3)
+                            cellStyle = {
+                                'text-align': 'right',
+                                'padding-right': '35px',  // Keep in left half
+                                'padding-left': '5px'
+                            };
                         }
                         cell.text(this.cleanValue(value)).css(cellStyle);
                         row.append(cell);
-                        console.log('🎨 Gender POSITION column detected:', column.id, '=', value, 'athlete gender:', athleteGender, 'style:', cellStyle);
+                        console.log('🎨 Gender POSITION column:', column.id, '=', value, 'gender:', athleteGender, 'style:', cellStyle);
                     } else {
                         cell.text(this.cleanValue(value));
                         row.append(cell);

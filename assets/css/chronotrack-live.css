@@ -354,6 +354,18 @@ body.chronotrack-page .container {
     min-width: 200px;
 }
 
+/* Gender position column (Msc M/K) - fixed width for 6-digit layout */
+.chronotrack-results-table .col-gender_position,
+.chronotrack-results-table .col-sex_place,
+.chronotrack-results-table .col-sex_position {
+    width: 70px;
+    max-width: 70px;
+    min-width: 70px;
+    font-family: 'Courier New', monospace;
+    font-weight: 600;
+    padding: 0 !important;
+}
+
 .chronotrack-results-table .col-time {
     font-weight: 600;
     color: #007cba;
