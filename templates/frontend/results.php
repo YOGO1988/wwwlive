@@ -105,6 +105,9 @@ $columns = $db->get_event_columns($event->event_id, true);
             <table class="chronotrack-results-table">
                 <thead>
                     <tr>
+                        <!-- Flag column FIRST - no header text, just empty -->
+                        <th class="col-flag" style="width: 30px; text-align: center;"></th>
+
                         <?php if (!empty($columns)): ?>
                             <?php foreach ($columns as $column):
                                 // Get first API attribute for sorting

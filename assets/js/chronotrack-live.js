@@ -481,35 +481,31 @@
                 .attr('data-distance', result.distance || '')
                 .attr('data-bracket-positions', JSON.stringify(result.bracket_positions || {}));
 
+            // Get country flag for separate column
+            const countryCode = result.country || result.Country || result.nationality || result.Nationality ||
+                              result.athlete_country || result.country_code || result.CountryCode;
+            let flagEmoji = '';
+            if (countryCode && typeof CountryFlags !== 'undefined') {
+                flagEmoji = CountryFlags.getFlag(countryCode) || '';
+            }
+
+            // Add flag column FIRST (before all other columns, no header name)
+            const flagCell = $('<td>').addClass('col-flag').css({'text-align': 'center', 'font-size': '20px'}).html(flagEmoji);
+            row.append(flagCell);
+
             // Use dynamic columns if available
             if (this.columns && this.columns.length > 0) {
                 this.columns.forEach((column) => {
                     const value = this.getColumnValue(result, column);
                     const cell = $('<td>').addClass('col-' + column.id);
 
-                    // Special formatting for full_name - make it clickable with flag
+                    // Special formatting for full_name - make it clickable WITHOUT flag (flag is in separate column now)
                     if (column.id === 'full_name' || column.id.includes('name')) {
-                        // Add country flag AFTER name if available
-                        let flagEmoji = '';
-                        const countryCode = result.country || result.Country || result.nationality || result.Nationality ||
-                                          result.athlete_country || result.country_code || result.CountryCode;
-
-                        if (countryCode) {
-                            console.log('🚩 Country code:', countryCode, 'for:', result.last_name);
-                            if (typeof CountryFlags !== 'undefined') {
-                                flagEmoji = CountryFlags.getFlag(countryCode);
-                                if (flagEmoji) {
-                                    flagEmoji = ' ' + flagEmoji; // Add space BEFORE flag
-                                    console.log('✅ Flag:', flagEmoji);
-                                }
-                            }
-                        }
-
                         const nameLink = $('<a>')
                             .attr('href', '#')
                             .addClass('chronotrack-view-details')
                             .attr('data-participant-id', result.participant_id)
-                            .html('<strong>' + this.escapeHtml(value) + '</strong>' + flagEmoji);
+                            .html('<strong>' + this.escapeHtml(value) + '</strong>');
                         cell.append(nameLink);
                     } else {
                         cell.text(this.cleanValue(value));
@@ -522,22 +518,12 @@
                 row.append($('<td>').addClass('col-position').text(this.cleanValue(result.position)));
                 row.append($('<td>').addClass('col-bib').text(this.cleanValue(result.bib_number)));
 
-                // Make name clickable in fallback mode too (with flag AFTER name)
-                let flagEmoji = '';
-                const countryCode = result.country || result.Country || result.nationality || result.Nationality ||
-                                  result.athlete_country || result.country_code || result.CountryCode;
-                if (countryCode && typeof CountryFlags !== 'undefined') {
-                    flagEmoji = CountryFlags.getFlag(countryCode);
-                    if (flagEmoji) {
-                        flagEmoji = ' ' + flagEmoji; // Add space BEFORE flag
-                    }
-                }
-
+                // Make name clickable WITHOUT flag (flag is in separate column)
                 const nameLink = $('<a>')
                     .attr('href', '#')
                     .addClass('chronotrack-view-details')
                     .attr('data-participant-id', result.participant_id)
-                    .html('<strong>' + this.escapeHtml(result.full_name) + '</strong>' + flagEmoji);
+                    .html('<strong>' + this.escapeHtml(result.full_name) + '</strong>');
                 row.append($('<td>').addClass('col-name').append(nameLink));
 
                 row.append($('<td>').addClass('col-category').text(this.cleanValue(result.category)));
@@ -1210,13 +1196,14 @@
 
             // Handle different event statuses
             if (status === 'completed') {
-                // Event is completed - fetch from API ONCE to ensure we have final results, then load from DB
-                console.log('🏁 Event completed - fetching final results from API once');
+                // Event is completed - load from DATABASE (fast, no API calls)
+                // Results should already be saved during live event
+                console.log('🏁 Event completed - loading from database (no API refresh)');
                 $('.chronotrack-live-text').text('ZAWODY ZAKOŃCZONE').css('color', '#856404');
                 $('.chronotrack-live-indicator').css('background', '#fff3cd');
 
-                // Fetch from API ONCE to save final results to database
-                this.refreshFromAPI();
+                // Load once from database - NO auto-refresh
+                this.loadResults(this.currentView);
                 return;
             }
 

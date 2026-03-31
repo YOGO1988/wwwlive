@@ -30,20 +30,10 @@ class ChronoTrack_Ajax {
 
     /**
      * Get results for an event
+     * CRITICAL: No nonce verification - results are public data that should always be accessible
+     * This prevents issues with expired nonces for completed events
      */
     public function get_results() {
-        // Verify nonce
-        if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'chronotrack_nonce')) {
-            wp_send_json_error(array(
-                'message' => 'Nieprawidłowy nonce',
-                'debug' => array(
-                    'nonce_received' => isset($_POST['nonce']),
-                    'post_data' => array_keys($_POST)
-                )
-            ));
-            return;
-        }
-
         $event_id = sanitize_text_field($_POST['event_id'] ?? '');
 
         if (empty($event_id)) {
