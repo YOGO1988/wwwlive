@@ -555,20 +555,20 @@
                         const athleteGender = result.gender || result.sex || result.athlete_sex || '';
                         let cellStyle = {};
 
-                        // SWAPPED: Fixing observed behavior where men appear on right but should be on left
+                        // CORRECT: Virtual center line - both sides align TOWARD it
                         if (athleteGender === 'M' || athleteGender === 'Male' || athleteGender === 'Mężczyźni') {
-                            // M (Mężczyźni/Men) = LEFT half, RIGHT aligned
+                            // M (Men) = LEFT side + RIGHT align (ends at virtual center line)
                             cellStyle = {
-                                'text-align': 'left',
-                                'padding-left': '35px',
-                                'padding-right': '5px'
+                                'text-align': 'right',    // ← Aligns TO THE RIGHT (toward center)
+                                'padding-right': '35px',  // Reserves right half for women
+                                'padding-left': '5px'
                             };
                         } else if (athleteGender === 'K' || athleteGender === 'F' || athleteGender === 'Female') {
-                            // K (Kobiety/Women) = RIGHT half, LEFT aligned
+                            // K (Women) = RIGHT side + LEFT align (starts at virtual center line)
                             cellStyle = {
-                                'text-align': 'right',
-                                'padding-right': '35px',
-                                'padding-left': '5px'
+                                'text-align': 'left',      // ← Aligns TO THE LEFT (toward center)
+                                'padding-left': '35px',    // Reserves left half for men
+                                'padding-right': '5px'
                             };
                         } else {
                             // Unknown gender - center align
