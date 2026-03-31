@@ -150,13 +150,14 @@
         },
 
         updateColumnHeaders: function() {
-            // Change column header text from "M/K" to "K/M"
+            // Change column header text from "K/M" back to "M/K"
+            // M is on LEFT, K is on RIGHT, so header should be M/K
             $('.chronotrack-results-table thead th').each(function() {
                 const headerText = $(this).html();
-                if (headerText && headerText.includes('M/K')) {
-                    const newText = headerText.replace(/M\/K/g, 'K/M');
+                if (headerText && headerText.includes('K/M')) {
+                    const newText = headerText.replace(/K\/M/g, 'M/K');
                     $(this).html(newText);
-                    console.log('✏️ Updated column header from "M/K" to "K/M"');
+                    console.log('✏️ Updated column header from "K/M" to "M/K"');
                 }
             });
         },
@@ -203,10 +204,11 @@
                             this.columns = response.data.columns;
                             console.log('📋 Columns loaded:', this.columns.length);
 
-                            // CRITICAL: Change column header from "M/K" to "K/M"
+                            // CRITICAL: Change column header from "K/M" back to "M/K"
+                            // M is on LEFT, K is on RIGHT, so header is M/K
                             this.columns.forEach((column) => {
-                                if (column.column_name && column.column_name.includes('M/K')) {
-                                    column.column_name = column.column_name.replace('M/K', 'K/M');
+                                if (column.column_name && column.column_name.includes('K/M')) {
+                                    column.column_name = column.column_name.replace('K/M', 'M/K');
                                     console.log('✏️ Renamed column header to:', column.column_name);
                                 }
                             });
@@ -532,20 +534,26 @@
                         const flagCell = $('<td>').addClass('col-flag').css({'text-align': 'center', 'font-size': '20px'}).html(flagEmoji);
                         row.append(flagCell);
                     }
-                    // Special formatting for gender POSITION column (Msc K/M)
+                    // Special formatting for gender POSITION column (Msc M/K)
                     // Align position based on athlete's gender to create center line effect:
-                    // K (women) = RIGHT align (numbers near center/right)
-                    // M (men) = LEFT align (numbers near center/left)
-                    // This creates visual dividing line with numbers close together
+                    // M (men) = LEFT align with large right padding → numbers near center/left
+                    // K (women) = RIGHT align with large left padding → numbers near center/right
+                    // This creates visual dividing line with numbers CLOSE together
                     else if (column.id === 'gender_position' || column.id === 'sex_place' || column.id === 'sex_position' ||
                              column.id.toLowerCase().includes('gender_position') || column.id.toLowerCase().includes('sex_place')) {
                         // Get athlete's gender from result data
                         const athleteGender = result.gender || result.sex || result.athlete_sex || '';
-                        // K (Kobiety) = RIGHT (near center), M (Mężczyźni) = LEFT (near center)
-                        const align = (athleteGender === 'K' || athleteGender === 'F' || athleteGender === 'Female') ? 'right' : 'left';
-                        cell.text(this.cleanValue(value)).css({'text-align': align, 'padding-left': '8px', 'padding-right': '8px'});
+                        let cellStyle = {'text-align': 'center'};
+                        if (athleteGender === 'K' || athleteGender === 'F' || athleteGender === 'Female') {
+                            // K (Kobiety) = RIGHT with large left padding (pushes toward center/right)
+                            cellStyle = {'text-align': 'right', 'padding-left': '40%', 'padding-right': '2px'};
+                        } else {
+                            // M (Mężczyźni) = LEFT with large right padding (pushes toward center/left)
+                            cellStyle = {'text-align': 'left', 'padding-right': '40%', 'padding-left': '2px'};
+                        }
+                        cell.text(this.cleanValue(value)).css(cellStyle);
                         row.append(cell);
-                        console.log('🎨 Gender POSITION column detected:', column.id, '=', value, 'athlete gender:', athleteGender, 'align:', align);
+                        console.log('🎨 Gender POSITION column detected:', column.id, '=', value, 'athlete gender:', athleteGender, 'style:', cellStyle);
                     } else {
                         cell.text(this.cleanValue(value));
                         row.append(cell);

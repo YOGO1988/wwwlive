@@ -602,11 +602,8 @@ class ChronoTrack_PDF_Generator {
         // Table header with explicit widths
         $html .= '<thead><tr>';
         foreach ($columns as $index => $col) {
-            // CRITICAL: Change column header from "M/K" to "K/M"
+            // CRITICAL: Keep column header as "M/K" (M on left, K on right)
             $column_name = $col->column_name;
-            if (strpos($column_name, 'M/K') !== false) {
-                $column_name = str_replace('M/K', 'K/M', $column_name);
-            }
             $html .= '<th class="col' . $index . '" style="width:' . round($col_widths[$index], 2) . 'mm;">' .
                      htmlspecialchars($column_name, ENT_QUOTES, 'UTF-8') . '</th>';
         }
@@ -631,23 +628,31 @@ class ChronoTrack_PDF_Generator {
                     $escaped_value = '<span class="small-text">' . $escaped_value . '</span>';
                 }
 
-                // CRITICAL: Gender position column alignment (Msc K/M)
+                // CRITICAL: Gender position column alignment (Msc M/K)
                 // Align to create center line effect:
-                // K (women) = RIGHT (numbers near center/right)
-                // M (men) = LEFT (numbers near center/left)
-                // This creates visual dividing line with numbers close together
+                // M (men) = LEFT with right padding → numbers near center/left
+                // K (women) = RIGHT with left padding → numbers near center/right
+                // This creates visual dividing line with numbers CLOSE together
                 $text_align = 'center'; // Default alignment
+                $padding_style = '';
                 $column_id = $col->column_id ?? '';
                 if ($column_id === 'gender_position' || $column_id === 'sex_place' || $column_id === 'sex_position' ||
                     stripos($column_id, 'gender_position') !== false || stripos($column_id, 'sex_place') !== false) {
                     // Get athlete's gender
                     $athlete_gender = $result->gender ?? $result->sex ?? $result->athlete_sex ?? '';
-                    // K (Kobiety) = RIGHT (near center), M (Mężczyźni) = LEFT (near center)
-                    $text_align = ($athlete_gender === 'K' || $athlete_gender === 'F' || $athlete_gender === 'Female') ? 'right' : 'left';
+                    if ($athlete_gender === 'K' || $athlete_gender === 'F' || $athlete_gender === 'Female') {
+                        // K (Kobiety) = RIGHT with large left padding (pushes toward center/right)
+                        $text_align = 'right';
+                        $padding_style = 'padding-left: 40%; padding-right: 1mm;';
+                    } else {
+                        // M (Mężczyźni) = LEFT with large right padding (pushes toward center/left)
+                        $text_align = 'left';
+                        $padding_style = 'padding-right: 40%; padding-left: 1mm;';
+                    }
                 }
 
-                // CRITICAL: Apply same width to data cells as headers + alignment
-                $html .= '<td class="col' . $index . '" style="width:' . round($col_widths[$index], 2) . 'mm; text-align: ' . $text_align . ';">' .
+                // CRITICAL: Apply same width to data cells as headers + alignment + padding
+                $html .= '<td class="col' . $index . '" style="width:' . round($col_widths[$index], 2) . 'mm; text-align: ' . $text_align . '; ' . $padding_style . '">' .
                          $escaped_value . '</td>';
             }
             $html .= '</tr>';
