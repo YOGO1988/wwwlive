@@ -495,6 +495,9 @@
                     const value = this.getColumnValue(result, column);
                     const cell = $('<td>').addClass('col-' + column.id);
 
+                    // DEBUG: Log all columns to identify gender/sex column
+                    console.log('📋 Column:', column.id, '=', value);
+
                     // Special formatting for full_name - make it clickable WITHOUT flag (flag is in separate column now)
                     if (column.id === 'full_name' || column.id.includes('name')) {
                         const nameLink = $('<a>')
