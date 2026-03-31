@@ -557,21 +557,20 @@
                         const athleteGender = result.gender || result.sex || result.athlete_sex || '';
                         let cellStyle = {};
 
-                        // CORRECT: Virtual center line under "/" in "M/K" header
+                        // CRITICAL: Push men MUCH MORE to the left, women slightly left
                         const cellElem = cell[0]; // Get DOM element for setProperty
                         if (athleteGender === 'M' || athleteGender === 'Male' || athleteGender === 'Mężczyźni') {
-                            // M (Men) = LEFT side + RIGHT align (ends BEFORE "/" - under "M")
-                            // INCREASED padding to push further LEFT
+                            // M (Men) = PUSH FAR LEFT - under "M" not "K"
                             cellElem.style.setProperty('text-align', 'right', 'important');
-                            cellElem.style.setProperty('padding-right', '42px', 'important');  // Was 35px, now 42px
-                            cellElem.style.setProperty('padding-left', '3px', 'important');
-                            console.log('🎨 M/K Column | ID:', result.id, '| Gender: M | Value:', value, '| Align: RIGHT | Pad-R: 42px');
+                            cellElem.style.setProperty('padding-right', '48px', 'important');  // Was 42px, now 48px!
+                            cellElem.style.setProperty('padding-left', '2px', 'important');
+                            console.log('🎨 M/K Column | ID:', result.id, '| Gender: M | Value:', value, '| Pad-R: 48px');
                         } else if (athleteGender === 'K' || athleteGender === 'F' || athleteGender === 'Female') {
-                            // K (Women) = RIGHT side + LEFT align (starts AFTER "/" - under "K")
+                            // K (Women) = slight left, under "K"
                             cellElem.style.setProperty('text-align', 'left', 'important');
-                            cellElem.style.setProperty('padding-left', '38px', 'important');  // Was 35px, now 38px
+                            cellElem.style.setProperty('padding-left', '32px', 'important');  // Was 38px, now 32px
                             cellElem.style.setProperty('padding-right', '2px', 'important');
-                            console.log('🎨 M/K Column | ID:', result.id, '| Gender: K | Value:', value, '| Align: LEFT | Pad-L: 38px');
+                            console.log('🎨 M/K Column | ID:', result.id, '| Gender: K | Value:', value, '| Pad-L: 32px');
                         } else {
                             // Unknown gender - center align
                             cellElem.style.setProperty('text-align', 'center', 'important');

@@ -629,27 +629,39 @@ class ChronoTrack_PDF_Generator {
                 }
 
                 // CRITICAL: Gender position column alignment (Msc M/K)
-                // Virtual center line - both sides align TOWARD it
+                // Detect by: column_id, column_name, OR fixed 15mm width
                 $text_align = 'center'; // Default alignment
                 $padding_style = '';
                 $column_id = $col->column_id ?? '';
                 $column_name = $col->column_name ?? '';
+                $is_mk_column = false;
+
+                // Method 1: Check column ID/name
                 if ($column_id === 'gender_position' || $column_id === 'sex_place' || $column_id === 'sex_position' ||
                     stripos($column_id, 'gender_position') !== false || stripos($column_id, 'sex_place') !== false ||
                     stripos($column_id, 'm/k') !== false || stripos($column_id, 'k/m') !== false ||
                     stripos($column_name, 'M/K') !== false || stripos($column_name, 'K/M') !== false) {
+                    $is_mk_column = true;
+                }
+
+                // Method 2: Fallback - check if column width is exactly 15mm (our fixed width)
+                if (!$is_mk_column && round($col_widths[$index], 2) == 15) {
+                    $is_mk_column = true;
+                }
+
+                if ($is_mk_column) {
                     // Get athlete's gender
                     $athlete_gender = $result->gender ?? $result->sex ?? $result->athlete_sex ?? '';
-                    // Calculate half of column width for splitting
-                    $half_width = round($col_widths[$index] / 2, 2);
+                    // Use more aggressive padding for PDF
+                    $half_width = round($col_widths[$index] / 2, 1);
                     if ($athlete_gender === 'M' || $athlete_gender === 'Male' || $athlete_gender === 'Mężczyźni') {
-                        // M (Men) = LEFT side + RIGHT align (ends at center line)
+                        // M (Men) = LEFT side + RIGHT align
                         $text_align = 'right';
-                        $padding_style = 'padding-right: ' . $half_width . 'mm; padding-left: 0.5mm;';
+                        $padding_style = 'padding-right: ' . ($half_width + 1) . 'mm; padding-left: 0.3mm;';
                     } else if ($athlete_gender === 'K' || $athlete_gender === 'F' || $athlete_gender === 'Female') {
-                        // K (Women) = RIGHT side + LEFT align (starts at center line)
+                        // K (Women) = RIGHT side + LEFT align
                         $text_align = 'left';
-                        $padding_style = 'padding-left: ' . $half_width . 'mm; padding-right: 0.5mm;';
+                        $padding_style = 'padding-left: ' . ($half_width - 1) . 'mm; padding-right: 0.3mm;';
                     }
                 }
 
