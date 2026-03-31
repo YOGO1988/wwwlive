@@ -602,8 +602,13 @@ class ChronoTrack_PDF_Generator {
         // Table header with explicit widths
         $html .= '<thead><tr>';
         foreach ($columns as $index => $col) {
+            // CRITICAL: Change column header from "M/K" to "K/M"
+            $column_name = $col->column_name;
+            if (strpos($column_name, 'M/K') !== false) {
+                $column_name = str_replace('M/K', 'K/M', $column_name);
+            }
             $html .= '<th class="col' . $index . '" style="width:' . round($col_widths[$index], 2) . 'mm;">' .
-                     htmlspecialchars($col->column_name, ENT_QUOTES, 'UTF-8') . '</th>';
+                     htmlspecialchars($column_name, ENT_QUOTES, 'UTF-8') . '</th>';
         }
         $html .= '</tr></thead>';
 
@@ -626,8 +631,20 @@ class ChronoTrack_PDF_Generator {
                     $escaped_value = '<span class="small-text">' . $escaped_value . '</span>';
                 }
 
-                // CRITICAL: Apply same width to data cells as headers
-                $html .= '<td class="col' . $index . '" style="width:' . round($col_widths[$index], 2) . 'mm;">' .
+                // CRITICAL: Gender position column alignment (Msc K/M)
+                // Align based on athlete's gender: K (left), M (right)
+                $text_align = 'center'; // Default alignment
+                $column_id = $col->column_id ?? '';
+                if ($column_id === 'gender_position' || $column_id === 'sex_place' || $column_id === 'sex_position' ||
+                    stripos($column_id, 'gender_position') !== false || stripos($column_id, 'sex_place') !== false) {
+                    // Get athlete's gender
+                    $athlete_gender = $result->gender ?? $result->sex ?? $result->athlete_sex ?? '';
+                    // K (Kobiety) = left, M (Mężczyźni) = right
+                    $text_align = ($athlete_gender === 'K' || $athlete_gender === 'F' || $athlete_gender === 'Female') ? 'left' : 'right';
+                }
+
+                // CRITICAL: Apply same width to data cells as headers + alignment
+                $html .= '<td class="col' . $index . '" style="width:' . round($col_widths[$index], 2) . 'mm; text-align: ' . $text_align . ';">' .
                          $escaped_value . '</td>';
             }
             $html .= '</tr>';
