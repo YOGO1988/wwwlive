@@ -1210,11 +1210,13 @@
 
             // Handle different event statuses
             if (status === 'completed') {
-                // Event is completed - show final results, NO auto-refresh
-                console.log('🏁 Event completed - showing final results (NO auto-refresh by design)');
+                // Event is completed - fetch from API ONCE to ensure we have final results, then load from DB
+                console.log('🏁 Event completed - fetching final results from API once');
                 $('.chronotrack-live-text').text('ZAWODY ZAKOŃCZONE').css('color', '#856404');
                 $('.chronotrack-live-indicator').css('background', '#fff3cd');
-                this.loadResults(this.currentView);  // Load once from database
+
+                // Fetch from API ONCE to save final results to database
+                this.refreshFromAPI();
                 return;
             }
 
