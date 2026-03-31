@@ -510,12 +510,16 @@
                         row.append(flagCell);
                     }
                     // Special formatting for gender/sex column (M/K)
-                    else if (column.id === 'gender' || column.id === 'sex' || column.id === 'athlete_sex') {
+                    // Detect by column name OR by value (if it's just K/M/F)
+                    else if (column.id === 'gender' || column.id === 'sex' || column.id === 'athlete_sex' ||
+                             column.id.toLowerCase().includes('płeć') || column.id.toLowerCase().includes('sex') ||
+                             (value && (value === 'K' || value === 'M' || value === 'F' || value === 'Male' || value === 'Female'))) {
                         const genderValue = this.cleanValue(value);
                         // K (Kobiety) = left, M (Mężczyźni) = right
                         const align = (genderValue === 'K' || genderValue === 'F' || genderValue === 'Female') ? 'left' : 'right';
                         cell.text(genderValue).css({'text-align': align, 'padding-left': '8px', 'padding-right': '8px'});
                         row.append(cell);
+                        console.log('🎨 Gender column detected:', column.id, '=', genderValue, 'align:', align);
                     } else {
                         cell.text(this.cleanValue(value));
                         row.append(cell);
