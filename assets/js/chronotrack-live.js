@@ -481,17 +481,13 @@
                 .attr('data-distance', result.distance || '')
                 .attr('data-bracket-positions', JSON.stringify(result.bracket_positions || {}));
 
-            // Get country flag for separate column
+            // Get country flag for separate column (will be added AFTER name column)
             const countryCode = result.country || result.Country || result.nationality || result.Nationality ||
                               result.athlete_country || result.country_code || result.CountryCode;
             let flagEmoji = '';
             if (countryCode && typeof CountryFlags !== 'undefined') {
                 flagEmoji = CountryFlags.getFlag(countryCode) || '';
             }
-
-            // Add flag column FIRST (before all other columns, no header name)
-            const flagCell = $('<td>').addClass('col-flag').css({'text-align': 'center', 'font-size': '20px'}).html(flagEmoji);
-            row.append(flagCell);
 
             // Use dynamic columns if available
             if (this.columns && this.columns.length > 0) {
@@ -507,11 +503,15 @@
                             .attr('data-participant-id', result.participant_id)
                             .html('<strong>' + this.escapeHtml(value) + '</strong>');
                         cell.append(nameLink);
+                        row.append(cell);
+
+                        // Add flag column RIGHT AFTER name column
+                        const flagCell = $('<td>').addClass('col-flag').css({'text-align': 'center', 'font-size': '20px'}).html(flagEmoji);
+                        row.append(flagCell);
                     } else {
                         cell.text(this.cleanValue(value));
+                        row.append(cell);
                     }
-
-                    row.append(cell);
                 });
             } else {
                 // Fallback to hardcoded columns
@@ -525,6 +525,10 @@
                     .attr('data-participant-id', result.participant_id)
                     .html('<strong>' + this.escapeHtml(result.full_name) + '</strong>');
                 row.append($('<td>').addClass('col-name').append(nameLink));
+
+                // Add flag column RIGHT AFTER name column
+                const flagCell = $('<td>').addClass('col-flag').css({'text-align': 'center', 'font-size': '20px'}).html(flagEmoji);
+                row.append(flagCell);
 
                 row.append($('<td>').addClass('col-category').text(this.cleanValue(result.category)));
                 row.append($('<td>').addClass('col-club').text(this.cleanValue(result.club)));

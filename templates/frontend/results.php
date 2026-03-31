@@ -105,9 +105,6 @@ $columns = $db->get_event_columns($event->event_id, true);
             <table class="chronotrack-results-table">
                 <thead>
                     <tr>
-                        <!-- Flag column FIRST - no header text, just empty -->
-                        <th class="col-flag" style="width: 30px; text-align: center;"></th>
-
                         <?php if (!empty($columns)): ?>
                             <?php foreach ($columns as $column):
                                 // Get first API attribute for sorting
@@ -132,12 +129,20 @@ $columns = $db->get_event_columns($event->event_id, true);
                                     }
                                     ?>
                                 </th>
+                                <?php
+                                // Add empty flag column AFTER name column
+                                if ($column->column_id === 'full_name' || strpos($column->column_id, 'name') !== false):
+                                ?>
+                                    <th class="col-flag" style="width: 30px; text-align: center;"></th>
+                                <?php endif; ?>
                             <?php endforeach; ?>
                         <?php else: ?>
                             <!-- Fallback to default columns if none configured -->
                             <th class="col-position">Miej.</th>
                             <th class="col-bib">Nr</th>
                             <th class="col-name">Imię i nazwisko</th>
+                            <!-- Flag column AFTER name -->
+                            <th class="col-flag" style="width: 30px; text-align: center;"></th>
                             <th class="col-category">Kategoria</th>
                             <th class="col-club">Klub</th>
                             <th class="col-time">Czas</th>
