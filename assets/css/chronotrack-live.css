@@ -259,14 +259,16 @@ body.chronotrack-page .container {
 .chronotrack-table-wrapper {
     overflow-x: auto;
     width: 100%;
+    -webkit-overflow-scrolling: touch; /* Smooth scrolling on touch devices */
 }
 
 .chronotrack-results-table {
-    width: 100%;
+    width: auto; /* Changed from 100% to auto to allow table to expand */
+    min-width: 100%; /* Ensure table is at least full width */
     border-collapse: collapse;
     font-size: 12px;
     table-layout: auto;
-    min-width: 100%;
+    display: table; /* Force table display for Edge compatibility */
 }
 
 .chronotrack-results-table thead {
@@ -319,17 +321,17 @@ body.chronotrack-page .container {
 
 /* Row colors - using classes instead of nth-child for dynamic filtering */
 .chronotrack-results-table tbody tr {
-    width: 100%;
+    /* Removed width: 100% for Edge compatibility */
 }
 
 .chronotrack-results-table tbody tr.row-even {
     background: #f5f5f5;
-    width: 100%;
+    /* Removed width: 100% for Edge compatibility */
 }
 
 .chronotrack-results-table tbody tr.row-odd {
     background: #fff;
-    width: 100%;
+    /* Removed width: 100% for Edge compatibility */
 }
 
 .chronotrack-results-table tbody tr:hover {
