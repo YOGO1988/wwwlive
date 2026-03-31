@@ -68,6 +68,9 @@
 
             this.bindEvents();
 
+            // CRITICAL: Change column header from "M/K" to "K/M" in the DOM
+            this.updateColumnHeaders();
+
             // Check event status and start auto-refresh based on status and time
             this.checkEventStatusAndStartRefresh();
 
@@ -146,6 +149,18 @@
             });
         },
 
+        updateColumnHeaders: function() {
+            // Change column header text from "M/K" to "K/M"
+            $('.chronotrack-results-table thead th').each(function() {
+                const headerText = $(this).html();
+                if (headerText && headerText.includes('M/K')) {
+                    const newText = headerText.replace(/M\/K/g, 'K/M');
+                    $(this).html(newText);
+                    console.log('✏️ Updated column header from "M/K" to "K/M"');
+                }
+            });
+        },
+
         loadResults: function(view) {
             // Prevent concurrent requests
             if (this.isLoading) {
@@ -187,6 +202,14 @@
                         if (response.data.columns && response.data.columns.length > 0) {
                             this.columns = response.data.columns;
                             console.log('📋 Columns loaded:', this.columns.length);
+
+                            // CRITICAL: Change column header from "M/K" to "K/M"
+                            this.columns.forEach((column) => {
+                                if (column.column_name && column.column_name.includes('M/K')) {
+                                    column.column_name = column.column_name.replace('M/K', 'K/M');
+                                    console.log('✏️ Renamed column header to:', column.column_name);
+                                }
+                            });
                         }
 
                         // Save distances (but don't render yet - need results first)
@@ -495,9 +518,6 @@
                     const value = this.getColumnValue(result, column);
                     const cell = $('<td>').addClass('col-' + column.id);
 
-                    // DEBUG: Log all columns to identify gender/sex column
-                    console.log('📋 Column:', column.id, '=', value);
-
                     // Special formatting for full_name - make it clickable WITHOUT flag (flag is in separate column now)
                     if (column.id === 'full_name' || column.id.includes('name')) {
                         const nameLink = $('<a>')
@@ -512,17 +532,17 @@
                         const flagCell = $('<td>').addClass('col-flag').css({'text-align': 'center', 'font-size': '20px'}).html(flagEmoji);
                         row.append(flagCell);
                     }
-                    // Special formatting for gender/sex column (M/K)
-                    // Detect by column name OR by value (if it's just K/M/F)
-                    else if (column.id === 'gender' || column.id === 'sex' || column.id === 'athlete_sex' ||
-                             column.id.toLowerCase().includes('płeć') || column.id.toLowerCase().includes('sex') ||
-                             (value && (value === 'K' || value === 'M' || value === 'F' || value === 'Male' || value === 'Female'))) {
-                        const genderValue = this.cleanValue(value);
+                    // Special formatting for gender POSITION column (Msc M/K)
+                    // Align position based on athlete's gender: K (left), M (right)
+                    else if (column.id === 'gender_position' || column.id === 'sex_place' || column.id === 'sex_position' ||
+                             column.id.toLowerCase().includes('gender_position') || column.id.toLowerCase().includes('sex_place')) {
+                        // Get athlete's gender from result data
+                        const athleteGender = result.gender || result.sex || result.athlete_sex || '';
                         // K (Kobiety) = left, M (Mężczyźni) = right
-                        const align = (genderValue === 'K' || genderValue === 'F' || genderValue === 'Female') ? 'left' : 'right';
-                        cell.text(genderValue).css({'text-align': align, 'padding-left': '8px', 'padding-right': '8px'});
+                        const align = (athleteGender === 'K' || athleteGender === 'F' || athleteGender === 'Female') ? 'left' : 'right';
+                        cell.text(this.cleanValue(value)).css({'text-align': align, 'padding-left': '8px', 'padding-right': '8px'});
                         row.append(cell);
-                        console.log('🎨 Gender column detected:', column.id, '=', genderValue, 'align:', align);
+                        console.log('🎨 Gender POSITION column detected:', column.id, '=', value, 'athlete gender:', athleteGender, 'align:', align);
                     } else {
                         cell.text(this.cleanValue(value));
                         row.append(cell);
