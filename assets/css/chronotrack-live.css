@@ -363,7 +363,7 @@ body.chronotrack-page .container {
     min-width: 70px;
     font-family: 'Courier New', monospace;
     font-weight: 600;
-    padding: 0 !important;
+    /* REMOVED padding: 0 !important - was blocking inline padding from JS */
 }
 
 .chronotrack-results-table .col-time {

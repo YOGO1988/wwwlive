@@ -550,34 +550,34 @@
                     // Left 3 chars (35px) = Men, RIGHT aligned (number ends near middle)
                     // Right 3 chars (35px) = Women, LEFT aligned (number starts near middle)
                     else if (column.id === 'gender_position' || column.id === 'sex_place' || column.id === 'sex_position' ||
-                             column.id.toLowerCase().includes('gender_position') || column.id.toLowerCase().includes('sex_place')) {
+                             column.id.toLowerCase().includes('gender_position') || column.id.toLowerCase().includes('sex_place') ||
+                             column.id.toLowerCase().includes('m/k') || column.id.toLowerCase().includes('k/m') ||
+                             (column.column_name && (column.column_name.includes('M/K') || column.column_name.includes('K/M')))) {
                         // Get athlete's gender from result data
                         const athleteGender = result.gender || result.sex || result.athlete_sex || '';
                         let cellStyle = {};
 
                         // CORRECT: Virtual center line - both sides align TOWARD it
+                        const cellElem = cell[0]; // Get DOM element for setProperty
                         if (athleteGender === 'M' || athleteGender === 'Male' || athleteGender === 'Mężczyźni') {
                             // M (Men) = LEFT side + RIGHT align (ends at virtual center line)
-                            cellStyle = {
-                                'text-align': 'right',    // ← Aligns TO THE RIGHT (toward center)
-                                'padding-right': '35px',  // Reserves right half for women
-                                'padding-left': '5px'
-                            };
+                            cellElem.style.setProperty('text-align', 'right', 'important');
+                            cellElem.style.setProperty('padding-right', '35px', 'important');
+                            cellElem.style.setProperty('padding-left', '5px', 'important');
+                            console.log('🎨 M/K Column | ID:', result.id, '| Gender: M | Value:', value, '| Align: RIGHT');
                         } else if (athleteGender === 'K' || athleteGender === 'F' || athleteGender === 'Female') {
                             // K (Women) = RIGHT side + LEFT align (starts at virtual center line)
-                            cellStyle = {
-                                'text-align': 'left',      // ← Aligns TO THE LEFT (toward center)
-                                'padding-left': '35px',    // Reserves left half for men
-                                'padding-right': '5px'
-                            };
+                            cellElem.style.setProperty('text-align', 'left', 'important');
+                            cellElem.style.setProperty('padding-left', '35px', 'important');
+                            cellElem.style.setProperty('padding-right', '5px', 'important');
+                            console.log('🎨 M/K Column | ID:', result.id, '| Gender: K | Value:', value, '| Align: LEFT');
                         } else {
                             // Unknown gender - center align
-                            cellStyle = {'text-align': 'center'};
+                            cellElem.style.setProperty('text-align', 'center', 'important');
                             console.warn('⚠️ Unknown gender:', athleteGender, 'for result:', result.id);
                         }
-                        cell.text(this.cleanValue(value)).css(cellStyle);
+                        cell.text(this.cleanValue(value));
                         row.append(cell);
-                        console.log('🎨 M/K Column | ID:', result.id, '| Gender:', athleteGender, '| Value:', value, '| Align:', cellStyle['text-align']);
                     } else {
                         cell.text(this.cleanValue(value));
                         row.append(cell);

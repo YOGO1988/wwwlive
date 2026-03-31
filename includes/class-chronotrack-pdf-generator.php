@@ -633,8 +633,11 @@ class ChronoTrack_PDF_Generator {
                 $text_align = 'center'; // Default alignment
                 $padding_style = '';
                 $column_id = $col->column_id ?? '';
+                $column_name = $col->column_name ?? '';
                 if ($column_id === 'gender_position' || $column_id === 'sex_place' || $column_id === 'sex_position' ||
-                    stripos($column_id, 'gender_position') !== false || stripos($column_id, 'sex_place') !== false) {
+                    stripos($column_id, 'gender_position') !== false || stripos($column_id, 'sex_place') !== false ||
+                    stripos($column_id, 'm/k') !== false || stripos($column_id, 'k/m') !== false ||
+                    stripos($column_name, 'M/K') !== false || stripos($column_name, 'K/M') !== false) {
                     // Get athlete's gender
                     $athlete_gender = $result->gender ?? $result->sex ?? $result->athlete_sex ?? '';
                     // Calculate half of column width for splitting
