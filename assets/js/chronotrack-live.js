@@ -508,6 +508,14 @@
                         // Add flag column RIGHT AFTER name column
                         const flagCell = $('<td>').addClass('col-flag').css({'text-align': 'center', 'font-size': '20px'}).html(flagEmoji);
                         row.append(flagCell);
+                    }
+                    // Special formatting for gender/sex column (M/K)
+                    else if (column.id === 'gender' || column.id === 'sex' || column.id === 'athlete_sex') {
+                        const genderValue = this.cleanValue(value);
+                        // K (Kobiety) = left, M (Mężczyźni) = right
+                        const align = (genderValue === 'K' || genderValue === 'F' || genderValue === 'Female') ? 'left' : 'right';
+                        cell.text(genderValue).css({'text-align': align, 'padding-left': '8px', 'padding-right': '8px'});
+                        row.append(cell);
                     } else {
                         cell.text(this.cleanValue(value));
                         row.append(cell);

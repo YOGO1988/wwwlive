@@ -31,6 +31,13 @@ $columns = $db->get_event_columns($event->event_id, true);
             </div>
 
             <div class="chronotrack-logos">
+                <!-- YOGO logo - ALWAYS visible (rightmost position) -->
+                <div class="chronotrack-yogo-logo">
+                    <img src="https://yogoevents.pl/wp-content/uploads/2017/09/poziom-kolor3.jpg"
+                         alt="YO&GO Events"
+                         style="max-width: 200px; max-height: 100px;">
+                </div>
+
                 <?php if (!empty($event->event_logo_url)): ?>
                     <div class="chronotrack-event-logo">
                         <img src="<?php echo esc_url($event->event_logo_url); ?>"
