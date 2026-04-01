@@ -13,8 +13,19 @@ if (!defined('ABSPATH')) {
     <a href="<?php echo admin_url('admin.php?page=chronotrack-add-event'); ?>" class="page-title-action">
         <?php _e('Add New Event', 'chronotrack-live'); ?>
     </a>
+    <a href="<?php echo wp_nonce_url(admin_url('admin-post.php?action=chronotrack_clean_duplicates'), 'chronotrack_clean_duplicates'); ?>"
+       class="page-title-action"
+       onclick="return confirm('<?php _e('Czy na pewno chcesz usunąć wszystkie duplikaty z bazy danych?', 'chronotrack-live'); ?>');"
+       style="background: #dc3232; border-color: #dc3232;">
+        <?php _e('🧹 Wyczyść duplikaty', 'chronotrack-live'); ?>
+    </a>
 
     <?php if (isset($_GET['message'])): ?>
+        <?php if (!in_array($_GET['message'], array('saved', 'deleted', 'results_fetched', 'no_results'))): ?>
+            <div class="notice notice-info is-dismissible">
+                <p><?php echo esc_html(urldecode($_GET['message'])); ?></p>
+            </div>
+        <?php endif; ?>
         <?php if ($_GET['message'] === 'saved'): ?>
             <div class="notice notice-success is-dismissible">
                 <p><?php _e('Event saved successfully.', 'chronotrack-live'); ?></p>

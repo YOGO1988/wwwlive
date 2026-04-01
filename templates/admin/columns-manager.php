@@ -18,6 +18,9 @@ if (empty($event_id)) {
 $columns = $db->get_event_columns($event_id, false);
 $available_attrs = $db->get_default_columns();
 
+// Get event details for split times
+$event = $db->get_event($event_id);
+
 // Extract all possible API attributes
 $all_api_attributes = array();
 foreach ($available_attrs as $col) {
@@ -25,6 +28,86 @@ foreach ($available_attrs as $col) {
         $all_api_attributes = array_merge($all_api_attributes, $col['api_options']);
     }
 }
+
+// AUTOMATIC: Fetch split times from ChronoTrack API
+// This will get ALL checkpoints/intervals configured for this event
+$api = chronotrack_live_results()->api;
+
+// Try to get split times from API by fetching multiple pages to ensure we get ALL intervals
+error_log("Columns Manager: Fetching split times from API for event {$event_id}");
+
+try {
+    // Fetch first 3 pages (up to 300 results) to maximize chances of finding all intervals
+    $all_api_results = array();
+
+    for ($page = 1; $page <= 3; $page++) {
+        $page_results = $api->fetch_results_page($event_id, $page, 100);
+
+        if (!empty($page_results)) {
+            $all_api_results = array_merge($all_api_results, $page_results);
+            error_log("Columns Manager: Page {$page} returned " . count($page_results) . " results");
+        } else {
+            error_log("Columns Manager: Page {$page} returned no results, stopping");
+            break; // No more pages
+        }
+    }
+
+    if (!empty($all_api_results)) {
+        error_log("Columns Manager: Total " . count($all_api_results) . " results fetched, extracting split times");
+
+        // Extract unique interval names from all results
+        $found_intervals = array();
+
+        foreach ($all_api_results as $result) {
+            if (isset($result['split_times']) && is_array($result['split_times'])) {
+                foreach ($result['split_times'] as $split) {
+                    if (!empty($split['interval_name'])) {
+                        $interval_name = $split['interval_name'];
+                        if (!isset($found_intervals[$interval_name])) {
+                            $found_intervals[$interval_name] = true;
+                            $attr = 'split_time:' . $interval_name;
+                            if (!in_array($attr, $all_api_attributes)) {
+                                $all_api_attributes[] = $attr;
+                                error_log("Columns Manager: Added split_time attribute: {$attr}");
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        error_log("Columns Manager: Found " . count($found_intervals) . " unique split time intervals: " . implode(', ', array_keys($found_intervals)));
+    } else {
+        error_log("Columns Manager: No results found from API, checking database cache");
+
+        // Fallback: try database cache if API returns nothing
+        $sample_results = $db->get_results($event_id, 10); // Get up to 10 results
+        if (!empty($sample_results)) {
+            foreach ($sample_results as $sample) {
+                if (!empty($sample->split_times)) {
+                    $split_times = is_string($sample->split_times)
+                        ? json_decode($sample->split_times, true)
+                        : $sample->split_times;
+
+                    if (is_array($split_times)) {
+                        foreach ($split_times as $split) {
+                            if (!empty($split['interval_name'])) {
+                                $attr = 'split_time:' . $split['interval_name'];
+                                if (!in_array($attr, $all_api_attributes)) {
+                                    $all_api_attributes[] = $attr;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+} catch (Exception $e) {
+    error_log("Columns Manager: Error fetching split times from API: " . $e->getMessage());
+    // Continue without split times - not fatal
+}
+
 $all_api_attributes = array_unique($all_api_attributes);
 sort($all_api_attributes);
 ?>

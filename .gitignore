@@ -13,6 +13,12 @@ Thumbs.db
 *.zip
 node_modules/
 
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
 # WordPress
 wp-config.php
 wp-content/uploads/

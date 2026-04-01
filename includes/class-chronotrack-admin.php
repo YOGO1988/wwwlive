@@ -15,6 +15,7 @@ class ChronoTrack_Admin {
         add_action('admin_post_chronotrack_delete_event', array($this, 'delete_event'));
         add_action('admin_post_chronotrack_save_columns', array($this, 'save_columns'));
         add_action('admin_post_chronotrack_fetch_results', array($this, 'manual_fetch_results'));
+        add_action('admin_post_chronotrack_clean_duplicates', array($this, 'clean_duplicates'));
         add_action('admin_enqueue_scripts', array($this, 'enqueue_admin_scripts'));
         add_action('wp_ajax_chronotrack_fetch_event_info', array($this, 'ajax_fetch_event_info'));
     }
@@ -188,6 +189,7 @@ class ChronoTrack_Admin {
             'event_id' => sanitize_text_field($_POST['event_id']),
             'event_name' => sanitize_text_field($_POST['event_name']),
             'event_date' => sanitize_text_field($_POST['event_date']),
+            'event_location' => sanitize_text_field($_POST['event_location'] ?? ''),
             'event_logo_url' => $event_logo_url,
             'sponsor_logo_url' => $sponsor_logo_url,
             'event_status' => sanitize_text_field($_POST['event_status'] ?? 'active'),
@@ -274,7 +276,7 @@ class ChronoTrack_Admin {
      * Create event page
      */
     private function create_event_page($event_id, $event_name) {
-        // Check if page already exists
+        // Check if page already exists for this event
         global $wpdb;
         $event = $wpdb->get_row($wpdb->prepare(
             "SELECT page_id FROM {$wpdb->prefix}chronotrack_events WHERE event_id = %s",
@@ -282,19 +284,45 @@ class ChronoTrack_Admin {
         ));
 
         if ($event && $event->page_id) {
-            // Update existing page
-            wp_update_post(array(
-                'ID' => $event->page_id,
-                'post_title' => $event_name,
-                'post_name' => sanitize_title($event_name . '-' . $event_id),
-            ));
-            return $event->page_id;
+            // Check if the page still exists in WordPress
+            $page = get_post($event->page_id);
+            if ($page && $page->post_status !== 'trash') {
+                // Update existing page title only (keep same slug!)
+                wp_update_post(array(
+                    'ID' => $event->page_id,
+                    'post_title' => $event_name,
+                    // DON'T update post_name - keep the same URL!
+                ));
+
+                // CRITICAL FIX: Also set template for existing pages
+                $this->set_page_template($event->page_id);
+
+                return $event->page_id;
+            }
         }
 
-        // Create new page
+        // Check if page with this slug already exists (from previous event)
+        $slug = sanitize_title($event_name . '-' . $event_id);
+        $existing_page = get_page_by_path($slug, OBJECT, 'page');
+
+        if ($existing_page) {
+            // Reuse existing page
+            wp_update_post(array(
+                'ID' => $existing_page->ID,
+                'post_title' => $event_name,
+                'post_status' => 'publish',
+            ));
+
+            // CRITICAL FIX: Also set template for reused pages
+            $this->set_page_template($existing_page->ID);
+
+            return $existing_page->ID;
+        }
+
+        // Create new page only if doesn't exist
         $page_data = array(
             'post_title' => $event_name,
-            'post_name' => sanitize_title($event_name . '-' . $event_id),
+            'post_name' => $slug,
             'post_content' => '', // Empty - results added automatically by the_content filter
             'post_status' => 'publish',
             'post_type' => 'page',
@@ -303,7 +331,49 @@ class ChronoTrack_Admin {
 
         $page_id = wp_insert_post($page_data);
 
+        // Set blank/full-width template for new page
+        $this->set_page_template($page_id);
+
         return $page_id;
+    }
+
+    /**
+     * Set page template to blank/full-width
+     */
+    private function set_page_template($page_id) {
+        // Try common template names - WordPress will use first available
+        $templates_to_try = array(
+            'elementor_canvas',           // Elementor Canvas (blank)
+            'page-templates/blank.php',   // Common blank template
+            'templates/blank.php',        // Alternative blank
+            'template-blank.php',         // Alternative blank
+            'page-templates/full-width.php', // Full width
+            'templates/full-width.php',   // Alternative full width
+            'template-fullwidth.php',     // Alternative full width
+        );
+
+        // Try to set a blank/full-width template if available
+        $template_set = false;
+        foreach ($templates_to_try as $template) {
+            $theme_templates = wp_get_theme()->get_page_templates();
+            if (isset($theme_templates[$template]) || $template === 'elementor_canvas') {
+                update_post_meta($page_id, '_wp_page_template', $template);
+                error_log("ChronoTrack: Set page template to '{$template}' for page {$page_id}");
+                $template_set = true;
+                break;
+            }
+        }
+
+        if (!$template_set) {
+            error_log("ChronoTrack: No blank/full-width template found in theme for page {$page_id}");
+        }
+
+        // Also try to disable Elementor's header/footer if Elementor is active
+        if (defined('ELEMENTOR_VERSION')) {
+            update_post_meta($page_id, '_elementor_page_assets_css', 'inline');
+            update_post_meta($page_id, '_elementor_template_type', 'wp-page');
+            error_log("ChronoTrack: Set Elementor settings for page {$page_id}");
+        }
     }
 
     /**
@@ -365,13 +435,26 @@ class ChronoTrack_Admin {
         // Fetch results from API
         $results = $api->fetch_results($event_id);
 
+        // Check database to see what was actually saved
+        $db = chronotrack_live_results()->db;
+        $db_results = $db->get_results($event_id);
+        $db_count = count($db_results);
+
         $message = !empty($results) ? 'results_fetched' : 'no_results';
+
+        // Add debug info to message
+        if (!empty($results) && $db_count === 0) {
+            $message = urlencode("⚠️ PROBLEM: API zwróciło " . count($results) . " wyników, ale w bazie jest 0! Sprawdź format danych lub parametry API.");
+        } else if (!empty($results) && $db_count > 0) {
+            $message = urlencode("✅ Pobrano " . count($results) . " wyników z API i zapisano " . $db_count . " do bazy.");
+        }
 
         wp_redirect(add_query_arg(
             array(
                 'page' => 'chronotrack-live',
                 'message' => $message,
-                'count' => count($results)
+                'count' => count($results),
+                'db_count' => $db_count
             ),
             admin_url('admin.php')
         ));
@@ -382,7 +465,7 @@ class ChronoTrack_Admin {
      * AJAX: Fetch event info from API
      */
     public function ajax_fetch_event_info() {
-        check_ajax_referer('chronotrack_admin', 'nonce');
+        check_ajax_referer('chronotrack_fetch_event_info', 'nonce');
 
         if (!current_user_can('manage_options')) {
             wp_send_json_error(array('message' => 'Unauthorized'));
@@ -400,14 +483,87 @@ class ChronoTrack_Admin {
         $event_info = $api->fetch_event_info($event_id);
 
         if ($event_info) {
+            // Format date for display
+            $event_date_formatted = 'N/A';
+            if (!empty($event_info['event_date'])) {
+                $timestamp = is_numeric($event_info['event_date'])
+                    ? $event_info['event_date']
+                    : strtotime($event_info['event_date']);
+                $event_date_formatted = date_i18n(get_option('date_format') . ' ' . get_option('time_format'), $timestamp);
+            }
+
+            // CRITICAL: Also fetch split times/intervals from API
+            error_log("AJAX: Fetching split times for event {$event_id}");
+            $split_times_list = array();
+
+            try {
+                // Fetch first 3 pages to get all possible intervals
+                $found_intervals = array();
+
+                for ($page = 1; $page <= 3; $page++) {
+                    $results = $api->fetch_results_page($event_id, $page, 100);
+
+                    if (!empty($results)) {
+                        foreach ($results as $result) {
+                            if (isset($result['split_times']) && is_array($result['split_times'])) {
+                                foreach ($result['split_times'] as $split) {
+                                    if (!empty($split['interval_name']) && !isset($found_intervals[$split['interval_name']])) {
+                                        $found_intervals[$split['interval_name']] = true;
+                                        $split_times_list[] = $split['interval_name'];
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        break; // No more pages
+                    }
+                }
+
+                error_log("AJAX: Found " . count($split_times_list) . " unique split times: " . implode(', ', $split_times_list));
+            } catch (Exception $e) {
+                error_log("AJAX: Error fetching split times: " . $e->getMessage());
+                // Continue without split times
+            }
+
             wp_send_json_success(array(
                 'event_name' => $event_info['event_name'],
                 'event_date' => $event_info['event_date'],
+                'event_date_formatted' => $event_date_formatted,
                 'location' => $event_info['location'],
                 'status' => $event_info['status'],
+                'split_times' => $split_times_list, // NEW: list of interval names
             ));
         } else {
-            wp_send_json_error(array('message' => 'Nie można pobrać danych wydarzenia z API'));
+            wp_send_json_error(array('message' => 'Nie można pobrać danych wydarzenia z API. Sprawdź czy Event ID jest prawidłowy.'));
         }
+    }
+
+    /**
+     * Clean duplicate results from database
+     */
+    public function clean_duplicates() {
+        if (!current_user_can('manage_options')) {
+            wp_die('Unauthorized');
+        }
+
+        check_admin_referer('chronotrack_clean_duplicates');
+
+        $event_id = isset($_GET['event_id']) ? sanitize_text_field($_GET['event_id']) : null;
+
+        $db = chronotrack_live_results()->db;
+        $deleted = $db->clean_duplicate_results($event_id);
+
+        // Try to add unique constraint if it doesn't exist
+        $db->add_unique_constraint();
+
+        $message = $deleted > 0
+            ? sprintf(__('Usunięto %d zduplikowanych rekordów.', 'chronotrack-live'), $deleted)
+            : __('Nie znaleziono duplikatów.', 'chronotrack-live');
+
+        wp_redirect(add_query_arg(array(
+            'page' => 'chronotrack-live',
+            'message' => urlencode($message)
+        ), admin_url('admin.php')));
+        exit;
     }
 }

@@ -9,6 +9,60 @@ if (!defined('ABSPATH')) {
 
 class ChronoTrack_Database {
 
+    public function __construct() {
+        // Run migrations on plugin load (version check prevents running every time)
+        $this->maybe_run_migrations();
+    }
+
+    /**
+     * Run database migrations if needed
+     */
+    private function maybe_run_migrations() {
+        $db_version = get_option('chronotrack_db_version', '0');
+        $current_version = '4.0.8';
+
+        if (version_compare($db_version, $current_version, '<')) {
+            $this->run_migrations();
+            update_option('chronotrack_db_version', $current_version);
+        }
+    }
+
+    /**
+     * Run database migrations
+     */
+    private function run_migrations() {
+        global $wpdb;
+        $events_table = $wpdb->prefix . 'chronotrack_events';
+        $results_table = $wpdb->prefix . 'chronotrack_results';
+
+        // Migration 1: Add event_location column to events table
+        $column_exists = $wpdb->get_results(
+            "SHOW COLUMNS FROM $events_table LIKE 'event_location'"
+        );
+        if (empty($column_exists)) {
+            error_log("Migration: Adding event_location column to $events_table");
+            $wpdb->query("ALTER TABLE $events_table ADD COLUMN event_location varchar(500) AFTER event_date");
+        }
+
+        // Migration 2: Add distance column to results table
+        $distance_exists = $wpdb->get_results(
+            "SHOW COLUMNS FROM $results_table LIKE 'distance'"
+        );
+        if (empty($distance_exists)) {
+            error_log("Migration: Adding distance column to $results_table");
+            $wpdb->query("ALTER TABLE $results_table ADD COLUMN distance varchar(255) AFTER club");
+        }
+
+        // Migration 3: Add bracket_positions column to results table
+        $bracket_positions_exists = $wpdb->get_results(
+            "SHOW COLUMNS FROM $results_table LIKE 'bracket_positions'"
+        );
+        if (empty($bracket_positions_exists)) {
+            error_log("Migration: Adding bracket_positions column to $results_table");
+            $wpdb->query("ALTER TABLE $results_table ADD COLUMN bracket_positions TEXT AFTER split_times");
+        }
+    }
+
     /**
      * Create database tables
      */
@@ -24,6 +78,7 @@ class ChronoTrack_Database {
             event_id varchar(255) NOT NULL,
             event_name varchar(255) NOT NULL,
             event_date datetime NOT NULL,
+            event_location varchar(500),
             event_logo_url text,
             sponsor_logo_url text,
             event_status varchar(50) DEFAULT 'active',
@@ -68,7 +123,8 @@ class ChronoTrack_Database {
             KEY participant_id (participant_id),
             KEY finish_timestamp (finish_timestamp),
             KEY position (position),
-            KEY distance (distance)
+            KEY distance (distance),
+            UNIQUE KEY event_bib (event_id, bib_number)
         ) $charset_collate;";
 
         // Split times table
@@ -115,6 +171,10 @@ class ChronoTrack_Database {
         dbDelta($results_sql);
         dbDelta($splits_sql);
         dbDelta($columns_sql);
+
+        // Add country and nationality columns if they don't exist
+        $wpdb->query("ALTER TABLE $results_table ADD COLUMN IF NOT EXISTS country VARCHAR(255) AFTER city");
+        $wpdb->query("ALTER TABLE $results_table ADD COLUMN IF NOT EXISTS nationality VARCHAR(255) AFTER country");
     }
 
     /**
@@ -128,6 +188,7 @@ class ChronoTrack_Database {
             'event_id' => sanitize_text_field($event_data['event_id']),
             'event_name' => sanitize_text_field($event_data['event_name']),
             'event_date' => sanitize_text_field($event_data['event_date']),
+            'event_location' => sanitize_text_field($event_data['event_location'] ?? ''),
             'event_logo_url' => esc_url_raw($event_data['event_logo_url'] ?? ''),
             'sponsor_logo_url' => esc_url_raw($event_data['sponsor_logo_url'] ?? ''),
             'event_status' => sanitize_text_field($event_data['event_status'] ?? 'active'),
@@ -146,7 +207,7 @@ class ChronoTrack_Database {
                 $table,
                 $data,
                 array('event_id' => $data['event_id']),
-                array('%s', '%s', '%s', '%s', '%s', '%s', '%d', '%s'),
+                array('%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%s'),
                 array('%s')
             );
             return $existing->id;
@@ -226,7 +287,39 @@ class ChronoTrack_Database {
         global $wpdb;
         $table = $wpdb->prefix . 'chronotrack_results';
 
+        error_log("DB save_results() called: event_id={$event_id}, input count=" . count($results_data));
+
+        // Deduplicate results by bib_number before saving
+        $deduplicated = array();
         foreach ($results_data as $result) {
+            $bib = $result['bib_number'] ?? '';
+            if (empty($bib)) {
+                error_log("  Skipping result without bib_number");
+                continue; // Skip results without bib number
+            }
+
+            // Keep only the first occurrence of each bib number
+            if (!isset($deduplicated[$bib])) {
+                $deduplicated[$bib] = $result;
+            }
+        }
+
+        error_log("After deduplication: " . count($deduplicated) . " unique BIBs");
+
+        $saved_count = 0;
+        $first_logged = false;
+        foreach ($deduplicated as $result) {
+            // Debug first result
+            if (!$first_logged) {
+                error_log("========== FIRST RESULT TO SAVE ==========");
+                error_log("BIB: " . ($result['bib_number'] ?? 'NULL'));
+                error_log("Name: " . ($result['first_name'] ?? '') . ' ' . ($result['last_name'] ?? ''));
+                error_log("Position: " . ($result['position'] ?? 'NULL'));
+                error_log("Finish time: " . ($result['finish_time'] ?? 'NULL'));
+                error_log("==========================================");
+                $first_logged = true;
+            }
+
             $data = array(
                 'event_id' => sanitize_text_field($event_id),
                 'participant_id' => sanitize_text_field($result['participant_id'] ?? ''),
@@ -236,6 +329,8 @@ class ChronoTrack_Database {
                 'age' => absint($result['age'] ?? 0),
                 'gender' => sanitize_text_field($result['gender'] ?? ''),
                 'city' => sanitize_text_field($result['city'] ?? ''),
+                'country' => sanitize_text_field($result['country'] ?? ''),
+                'nationality' => sanitize_text_field($result['nationality'] ?? ''),
                 'club' => sanitize_text_field($result['club'] ?? ''),
                 'distance' => sanitize_text_field($result['distance'] ?? ''),
                 'category' => sanitize_text_field($result['category'] ?? ''),
@@ -247,6 +342,7 @@ class ChronoTrack_Database {
                 'net_time' => sanitize_text_field($result['net_time'] ?? ''),
                 'net_time_seconds' => absint($result['net_time_seconds'] ?? 0),
                 'split_times' => wp_json_encode($result['split_times'] ?? array()),
+                'bracket_positions' => wp_json_encode($result['bracket_positions'] ?? array()),
                 'finish_timestamp' => $result['finish_timestamp'] ?? current_time('mysql'),
                 'raw_data' => wp_json_encode($result),
             );
@@ -272,13 +368,59 @@ class ChronoTrack_Database {
                     }
                 }
 
-                $wpdb->update(
+                $update_result = $wpdb->update(
                     $table,
                     $data,
                     array('id' => $existing->id)
                 );
+                if ($update_result !== false) {
+                    $saved_count++;
+                    // Save split times to splits table
+                    $this->save_split_times($existing->id, $event_id, $result);
+                } else {
+                    error_log("⚠️ UPDATE FAILED for BIB {$data['bib_number']}: " . $wpdb->last_error);
+                }
             } else {
-                $wpdb->insert($table, $data);
+                $insert_result = $wpdb->insert($table, $data);
+                if ($insert_result !== false) {
+                    $result_id = $wpdb->insert_id;
+                    $saved_count++;
+                    // Save split times to splits table
+                    $this->save_split_times($result_id, $event_id, $result);
+                } else {
+                    error_log("⚠️ INSERT FAILED for BIB {$data['bib_number']}: " . $wpdb->last_error);
+                }
+            }
+        }
+
+        error_log("DB save_results() complete: saved {$saved_count} records to database");
+        return $saved_count;
+    }
+
+    /**
+     * Save split times to splits table
+     */
+    private function save_split_times($result_id, $event_id, $result) {
+        global $wpdb;
+        $splits_table = $wpdb->prefix . 'chronotrack_splits';
+
+        // Delete existing splits for this result
+        $wpdb->delete($splits_table, array('result_id' => $result_id));
+
+        // Insert new splits
+        if (!empty($result['split_times']) && is_array($result['split_times'])) {
+            foreach ($result['split_times'] as $split) {
+                $wpdb->insert($splits_table, array(
+                    'result_id' => $result_id,
+                    'event_id' => sanitize_text_field($event_id),
+                    'participant_id' => sanitize_text_field($result['participant_id'] ?? ''),
+                    'checkpoint_name' => sanitize_text_field($split['interval_name'] ?? $split['checkpoint_name'] ?? ''),
+                    'checkpoint_time' => sanitize_text_field($split['formatted_time'] ?? $split['checkpoint_time'] ?? ''),
+                    'checkpoint_time_seconds' => absint($split['time_seconds'] ?? $split['checkpoint_time_seconds'] ?? 0),
+                    'checkpoint_position' => absint($split['rank'] ?? $split['checkpoint_position'] ?? 0),
+                    'segment_time' => sanitize_text_field($split['segment_time'] ?? ''),
+                    'segment_time_seconds' => absint($split['segment_time_seconds'] ?? 0),
+                ));
             }
         }
     }
@@ -305,6 +447,9 @@ class ChronoTrack_Database {
             if (!empty($result->split_times)) {
                 $result->split_times = json_decode($result->split_times, true);
             }
+            if (!empty($result->bracket_positions)) {
+                $result->bracket_positions = json_decode($result->bracket_positions, true);
+            }
             if (!empty($result->raw_data)) {
                 $result->raw_data = json_decode($result->raw_data, true);
             }
@@ -321,9 +466,22 @@ class ChronoTrack_Database {
         $table = $wpdb->prefix . 'chronotrack_results';
 
         $distances = $wpdb->get_col($wpdb->prepare(
-            "SELECT DISTINCT distance FROM $table WHERE event_id = %s AND distance != '' ORDER BY distance",
+            "SELECT DISTINCT distance FROM $table WHERE event_id = %s AND distance != ''",
             $event_id
         ));
+
+        // Sort by numeric value (longest first)
+        usort($distances, function($a, $b) {
+            // Extract numbers from distance strings (e.g., "10km" -> 10, "5 km" -> 5)
+            preg_match('/(\d+(?:\.\d+)?)/', $a, $matches_a);
+            preg_match('/(\d+(?:\.\d+)?)/', $b, $matches_b);
+
+            $num_a = isset($matches_a[1]) ? floatval($matches_a[1]) : 0;
+            $num_b = isset($matches_b[1]) ? floatval($matches_b[1]) : 0;
+
+            // Sort descending (longest first)
+            return $num_b - $num_a;
+        });
 
         return $distances;
     }
@@ -344,6 +502,9 @@ class ChronoTrack_Database {
         foreach ($results as $result) {
             if (!empty($result->split_times)) {
                 $result->split_times = json_decode($result->split_times, true);
+            }
+            if (!empty($result->bracket_positions)) {
+                $result->bracket_positions = json_decode($result->bracket_positions, true);
             }
             if (!empty($result->raw_data)) {
                 $result->raw_data = json_decode($result->raw_data, true);
@@ -370,6 +531,9 @@ class ChronoTrack_Database {
         if ($result) {
             if (!empty($result->split_times)) {
                 $result->split_times = json_decode($result->split_times, true);
+            }
+            if (!empty($result->bracket_positions)) {
+                $result->bracket_positions = json_decode($result->bracket_positions, true);
             }
             if (!empty($result->raw_data)) {
                 $result->raw_data = json_decode($result->raw_data, true);
@@ -425,7 +589,7 @@ class ChronoTrack_Database {
             array('id' => 'full_name', 'name' => 'Nazwisko Imię', 'description' => 'Nazwisko i imię zawodnika', 'api_options' => array('full_name', 'athlete_last_name,athlete_first_name'), 'selected' => true),
             array('id' => 'city', 'name' => 'Miejscowość', 'description' => 'Miejscowość zawodnika', 'api_options' => array('city', 'results_city', 'athlete_city'), 'selected' => true),
             array('id' => 'club', 'name' => 'Klub', 'description' => 'Klub zawodnika', 'api_options' => array('club', 'results_club', 'athlete_club'), 'selected' => true),
-            array('id' => 'birth_year', 'name' => 'Rok Ur', 'description' => 'Rok urodzenia', 'api_options' => array('birth_year', 'birthdate', 'athlete_birthdate'), 'selected' => true),
+            array('id' => 'birth_year', 'name' => 'Rok Ur', 'description' => 'Rok urodzenia', 'api_options' => array('birth_year', 'birthdate', 'athlete_birthdate'), 'selected' => false),
             array('id' => 'category', 'name' => 'Kat', 'description' => 'Kategoria wiekowa', 'api_options' => array('category', 'bracket_name', 'results_primary_bracket_name'), 'selected' => true),
             array('id' => 'category_position', 'name' => 'Msc Kat', 'description' => 'Miejsce w kategorii wiekowej', 'api_options' => array('category_position', 'division_place', 'results_division_rank'), 'selected' => true),
             array('id' => 'gender_position', 'name' => 'Msc M/K', 'description' => 'Miejsce w kategorii płci', 'api_options' => array('gender_position', 'sex_place', 'results_sex_rank'), 'selected' => true),
@@ -553,5 +717,59 @@ class ChronoTrack_Database {
                 )
             );
         }
+    }
+
+    /**
+     * Clean duplicate results from database
+     * Keeps only the most recent record for each (event_id, bib_number) pair
+     */
+    public function clean_duplicate_results($event_id = null) {
+        global $wpdb;
+        $table = $wpdb->prefix . 'chronotrack_results';
+
+        // Build query to find duplicates
+        $where = $event_id ? $wpdb->prepare("WHERE event_id = %s", $event_id) : "";
+
+        // Delete duplicates, keeping the one with highest ID (most recent)
+        $query = "DELETE t1 FROM $table t1
+                  INNER JOIN $table t2
+                  WHERE t1.event_id = t2.event_id
+                    AND t1.bib_number = t2.bib_number
+                    AND t1.id < t2.id
+                  $where";
+
+        $deleted = $wpdb->query($query);
+
+        return $deleted;
+    }
+
+    /**
+     * Add unique constraint to results table if it doesn't exist
+     */
+    public function add_unique_constraint() {
+        global $wpdb;
+        $table = $wpdb->prefix . 'chronotrack_results';
+
+        // Check if constraint already exists
+        $constraint_exists = $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM INFORMATION_SCHEMA.STATISTICS
+             WHERE table_schema = %s
+             AND table_name = %s
+             AND index_name = 'event_bib'",
+            DB_NAME,
+            $table
+        ));
+
+        if (!$constraint_exists) {
+            // Clean duplicates first
+            $this->clean_duplicate_results();
+
+            // Add unique constraint
+            $wpdb->query("ALTER TABLE $table ADD UNIQUE KEY event_bib (event_id, bib_number)");
+
+            return true;
+        }
+
+        return false;
     }
 }
