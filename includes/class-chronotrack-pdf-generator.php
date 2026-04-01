@@ -654,20 +654,20 @@ class ChronoTrack_PDF_Generator {
                 if ($is_mk_column) {
                     // Get athlete's gender
                     $athlete_gender = $result->gender ?? $result->sex ?? $result->athlete_sex ?? '';
-                    // CRITICAL: Use 1/3 width instead of 1/2 for tighter spacing
-                    // For 15mm column: 5mm padding instead of 7.5mm
-                    $third_width = round($col_widths[$index] / 3, 1);
 
                     // SWAPPED: Gender detection inverted in PDF
-                    // Use FULL padding property to override CSS completely
+                    // TCPDF FIX: Use direction:rtl for men, direction:ltr for women
+                    // This creates virtual center line effect that works in TCPDF
                     if ($athlete_gender === 'K' || $athlete_gender === 'F' || $athlete_gender === 'Female') {
                         // K detected but APPLY MEN's style (LEFT side + RIGHT align)
+                        // Men should be RIGHT-aligned on LEFT half
                         $text_align = 'right';
-                        $padding_style = 'padding: 2px ' . $third_width . 'mm 2px 0.5mm;';  // 5mm right, not 7.5mm
+                        $padding_style = 'padding: 2px 8mm 2px 0mm; direction: rtl;';  // RTL for proper right-align
                     } else if ($athlete_gender === 'M' || $athlete_gender === 'Male' || $athlete_gender === 'Mężczyźni') {
                         // M detected but APPLY WOMEN's style (RIGHT side + LEFT align)
+                        // Women should be LEFT-aligned on RIGHT half
                         $text_align = 'left';
-                        $padding_style = 'padding: 2px 0.5mm 2px ' . $third_width . 'mm;';  // 5mm left, not 7.5mm
+                        $padding_style = 'padding: 2px 0mm 2px 4mm; direction: ltr;';  // LTR for proper left-align
                     }
                 }
 

@@ -703,6 +703,24 @@
                         }
                     }
 
+                    // CRITICAL: Handle birth_year - extract year from date if needed
+                    if (attr === 'birth_year' || attr === 'birthdate' || attr === 'athlete_birthdate') {
+                        let birthValue = result[attr] || result.birth_year || result.birthdate || result.athlete_birthdate;
+                        if (birthValue) {
+                            // If it's a full date (YYYY-MM-DD or similar), extract year
+                            if (typeof birthValue === 'string' && birthValue.includes('-')) {
+                                const year = birthValue.split('-')[0];
+                                if (year && year.length === 4) {
+                                    return year;
+                                }
+                            }
+                            // If it's already just a year (number or 4-digit string), return it
+                            if (typeof birthValue === 'number' || (typeof birthValue === 'string' && birthValue.length === 4)) {
+                                return birthValue;
+                            }
+                        }
+                    }
+
                     // Try direct attribute - accept 0 as valid value (except for category_position handled above)
                     if (result.hasOwnProperty(attr) && result[attr] !== null && result[attr] !== undefined && result[attr] !== '') {
                         return result[attr];
