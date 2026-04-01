@@ -659,11 +659,11 @@ class ChronoTrack_PDF_Generator {
                     if ($athlete_gender === 'K' || $athlete_gender === 'F' || $athlete_gender === 'Female') {
                         // K detected but APPLY MEN's style (LEFT side + RIGHT align)
                         $text_align = 'right';
-                        $padding_style = 'padding-right: ' . ($half_width + 0.5) . 'mm; padding-left: 0.3mm;';  // Reduced from +1mm to +0.5mm
+                        $padding_style = 'padding-right: ' . $half_width . 'mm; padding-left: 0.3mm;';  // Removed offset - use exact half
                     } else if ($athlete_gender === 'M' || $athlete_gender === 'Male' || $athlete_gender === 'Mężczyźni') {
                         // M detected but APPLY WOMEN's style (RIGHT side + LEFT align)
                         $text_align = 'left';
-                        $padding_style = 'padding-left: ' . ($half_width - 0.5) . 'mm; padding-right: 0.3mm;';  // Reduced from -1mm to -0.5mm
+                        $padding_style = 'padding-left: ' . $half_width . 'mm; padding-right: 0.3mm;';  // Removed offset - use exact half
                     }
                 }
 

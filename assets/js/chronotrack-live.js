@@ -560,17 +560,17 @@
                         // Push BOTH left by same amount
                         const cellElem = cell[0];
                         if (athleteGender === 'M' || athleteGender === 'Male' || athleteGender === 'Mężczyźni') {
-                            // M: push more LEFT
+                            // M: RIGHT align so double digits grow LEFT (0 stays put, 1 extends left)
                             cellElem.style.setProperty('text-align', 'right', 'important');
-                            cellElem.style.setProperty('padding-right', '60px', 'important');  // Was 52px, now 60px (+8px)
-                            cellElem.style.setProperty('padding-left', '2px', 'important');
-                            console.log('🎨 M/K Column | ID:', result.id, '| Gender: M | Value:', value, '| Pad-R: 60px');
+                            cellElem.style.setProperty('padding', '6px 54px 6px 2px', 'important');  // Reduced from 60px to 54px
+                            cellElem.style.setProperty('direction', 'ltr', 'important');  // Ensure left-to-right
+                            console.log('🎨 M/K Column | ID:', result.id, '| Gender: M | Value:', value, '| Pad-R: 54px');
                         } else if (athleteGender === 'K' || athleteGender === 'F' || athleteGender === 'Female') {
-                            // K: push LEFT by same amount
+                            // K: LEFT align, shifted left to be under "K"
                             cellElem.style.setProperty('text-align', 'left', 'important');
-                            cellElem.style.setProperty('padding-left', '44px', 'important');  // Was 36px, now 44px (+8px)
-                            cellElem.style.setProperty('padding-right', '2px', 'important');
-                            console.log('🎨 M/K Column | ID:', result.id, '| Gender: K | Value:', value, '| Pad-L: 44px');
+                            cellElem.style.setProperty('padding', '6px 2px 6px 36px', 'important');  // Reduced from 44px to 36px
+                            cellElem.style.setProperty('direction', 'ltr', 'important');
+                            console.log('🎨 M/K Column | ID:', result.id, '| Gender: K | Value:', value, '| Pad-L: 36px');
                         } else {
                             // Unknown gender - center align
                             cellElem.style.setProperty('text-align', 'center', 'important');
