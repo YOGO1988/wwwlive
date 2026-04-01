@@ -654,19 +654,20 @@ class ChronoTrack_PDF_Generator {
                 if ($is_mk_column) {
                     // Get athlete's gender
                     $athlete_gender = $result->gender ?? $result->sex ?? $result->athlete_sex ?? '';
-                    // Use exact half-width for tight spacing
-                    $half_width = round($col_widths[$index] / 2, 1);
+                    // CRITICAL: Use 1/3 width instead of 1/2 for tighter spacing
+                    // For 15mm column: 5mm padding instead of 7.5mm
+                    $third_width = round($col_widths[$index] / 3, 1);
 
                     // SWAPPED: Gender detection inverted in PDF
                     // Use FULL padding property to override CSS completely
                     if ($athlete_gender === 'K' || $athlete_gender === 'F' || $athlete_gender === 'Female') {
                         // K detected but APPLY MEN's style (LEFT side + RIGHT align)
                         $text_align = 'right';
-                        $padding_style = 'padding: 2px ' . $half_width . 'mm 2px 0.5mm;';  // top right bottom left
+                        $padding_style = 'padding: 2px ' . $third_width . 'mm 2px 0.5mm;';  // 5mm right, not 7.5mm
                     } else if ($athlete_gender === 'M' || $athlete_gender === 'Male' || $athlete_gender === 'Mężczyźni') {
                         // M detected but APPLY WOMEN's style (RIGHT side + LEFT align)
                         $text_align = 'left';
-                        $padding_style = 'padding: 2px 0.5mm 2px ' . $half_width . 'mm;';  // top right bottom left
+                        $padding_style = 'padding: 2px 0.5mm 2px ' . $third_width . 'mm;';  // 5mm left, not 7.5mm
                     }
                 }
 

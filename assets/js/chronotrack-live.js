@@ -568,9 +568,9 @@
                         } else if (athleteGender === 'K' || athleteGender === 'F' || athleteGender === 'Female') {
                             // K: LEFT align, shifted left to be under "K"
                             cellElem.style.setProperty('text-align', 'left', 'important');
-                            cellElem.style.setProperty('padding', '6px 2px 6px 30px', 'important');  // Reduced from 36px to 30px
+                            cellElem.style.setProperty('padding', '6px 2px 6px 24px', 'important');  // Reduced from 30px to 24px
                             cellElem.style.setProperty('direction', 'ltr', 'important');
-                            console.log('🎨 M/K Column | ID:', result.id, '| Gender: K | Value:', value, '| Pad-L: 30px');
+                            console.log('🎨 M/K Column | ID:', result.id, '| Gender: K | Value:', value, '| Pad-L: 24px');
                         } else {
                             // Unknown gender - center align
                             cellElem.style.setProperty('text-align', 'center', 'important');
