@@ -562,15 +562,15 @@
                         if (athleteGender === 'M' || athleteGender === 'Male' || athleteGender === 'Mężczyźni') {
                             // M: push more LEFT
                             cellElem.style.setProperty('text-align', 'right', 'important');
-                            cellElem.style.setProperty('padding-right', '52px', 'important');  // Was 48px, now 52px
+                            cellElem.style.setProperty('padding-right', '60px', 'important');  // Was 52px, now 60px (+8px)
                             cellElem.style.setProperty('padding-left', '2px', 'important');
-                            console.log('🎨 M/K Column | ID:', result.id, '| Gender: M | Value:', value, '| Pad-R: 52px');
+                            console.log('🎨 M/K Column | ID:', result.id, '| Gender: M | Value:', value, '| Pad-R: 60px');
                         } else if (athleteGender === 'K' || athleteGender === 'F' || athleteGender === 'Female') {
                             // K: push LEFT by same amount
                             cellElem.style.setProperty('text-align', 'left', 'important');
-                            cellElem.style.setProperty('padding-left', '36px', 'important');  // Was 32px, now 36px
+                            cellElem.style.setProperty('padding-left', '44px', 'important');  // Was 36px, now 44px (+8px)
                             cellElem.style.setProperty('padding-right', '2px', 'important');
-                            console.log('🎨 M/K Column | ID:', result.id, '| Gender: K | Value:', value, '| Pad-L: 36px');
+                            console.log('🎨 M/K Column | ID:', result.id, '| Gender: K | Value:', value, '| Pad-L: 44px');
                         } else {
                             // Unknown gender - center align
                             cellElem.style.setProperty('text-align', 'center', 'important');

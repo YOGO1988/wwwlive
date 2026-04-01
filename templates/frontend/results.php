@@ -61,30 +61,31 @@ $columns = $db->get_event_columns($event->event_id, true);
     <div class="chronotrack-controls">
         <!-- Removed META view - only show standings -->
 
+        <!-- Participant Statistics - in green box on the left -->
+        <div class="chronotrack-stats" id="chronotrack-stats" style="display: none; padding: 12px 20px; background: #4CAF50; border-radius: 6px; font-size: 13px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+            <div style="display: flex; gap: 25px; align-items: center;">
+                <div style="color: #fff; font-weight: 700; font-size: 14px;">Status zawodów:</div>
+                <div class="chronotrack-stat-item">
+                    <span class="chronotrack-stat-label" style="color: rgba(255,255,255,0.9); font-weight: 500; margin-right: 5px;">Wystartowało:</span>
+                    <span class="chronotrack-stat-value" id="stat-started" style="font-weight: 700; color: #fff; font-size: 15px;">-</span>
+                </div>
+                <div class="chronotrack-stat-item">
+                    <span class="chronotrack-stat-label" style="color: rgba(255,255,255,0.9); font-weight: 500; margin-right: 5px;">Na trasie:</span>
+                    <span class="chronotrack-stat-value" id="stat-on-course" style="font-weight: 700; color: #fff; font-size: 15px;">-</span>
+                </div>
+                <div class="chronotrack-stat-item">
+                    <span class="chronotrack-stat-label" style="color: rgba(255,255,255,0.9); font-weight: 500; margin-right: 5px;">Ukończyło:</span>
+                    <span class="chronotrack-stat-value" id="stat-finished" style="font-weight: 700; color: #fff; font-size: 15px;">-</span>
+                </div>
+            </div>
+        </div>
+
         <div class="chronotrack-live-wrapper">
             <div class="chronotrack-live-indicator">
                 <span class="chronotrack-live-text">Na żywo</span>
             </div>
             <div class="chronotrack-last-update">
                 <span id="chronotrack-timestamp"></span>
-            </div>
-
-            <!-- Participant Statistics - moved here under NA ŻYWO -->
-            <div class="chronotrack-stats" id="chronotrack-stats" style="display: none; margin-top: 10px; padding: 10px; background: #f8f9fa; border-radius: 4px; font-size: 12px;">
-                <div style="display: flex; justify-content: flex-end; gap: 20px; flex-wrap: wrap;">
-                    <div class="chronotrack-stat-item">
-                        <span class="chronotrack-stat-label" style="color: #666; font-weight: 600;">WYSTARTOWAŁO:</span>
-                        <span class="chronotrack-stat-value" id="stat-started" style="font-weight: 700; color: #333;">-</span>
-                    </div>
-                    <div class="chronotrack-stat-item">
-                        <span class="chronotrack-stat-label" style="color: #666; font-weight: 600;">NA TRASIE:</span>
-                        <span class="chronotrack-stat-value" id="stat-on-course" style="font-weight: 700; color: #2196F3;">-</span>
-                    </div>
-                    <div class="chronotrack-stat-item">
-                        <span class="chronotrack-stat-label" style="color: #666; font-weight: 600;">UKOŃCZYŁO:</span>
-                        <span class="chronotrack-stat-value" id="stat-finished" style="font-weight: 700; color: #2196F3;">-</span>
-                    </div>
-                </div>
             </div>
         </div>
     </div>
