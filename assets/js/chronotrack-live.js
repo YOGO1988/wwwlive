@@ -557,20 +557,20 @@
                         const athleteGender = result.gender || result.sex || result.athlete_sex || '';
                         let cellStyle = {};
 
-                        // CRITICAL: Push men MUCH MORE to the left, women slightly left
-                        const cellElem = cell[0]; // Get DOM element for setProperty
+                        // Push BOTH left by same amount
+                        const cellElem = cell[0];
                         if (athleteGender === 'M' || athleteGender === 'Male' || athleteGender === 'Mężczyźni') {
-                            // M (Men) = PUSH FAR LEFT - under "M" not "K"
+                            // M: push more LEFT
                             cellElem.style.setProperty('text-align', 'right', 'important');
-                            cellElem.style.setProperty('padding-right', '48px', 'important');  // Was 42px, now 48px!
+                            cellElem.style.setProperty('padding-right', '52px', 'important');  // Was 48px, now 52px
                             cellElem.style.setProperty('padding-left', '2px', 'important');
-                            console.log('🎨 M/K Column | ID:', result.id, '| Gender: M | Value:', value, '| Pad-R: 48px');
+                            console.log('🎨 M/K Column | ID:', result.id, '| Gender: M | Value:', value, '| Pad-R: 52px');
                         } else if (athleteGender === 'K' || athleteGender === 'F' || athleteGender === 'Female') {
-                            // K (Women) = slight left, under "K"
+                            // K: push LEFT by same amount
                             cellElem.style.setProperty('text-align', 'left', 'important');
-                            cellElem.style.setProperty('padding-left', '32px', 'important');  // Was 38px, now 32px
+                            cellElem.style.setProperty('padding-left', '36px', 'important');  // Was 32px, now 36px
                             cellElem.style.setProperty('padding-right', '2px', 'important');
-                            console.log('🎨 M/K Column | ID:', result.id, '| Gender: K | Value:', value, '| Pad-L: 32px');
+                            console.log('🎨 M/K Column | ID:', result.id, '| Gender: K | Value:', value, '| Pad-L: 36px');
                         } else {
                             // Unknown gender - center align
                             cellElem.style.setProperty('text-align', 'center', 'important');

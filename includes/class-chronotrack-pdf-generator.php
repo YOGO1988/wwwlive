@@ -654,12 +654,14 @@ class ChronoTrack_PDF_Generator {
                     $athlete_gender = $result->gender ?? $result->sex ?? $result->athlete_sex ?? '';
                     // Use more aggressive padding for PDF
                     $half_width = round($col_widths[$index] / 2, 1);
-                    if ($athlete_gender === 'M' || $athlete_gender === 'Male' || $athlete_gender === 'Mężczyźni') {
-                        // M (Men) = LEFT side + RIGHT align
+
+                    // SWAPPED: Testing if gender detection is inverted in PDF
+                    if ($athlete_gender === 'K' || $athlete_gender === 'F' || $athlete_gender === 'Female') {
+                        // K detected but APPLY MEN's style (LEFT side + RIGHT align)
                         $text_align = 'right';
                         $padding_style = 'padding-right: ' . ($half_width + 1) . 'mm; padding-left: 0.3mm;';
-                    } else if ($athlete_gender === 'K' || $athlete_gender === 'F' || $athlete_gender === 'Female') {
-                        // K (Women) = RIGHT side + LEFT align
+                    } else if ($athlete_gender === 'M' || $athlete_gender === 'Male' || $athlete_gender === 'Mężczyźni') {
+                        // M detected but APPLY WOMEN's style (RIGHT side + LEFT align)
                         $text_align = 'left';
                         $padding_style = 'padding-left: ' . ($half_width - 1) . 'mm; padding-right: 0.3mm;';
                     }
