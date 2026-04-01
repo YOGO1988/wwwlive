@@ -582,11 +582,13 @@ class ChronoTrack_PDF_Generator {
                 line-height: 1.2;
             }
             td {
-                text-align: center;
                 padding: 2px 1px;
                 border-top: 0.5px solid #CCCCCC;
                 border-bottom: 0.5px solid #CCCCCC;
                 line-height: 1.3;
+            }
+            td:not([style*="text-align"]) {
+                text-align: center;
             }
             .small-text {
                 font-size: 5.5pt;
@@ -652,18 +654,19 @@ class ChronoTrack_PDF_Generator {
                 if ($is_mk_column) {
                     // Get athlete's gender
                     $athlete_gender = $result->gender ?? $result->sex ?? $result->athlete_sex ?? '';
-                    // Use more aggressive padding for PDF
+                    // Use exact half-width for tight spacing
                     $half_width = round($col_widths[$index] / 2, 1);
 
-                    // SWAPPED: Testing if gender detection is inverted in PDF
+                    // SWAPPED: Gender detection inverted in PDF
+                    // Use FULL padding property to override CSS completely
                     if ($athlete_gender === 'K' || $athlete_gender === 'F' || $athlete_gender === 'Female') {
                         // K detected but APPLY MEN's style (LEFT side + RIGHT align)
                         $text_align = 'right';
-                        $padding_style = 'padding-right: ' . $half_width . 'mm; padding-left: 0.3mm;';  // Removed offset - use exact half
+                        $padding_style = 'padding: 2px ' . $half_width . 'mm 2px 0.5mm;';  // top right bottom left
                     } else if ($athlete_gender === 'M' || $athlete_gender === 'Male' || $athlete_gender === 'Mężczyźni') {
                         // M detected but APPLY WOMEN's style (RIGHT side + LEFT align)
                         $text_align = 'left';
-                        $padding_style = 'padding-left: ' . $half_width . 'mm; padding-right: 0.3mm;';  // Removed offset - use exact half
+                        $padding_style = 'padding: 2px 0.5mm 2px ' . $half_width . 'mm;';  // top right bottom left
                     }
                 }
 
