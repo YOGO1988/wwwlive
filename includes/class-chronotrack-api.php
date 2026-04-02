@@ -794,7 +794,7 @@ class ChronoTrack_API {
                 $first_bib_logged = true;
             }
 
-            $processed_result = $this->process_single_result($result, $data['split_times'], $entry, $sex_data, $age_data, $bracket_positions);
+            $processed_result = $this->process_single_result($result, $data['split_times'], $entry, $sex_data, $age_data, $bracket_positions, $intervals_metadata);
             if ($processed_result) {
                 // Debug first processed result
                 if (count($processed_results) === 0) {
@@ -839,7 +839,7 @@ class ChronoTrack_API {
      * Process single result from API
      * Merges result data with entry data (for city, club, etc.) and bracket data
      */
-    private function process_single_result($result, $split_times = array(), $entry = array(), $sex_data = array(), $age_data = array(), $bracket_positions = array()) {
+    private function process_single_result($result, $split_times = array(), $entry = array(), $sex_data = array(), $age_data = array(), $bracket_positions = array(), $intervals_metadata = array()) {
         // Sort split times by time (shortest first)
         usort($split_times, function($a, $b) {
             return $this->parse_time_to_seconds($a['formatted_time']) - $this->parse_time_to_seconds($b['formatted_time']);
@@ -851,9 +851,17 @@ class ChronoTrack_API {
         foreach ($split_times as $index => &$split) {
             $current_time_seconds = $this->parse_time_to_seconds($split['formatted_time'] ?? '');
 
-            // Extract distance in km from distance_km field (e.g., "5 km" -> 5.0)
+            // Get distance from intervals_metadata (most accurate source)
+            // This uses interval_iv_distance_m from ChronoTrack API
             $current_distance_km = 0;
-            if (!empty($split['distance_km'])) {
+            $checkpoint_name = $split['checkpoint_name'] ?? '';
+
+            // Try intervals_metadata first (preferred - accurate from API)
+            if (!empty($checkpoint_name) && isset($intervals_metadata[$checkpoint_name])) {
+                $current_distance_km = $intervals_metadata[$checkpoint_name]['distance_km'];
+            }
+            // Fallback: parse distance_km field (for backwards compatibility)
+            elseif (!empty($split['distance_km'])) {
                 if (preg_match('/(\d+(?:\.\d+)?)\s*km/', $split['distance_km'], $matches)) {
                     $current_distance_km = floatval($matches[1]);
                 } elseif (preg_match('/(\d+)\s*m/', $split['distance_km'], $matches)) {
