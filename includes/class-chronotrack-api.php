@@ -633,6 +633,7 @@ class ChronoTrack_API {
 
                         $split_data = array(
                             'interval_name' => $interval_name,
+                            'checkpoint_name' => $interval_name,  // Alias for interval_name (used in process_single_result)
                             'distance_km' => $distance_km,
                             'distance_m' => $distance_meters,  // Add distance in meters for pace calculation
                             'position' => $result['results_rank'] ?? 0,
@@ -860,7 +861,11 @@ class ChronoTrack_API {
             if (!empty($checkpoint_name) && isset($intervals_metadata[$checkpoint_name])) {
                 $current_distance_km = $intervals_metadata[$checkpoint_name]['distance_km'];
             }
-            // Fallback: parse distance_km field (for backwards compatibility)
+            // Fallback: use existing distance_m if available (from split_data)
+            elseif (!empty($split['distance_m']) && $split['distance_m'] > 0) {
+                $current_distance_km = $split['distance_m'] / 1000;
+            }
+            // Last fallback: parse distance_km field (for backwards compatibility)
             elseif (!empty($split['distance_km'])) {
                 if (preg_match('/(\d+(?:\.\d+)?)\s*km/', $split['distance_km'], $matches)) {
                     $current_distance_km = floatval($matches[1]);
@@ -894,6 +899,11 @@ class ChronoTrack_API {
             $split['time_seconds'] = $current_time_seconds;
             $split['rank'] = $split['position'] ?? 0;
             $split['checkpoint_position'] = $split['position'] ?? 0;
+
+            // CRITICAL FIX: Ensure cumulative distance_m is set (for pace calculation in frontend)
+            if (!isset($split['distance_m']) || $split['distance_m'] == 0) {
+                $split['distance_m'] = intval($current_distance_km * 1000);
+            }
 
             $previous_time_seconds = $current_time_seconds;
             $previous_distance_km = $current_distance_km;
