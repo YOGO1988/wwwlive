@@ -196,11 +196,8 @@ class ChronoTrack_Ajax {
                     ($result['first_name'] ?? '') . ' ' . ($result['last_name'] ?? '') :
                     $result->first_name . ' ' . $result->last_name,
                 'age' => $is_array ? ($result['age'] ?? 0) : $result->age,
-                'birth_year' => $is_array ? ($result['birth_year'] ?? '') : ($result->birth_year ?? ''),
                 'gender' => $is_array ? ($result['gender'] ?? '') : $result->gender,
                 'city' => $is_array ? ($result['city'] ?? '') : $result->city,
-                'country' => $is_array ? ($result['country'] ?? '') : ($result->country ?? ''),
-                'nationality' => $is_array ? ($result['nationality'] ?? '') : ($result->nationality ?? ''),
                 'club' => $is_array ? ($result['club'] ?? '') : $result->club,
                 'distance' => $is_array ? ($result['distance'] ?? '') : ($result->distance ?? ''),
                 'category' => $is_array ? ($result['category'] ?? '') : $result->category,
@@ -244,13 +241,6 @@ class ChronoTrack_Ajax {
      * Format participant details for JSON response
      */
     private function format_participant_details($result) {
-        // Extract pace from raw_data if available
-        $pace = '';
-        if (!empty($result->raw_data)) {
-            $raw_data = is_array($result->raw_data) ? $result->raw_data : array();
-            $pace = $raw_data['pace'] ?? $raw_data['formatted_pace'] ?? '';
-        }
-
         return array(
             'id' => $result->id,
             'participant_id' => $result->participant_id,
@@ -259,11 +249,8 @@ class ChronoTrack_Ajax {
             'last_name' => $result->last_name,
             'full_name' => $result->first_name . ' ' . $result->last_name,
             'age' => $result->age,
-            'birth_year' => $result->birth_year ?? '',
             'gender' => $result->gender,
             'city' => $result->city,
-            'country' => $result->country ?? '',
-            'nationality' => $result->nationality ?? '',
             'club' => $result->club,
             'distance' => $result->distance ?? '',
             'category' => $result->category,
@@ -272,7 +259,6 @@ class ChronoTrack_Ajax {
             'gender_position' => $result->gender_position,
             'finish_time' => $result->finish_time,
             'net_time' => $result->net_time,
-            'pace' => $pace,  // Add pace (tempo)
             'split_times' => $result->split_times ?? array(),
             'bracket_positions' => $result->bracket_positions ?? array(),
             'detailed_splits' => $result->detailed_splits ?? array(),
