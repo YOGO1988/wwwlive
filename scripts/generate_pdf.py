@@ -204,6 +204,9 @@ def generate_pdf(data):
         row = []
         for col_idx, col in enumerate(columns):
             value = ''
+            col_id = col.get('id', '')
+            col_name = col.get('name', '')
+
             for attr in col.get('api_attributes', []):
                 # Handle birth_year extraction
                 if attr in ['birth_year', 'birthdate', 'athlete_birthdate']:
@@ -226,6 +229,19 @@ def generate_pdf(data):
                 if attr in result and result[attr]:
                     value = str(result[attr])
                     break
+
+            # CRITICAL FIX: Add prefix M: or K: for gender position column in PDF
+            # This makes it clear which gender the position belongs to
+            if (col_id == 'gender_position' or col_id == 'sex_place' or col_id == 'sex_position' or
+                'M/K' in col_name or 'K/M' in col_name or 'm/k' in col_name.lower()):
+                # Get athlete's gender
+                gender = result.get('gender') or result.get('sex') or result.get('athlete_sex') or ''
+                if value and value != '-':
+                    if gender in ['M', 'Male', 'Mężczyźni']:
+                        value = 'M:' + value
+                    elif gender in ['K', 'F', 'Female', 'Kobiety']:
+                        value = 'K:' + value
+
             row.append(value)
 
             # Insert flag column after name column

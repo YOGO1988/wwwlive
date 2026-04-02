@@ -510,8 +510,16 @@
             const countryCode = result.country || result.Country || result.nationality || result.Nationality ||
                               result.athlete_country || result.country_code || result.CountryCode;
             let flagEmoji = '';
-            if (countryCode && typeof CountryFlags !== 'undefined') {
-                flagEmoji = CountryFlags.getFlag(countryCode) || '';
+            if (countryCode) {
+                if (typeof CountryFlags !== 'undefined') {
+                    flagEmoji = CountryFlags.getFlag(countryCode) || '';
+                    // Debug flag generation (sample 10% of results)
+                    if (Math.random() < 0.1) {
+                        console.log('🚩 Flag for', result.full_name, '| Country:', countryCode, '| Flag HTML:', flagEmoji);
+                    }
+                } else {
+                    console.warn('⚠️ CountryFlags not loaded - flags will not be shown');
+                }
             }
 
             // Use dynamic columns if available
@@ -546,35 +554,28 @@
                         row.append(flagCell);
                     }
                     // Special formatting for gender POSITION column (Msc M/K)
-                    // CRITICAL: 6-digit layout split 50/50:
-                    // Left 3 chars (35px) = Men, RIGHT aligned (number ends near middle)
-                    // Right 3 chars (35px) = Women, LEFT aligned (number starts near middle)
+                    // RESTORE ORIGINAL: side-by-side layout with padding
                     else if (column.id === 'gender_position' || column.id === 'sex_place' || column.id === 'sex_position' ||
                              column.id.toLowerCase().includes('gender_position') || column.id.toLowerCase().includes('sex_place') ||
                              column.id.toLowerCase().includes('m/k') || column.id.toLowerCase().includes('k/m') ||
                              (column.column_name && (column.column_name.includes('M/K') || column.column_name.includes('K/M')))) {
                         // Get athlete's gender from result data
                         const athleteGender = result.gender || result.sex || result.athlete_sex || '';
-                        let cellStyle = {};
-
-                        // Push BOTH left by same amount
                         const cellElem = cell[0];
+
                         if (athleteGender === 'M' || athleteGender === 'Male' || athleteGender === 'Mężczyźni') {
-                            // M: RIGHT align so double digits grow LEFT (0 stays put, 1 extends left)
+                            // M: RIGHT align (LEFT side of column - under "M")
                             cellElem.style.setProperty('text-align', 'right', 'important');
-                            cellElem.style.setProperty('padding', '6px 54px 6px 2px', 'important');  // Reduced from 60px to 54px
-                            cellElem.style.setProperty('direction', 'ltr', 'important');  // Ensure left-to-right
-                            console.log('🎨 M/K Column | ID:', result.id, '| Gender: M | Value:', value, '| Pad-R: 54px');
-                        } else if (athleteGender === 'K' || athleteGender === 'F' || athleteGender === 'Female') {
-                            // K: LEFT align, shifted left to be under "K"
-                            cellElem.style.setProperty('text-align', 'left', 'important');
-                            cellElem.style.setProperty('padding', '6px 2px 6px 24px', 'important');  // Reduced from 30px to 24px
+                            cellElem.style.setProperty('padding', '6px 54px 6px 2px', 'important');
                             cellElem.style.setProperty('direction', 'ltr', 'important');
-                            console.log('🎨 M/K Column | ID:', result.id, '| Gender: K | Value:', value, '| Pad-L: 24px');
+                        } else if (athleteGender === 'K' || athleteGender === 'F' || athleteGender === 'Female') {
+                            // K: LEFT align (RIGHT side of column - under "K")
+                            cellElem.style.setProperty('text-align', 'left', 'important');
+                            cellElem.style.setProperty('padding', '6px 2px 6px 24px', 'important');
+                            cellElem.style.setProperty('direction', 'ltr', 'important');
                         } else {
                             // Unknown gender - center align
                             cellElem.style.setProperty('text-align', 'center', 'important');
-                            console.warn('⚠️ Unknown gender:', athleteGender, 'for result:', result.id);
                         }
                         cell.text(this.cleanValue(value));
                         row.append(cell);
