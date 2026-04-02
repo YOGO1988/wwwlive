@@ -341,6 +341,82 @@ class ChronoTrack_API {
     }
 
     /**
+     * Fetch interval metadata from ChronoTrack API
+     * This provides accurate distance data (interval_iv_distance_m) for pace calculation
+     *
+     * @param string $event_id ChronoTrack Event ID
+     * @return array Interval metadata indexed by interval name
+     */
+    public function fetch_intervals_metadata($event_id) {
+        $intervals_data = array();
+        $page = 1;
+        $has_more = true;
+
+        error_log("ChronoTrack API: Fetching interval metadata for event {$event_id}");
+
+        while ($has_more && $page <= 10) {  // Limit to 10 pages (500 results)
+            $params = array(
+                'format' => 'json',
+                'page' => $page,
+                'size' => 50,
+            );
+
+            $endpoint = "/api/event/{$event_id}/interval";
+            $response = $this->make_api_request($endpoint, $params);
+
+            if ($response && isset($response['event_intervals']) && !empty($response['event_intervals'])) {
+                error_log("ChronoTrack API: Interval metadata page {$page}: " . count($response['event_intervals']) . " intervals");
+
+                foreach ($response['event_intervals'] as $interval) {
+                    $interval_name = $interval['interval_iv_name'] ?? '';
+                    $distance_m = intval($interval['interval_iv_distance_m'] ?? 0);
+
+                    if (!empty($interval_name) && $distance_m > 0) {
+                        $intervals_data[$interval_name] = array(
+                            'distance_m' => $distance_m,
+                            'distance_km' => $distance_m / 1000,
+                        );
+                    }
+                }
+
+                $page++;
+            } else {
+                $has_more = false;
+            }
+        }
+
+        error_log("ChronoTrack API: Found " . count($intervals_data) . " intervals with distance data");
+        return $intervals_data;
+    }
+
+    /**
+     * Calculate pace (min/km) from time and distance
+     *
+     * @param string $time_string Time in format HH:MM:SS or MM:SS
+     * @param float $distance_km Distance in kilometers
+     * @return string Formatted pace (e.g., "5:30" for 5 min 30 sec per km)
+     */
+    private function calculate_pace($time_string, $distance_km) {
+        if (empty($time_string) || empty($distance_km) || $distance_km <= 0) {
+            return '-';
+        }
+
+        $seconds = $this->parse_time_to_seconds($time_string);
+        if ($seconds === PHP_INT_MAX || $seconds <= 0) {
+            return '-';
+        }
+
+        // Calculate pace in seconds per km
+        $pace_seconds = $seconds / $distance_km;
+
+        // Convert to min:sec format
+        $pace_min = floor($pace_seconds / 60);
+        $pace_sec = round($pace_seconds % 60);
+
+        return sprintf('%d:%02d', $pace_min, $pace_sec);
+    }
+
+    /**
      * Fetch a single page of results from ChronoTrack API (lightweight, no database save)
      * Used for extracting split time intervals when configuring columns
      *
@@ -418,6 +494,9 @@ class ChronoTrack_API {
      */
     public function fetch_results($event_id, $mode = 'full') {
         error_log("ChronoTrack API: Fetching results for event {$event_id} (mode: {$mode})");
+
+        // Fetch interval metadata for accurate pace calculation
+        $intervals_metadata = $this->fetch_intervals_metadata($event_id);
 
         // OPTIMIZATION: Skip expensive entries fetch for live updates
         $entries_by_bib = array();
@@ -519,12 +598,23 @@ class ChronoTrack_API {
                             $all_results_by_bib[$bib]['main_result'] = $result;
                         }
                     } else {
-                        // Split time - extract distance in meters for km conversion
+                        // Split time - use interval metadata for accurate distance
                         $distance_meters = 0;
-                        if (preg_match('/(\d+)\s*m/', $interval_name, $matches)) {
+                        $distance_km_value = 0;
+
+                        // Try to get distance from interval metadata first (most accurate)
+                        if (isset($intervals_metadata[$interval_name])) {
+                            $distance_meters = $intervals_metadata[$interval_name]['distance_m'];
+                            $distance_km_value = $intervals_metadata[$interval_name]['distance_km'];
+                            error_log("Using interval metadata for '{$interval_name}': {$distance_meters}m");
+                        }
+                        // Fallback: extract from interval name
+                        else if (preg_match('/(\d+)\s*m/', $interval_name, $matches)) {
                             $distance_meters = intval($matches[1]);
+                            $distance_km_value = $distance_meters / 1000;
                         } elseif (preg_match('/(\d+(?:\.\d+)?)\s*km/', $interval_name, $matches)) {
                             $distance_meters = floatval($matches[1]) * 1000;
+                            $distance_km_value = floatval($matches[1]);
                         }
 
                         // Format distance for display
@@ -538,14 +628,17 @@ class ChronoTrack_API {
                             }
                         }
 
+                        // Calculate pace using accurate distance from interval metadata
+                        $calculated_pace = $this->calculate_pace($result['results_time'] ?? '', $distance_km_value);
+
                         $split_data = array(
                             'interval_name' => $interval_name,
                             'distance_km' => $distance_km,
                             'position' => $result['results_rank'] ?? 0,
                             'time' => $result['results_time'] ?? '',
-                            'pace' => $result['results_pace'] ?? '',
+                            'pace' => $calculated_pace,  // Use calculated pace instead of API pace
                             'formatted_time' => $this->format_time($result['results_time'] ?? ''),
-                            'formatted_pace' => $this->format_pace($result['results_pace'] ?? ''),
+                            'formatted_pace' => $calculated_pace,  // Already formatted by calculate_pace
                         );
 
                         // Check if we already have this split for this bib
