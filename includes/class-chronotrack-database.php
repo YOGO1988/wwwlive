@@ -356,11 +356,8 @@ class ChronoTrack_Database {
                 'first_name' => sanitize_text_field($result['first_name'] ?? ''),
                 'last_name' => sanitize_text_field($result['last_name'] ?? ''),
                 'age' => absint($result['age'] ?? 0),
-                'birth_year' => sanitize_text_field($result['birth_year'] ?? ''),
                 'gender' => sanitize_text_field($result['gender'] ?? ''),
                 'city' => sanitize_text_field($result['city'] ?? ''),
-                'country' => sanitize_text_field($result['country'] ?? ''),
-                'nationality' => sanitize_text_field($result['nationality'] ?? ''),
                 'club' => sanitize_text_field($result['club'] ?? ''),
                 'distance' => sanitize_text_field($result['distance'] ?? ''),
                 'category' => sanitize_text_field($result['category'] ?? ''),
@@ -376,6 +373,15 @@ class ChronoTrack_Database {
                 'finish_timestamp' => $result['finish_timestamp'] ?? current_time('mysql'),
                 'raw_data' => wp_json_encode($result),
             );
+
+            // Add new columns only if they exist in the database (migration already ran)
+            global $wpdb;
+            $columns_exist = $wpdb->get_results("SHOW COLUMNS FROM $table LIKE 'birth_year'");
+            if (!empty($columns_exist)) {
+                $data['birth_year'] = sanitize_text_field($result['birth_year'] ?? '');
+                $data['country'] = sanitize_text_field($result['country'] ?? '');
+                $data['nationality'] = sanitize_text_field($result['nationality'] ?? '');
+            }
 
             // Check if result exists by bib_number (unique per event)
             $existing = $wpdb->get_row($wpdb->prepare(
