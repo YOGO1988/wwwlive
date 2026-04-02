@@ -186,10 +186,20 @@ class ChronoTrack_Ajax {
             // Handle both object and array formats
             $is_array = is_array($result);
 
+            // Extract country and nationality once (avoid duplicates)
+            $country = $is_array ? ($result['country'] ?? '') : ($result->country ?? '');
+            $nationality = $is_array ? ($result['nationality'] ?? '') : ($result->nationality ?? '');
+            $bib = $is_array ? ($result['bib_number'] ?? '') : $result->bib_number;
+
+            // Debug country data (sample 5% of results for performance)
+            if (rand(1, 20) === 1) {
+                error_log("🚩 AJAX format_results: BIB={$bib} | country={$country} | nationality={$nationality}");
+            }
+
             $formatted[] = array(
                 'id' => $is_array ? ($result['id'] ?? 0) : $result->id,
                 'participant_id' => $is_array ? ($result['participant_id'] ?? '') : $result->participant_id,
-                'bib_number' => $is_array ? ($result['bib_number'] ?? '') : $result->bib_number,
+                'bib_number' => $bib,
                 'first_name' => $is_array ? ($result['first_name'] ?? '') : $result->first_name,
                 'last_name' => $is_array ? ($result['last_name'] ?? '') : $result->last_name,
                 'full_name' => $is_array ?
@@ -199,8 +209,8 @@ class ChronoTrack_Ajax {
                 'birth_year' => $is_array ? ($result['birth_year'] ?? '') : ($result->birth_year ?? ''),
                 'gender' => $is_array ? ($result['gender'] ?? '') : $result->gender,
                 'city' => $is_array ? ($result['city'] ?? '') : $result->city,
-                'country' => $is_array ? ($result['country'] ?? '') : ($result->country ?? ''),
-                'nationality' => $is_array ? ($result['nationality'] ?? '') : ($result->nationality ?? ''),
+                'country' => $country,
+                'nationality' => $nationality,
                 'club' => $is_array ? ($result['club'] ?? '') : $result->club,
                 'distance' => $is_array ? ($result['distance'] ?? '') : ($result->distance ?? ''),
                 'category' => $is_array ? ($result['category'] ?? '') : $result->category,
@@ -212,9 +222,6 @@ class ChronoTrack_Ajax {
                 'split_times' => $is_array ? ($result['split_times'] ?? array()) : ($result->split_times ?? array()),
                 'bracket_positions' => $is_array ? ($result['bracket_positions'] ?? array()) : ($result->bracket_positions ?? array()),
                 'finish_timestamp' => $is_array ? ($result['finish_timestamp'] ?? '') : $result->finish_timestamp,
-                // CRITICAL: Add country and nationality for flags!
-                'country' => $is_array ? ($result['country'] ?? '') : ($result->country ?? ''),
-                'nationality' => $is_array ? ($result['nationality'] ?? '') : ($result->nationality ?? ''),
             );
         }
 
@@ -251,6 +258,13 @@ class ChronoTrack_Ajax {
             $pace = $raw_data['pace'] ?? $raw_data['formatted_pace'] ?? '';
         }
 
+        // Extract country and nationality
+        $country = $result->country ?? '';
+        $nationality = $result->nationality ?? '';
+
+        // Debug participant details
+        error_log("🚩 AJAX format_participant_details: BIB={$result->bib_number} | country={$country} | nationality={$nationality}");
+
         return array(
             'id' => $result->id,
             'participant_id' => $result->participant_id,
@@ -262,8 +276,8 @@ class ChronoTrack_Ajax {
             'birth_year' => $result->birth_year ?? '',
             'gender' => $result->gender,
             'city' => $result->city,
-            'country' => $result->country ?? '',
-            'nationality' => $result->nationality ?? '',
+            'country' => $country,
+            'nationality' => $nationality,
             'club' => $result->club,
             'distance' => $result->distance ?? '',
             'category' => $result->category,
@@ -272,15 +286,12 @@ class ChronoTrack_Ajax {
             'gender_position' => $result->gender_position,
             'finish_time' => $result->finish_time,
             'net_time' => $result->net_time,
-            'pace' => $pace,  // Add pace (tempo)
+            'pace' => $pace,
             'split_times' => $result->split_times ?? array(),
             'bracket_positions' => $result->bracket_positions ?? array(),
             'detailed_splits' => $result->detailed_splits ?? array(),
             'finish_timestamp' => $result->finish_timestamp,
             'raw_data' => $result->raw_data ?? array(),
-            // CRITICAL: Add country and nationality for flags!
-            'country' => $result->country ?? '',
-            'nationality' => $result->nationality ?? '',
         );
     }
 

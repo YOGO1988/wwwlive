@@ -196,6 +196,15 @@
                 timeout: 10000, // 10 second timeout
                 success: (response) => {
                     console.log('✅ AJAX Success:', response);
+
+                    // DEBUG: Check if country data is in response (sample first result)
+                    if (response.success && response.data.results && response.data.results.length > 0) {
+                        const firstResult = response.data.results[0];
+                        console.log('🚩 First result country data: BIB=' + (firstResult.bib_number || 'NULL') +
+                                   ' | country=' + (firstResult.country || 'NULL') +
+                                   ' | nationality=' + (firstResult.nationality || 'NULL'));
+                    }
+
                     if (response.success) {
                         this.consecutiveErrors = 0; // Reset error counter
 
@@ -510,12 +519,20 @@
             const countryCode = result.country || result.Country || result.nationality || result.Nationality ||
                               result.athlete_country || result.country_code || result.CountryCode;
             let flagEmoji = '';
+
+            // Debug: log country data for EVERY result (for debugging)
+            if (Math.random() < 0.05) { // 5% sample to avoid console spam
+                console.log('🚩 createResultRow: BIB=' + result.bib_number +
+                           ' | country=' + (result.country || 'NULL') +
+                           ' | nationality=' + (result.nationality || 'NULL') +
+                           ' | countryCode=' + (countryCode || 'NULL'));
+            }
+
             if (countryCode) {
                 if (typeof CountryFlags !== 'undefined') {
                     flagEmoji = CountryFlags.getFlag(countryCode) || '';
-                    // Debug flag generation (sample 10% of results)
-                    if (Math.random() < 0.1) {
-                        console.log('🚩 Flag for', result.full_name, '| Country:', countryCode, '| Flag HTML:', flagEmoji);
+                    if (!flagEmoji && countryCode) {
+                        console.warn('⚠️ No flag found for country:', countryCode, '(BIB=' + result.bib_number + ')');
                     }
                 } else {
                     console.warn('⚠️ CountryFlags not loaded - flags will not be shown');

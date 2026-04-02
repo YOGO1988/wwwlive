@@ -345,6 +345,8 @@ class ChronoTrack_Database {
                 error_log("Name: " . ($result['first_name'] ?? '') . ' ' . ($result['last_name'] ?? ''));
                 error_log("Position: " . ($result['position'] ?? 'NULL'));
                 error_log("Finish time: " . ($result['finish_time'] ?? 'NULL'));
+                error_log("🚩 Country: " . ($result['country'] ?? 'NULL'));
+                error_log("🚩 Nationality: " . ($result['nationality'] ?? 'NULL'));
                 error_log("==========================================");
                 $first_logged = true;
             }
@@ -381,6 +383,16 @@ class ChronoTrack_Database {
                 $data['birth_year'] = sanitize_text_field($result['birth_year'] ?? '');
                 $data['country'] = sanitize_text_field($result['country'] ?? '');
                 $data['nationality'] = sanitize_text_field($result['nationality'] ?? '');
+
+                // Debug: log when country columns are included
+                if (!$first_logged && (!empty($data['country']) || !empty($data['nationality']))) {
+                    error_log("✅ DB: Country columns exist and data added: country={$data['country']}, nationality={$data['nationality']}");
+                }
+            } else {
+                // Critical warning: columns don't exist!
+                if (!$first_logged) {
+                    error_log("⚠️ WARNING: birth_year/country/nationality columns DO NOT EXIST in database!");
+                }
             }
 
             // Check if result exists by bib_number (unique per event)
