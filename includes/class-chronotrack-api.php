@@ -634,6 +634,7 @@ class ChronoTrack_API {
                         $split_data = array(
                             'interval_name' => $interval_name,
                             'distance_km' => $distance_km,
+                            'distance_m' => $distance_meters,  // Add distance in meters for pace calculation
                             'position' => $result['results_rank'] ?? 0,
                             'time' => $result['results_time'] ?? '',
                             'pace' => $calculated_pace,  // Use calculated pace instead of API pace

@@ -1138,9 +1138,12 @@
                             intervalLabel += ' (' + this.escapeHtml(split.distance_km) + ')';
                         }
 
-                        // Calculate average pace
-                        const distanceKm = this.parseDistanceToKm(split.distance_km || '');
-                        const avgPace = this.calculateAveragePace(split.formatted_time, distanceKm);
+                        // Calculate average pace using distance_m if available
+                        let avgPace = '-';
+                        if (split.distance_m && split.distance_m > 0) {
+                            const distanceKm = split.distance_m / 1000;
+                            avgPace = this.calculateAveragePace(split.formatted_time, distanceKm);
+                        }
 
                         html += '<tr>';
                         html += '<td>' + intervalLabel + '</td>';
@@ -1152,18 +1155,25 @@
                 });
 
                 // Add META (finish line) at the end
-                // Calculate average pace for finish (need to get total distance from the last split or participant.distance)
-                let finishDistanceKm = 0;
-                if (participant.split_times.length > 0) {
-                    const lastSplit = participant.split_times[participant.split_times.length - 1];
-                    finishDistanceKm = this.parseDistanceToKm(lastSplit.distance_km || '');
+                // Use results_pace from API if available, otherwise calculate
+                let finishPace = '-';
+                if (participant.pace || participant.formatted_pace) {
+                    finishPace = this.escapeHtml(participant.pace || participant.formatted_pace);
+                } else {
+                    // Fallback: calculate from distance
+                    let finishDistanceKm = 0;
+                    if (participant.split_times.length > 0) {
+                        const lastSplit = participant.split_times[participant.split_times.length - 1];
+                        if (lastSplit.distance_m && lastSplit.distance_m > 0) {
+                            finishDistanceKm = lastSplit.distance_m / 1000;
+                        }
+                    }
+                    // If no distance from splits, try to parse from participant.distance
+                    if (finishDistanceKm === 0 && participant.distance) {
+                        finishDistanceKm = this.parseDistanceToKm(participant.distance);
+                    }
+                    finishPace = this.calculateAveragePace(participant.finish_time, finishDistanceKm);
                 }
-                // If no distance from splits, try to parse from participant.distance
-                if (finishDistanceKm === 0 && participant.distance) {
-                    finishDistanceKm = this.parseDistanceToKm(participant.distance);
-                }
-
-                const finishPace = this.calculateAveragePace(participant.finish_time, finishDistanceKm);
 
                 html += '<tr class="chronotrack-finish-row">';
                 html += '<td><strong>Meta</strong></td>';
