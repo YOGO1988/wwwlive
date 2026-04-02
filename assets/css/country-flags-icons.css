@@ -111,6 +111,116 @@
     background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA5MDAgNjAwIj48cGF0aCBmaWxsPSIjZWQyOTM5IiBkPSJNMCAwaDkwMHY2MDBIMHoiLz48cGF0aCBmaWxsPSIjZmZmIiBkPSJNMCAyMDBoOTAwdjIwMEgweiIvPjwvc3ZnPg==');
 }
 
+/* Hungary 🇭🇺 */
+.flag-hu {
+    background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA5MDAgNjAwIj48cGF0aCBmaWxsPSIjZmZmIiBkPSJNMCAyMDBoOTAwdjIwMEgweiIvPjxwYXRoIGZpbGw9IiNjZTJhMWQiIGQ9Ik0wIDBoOTAwdjIwMEgweiIvPjxwYXRoIGZpbGw9IiM0MzZmNGQiIGQ9Ik0wIDQwMGg5MDB2MjAwSDB6Ii8+PC9zdmc+');
+}
+
+/* Romania 🇷🇴 */
+.flag-ro {
+    background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA5MDAgNjAwIj48cGF0aCBmaWxsPSIjZmZkMTFmIiBkPSJNMzAwIDBoMzAwdjYwMEgzMDB6Ii8+PHBhdGggZmlsbD0iIzAwMzE5YyIgZD0iTTAgMGgzMDB2NjAwSDB6Ii8+PHBhdGggZmlsbD0iI2NlMTEyNiIgZD0iTTYwMCAwaDMwMHY2MDBINjAweiIvPjwvc3ZnPg==');
+}
+
+/* Bulgaria 🇧🇬 */
+.flag-bg {
+    background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA5MDAgNjAwIj48cGF0aCBmaWxsPSIjZmZmIiBkPSJNMCAwaDkwMHYyMDBIMHoiLz48cGF0aCBmaWxsPSIjMDA5NjZlIiBkPSJNMCAyMDBoOTAwdjIwMEgweiIvPjxwYXRoIGZpbGw9IiNkNjJlMzIiIGQ9Ik0wIDQwMGg5MDB2MjAwSDB6Ii8+PC9zdmc+');
+}
+
+/* Sweden 🇸🇪 */
+.flag-se {
+    background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxNjAwIDEwMDAiPjxwYXRoIGZpbGw9IiMwMDZhYTciIGQ9Ik0wIDBoMTYwMHYxMDAwSDB6Ii8+PHBhdGggZmlsbD0iI2ZlY2MwMCIgZD0iTTAgNDAwaDQwMHY2MDBIODAwVjQwMGg4MDBWMjAwSDgwMFYwSDQwMHYyMDBIMHYyMDB6Ii8+PC9zdmc+');
+}
+
+/* Norway 🇳🇴 */
+.flag-no {
+    background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyMjAwIDE2MDAiPjxwYXRoIGZpbGw9IiNiYTBjMmYiIGQ9Ik0wIDBoMjIwMHYxNjAwSDB6Ii8+PHBhdGggZmlsbD0iI2ZmZiIgZD0iTTAgNjAwaDYwMHYxMDAwSDEwMDBWNjAwaDEyMDBWNDAwSDEwMDBWMEg2MDB2NDAwSDB6Ii8+PHBhdGggZmlsbD0iIzAwMjA1YiIgZD0iTTAgNzAwaDcwMHYxMDAwSDkwMFY3MDBoMTMwMFY1MDBIOTAwVjBINzAwdjUwMEgweiIvPjwvc3ZnPg==');
+}
+
+/* Denmark 🇩🇰 */
+.flag-dk {
+    background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzNzAgMjgwIj48cGF0aCBmaWxsPSIjYzYwYzMwIiBkPSJNMCAwaDM3MHYyODBIMHoiLz48cGF0aCBmaWxsPSIjZmZmIiBkPSJNMCAxMjBoMTIwdjI4MGg0MFYxMjBoMjEwVjgwSDE2MFYwSDEyMHY4MEgweiIvPjwvc3ZnPg==');
+}
+
+/* Finland 🇫🇮 */
+.flag-fi {
+    background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxODAwIDExMDAiPjxwYXRoIGZpbGw9IiNmZmYiIGQ9Ik0wIDBoMTgwMHYxMTAwSDB6Ii8+PHBhdGggZmlsbD0iIzAwMzU4MCIgZD0iTTAgNDAwaDUwMHYxMTAwaDYwMFY0MDBoNzAwVjIwMEgxMTAwVjBINTAwdjIwMEgweiIvPjwvc3ZnPg==');
+}
+
+/* Portugal 🇵🇹 */
+.flag-pt {
+    background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2MDAgNDAwIj48cGF0aCBmaWxsPSIjZjAwIiBkPSJNMCAwaDYwMHY0MDBIMHoiLz48cGF0aCBmaWxsPSIjMDA2IiBkPSJNMCAwaDI0MHY0MDBIMHoiLz48L3N2Zz4=');
+}
+
+/* Greece 🇬🇷 */
+.flag-gr {
+    background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA5MDAgNjAwIj48cGF0aCBmaWxsPSIjMDA1NmJhIiBkPSJNMCAwaDkwMHY2MDBIMHoiLz48cGF0aCBmaWxsPSIjZmZmIiBkPSJNMCAwaDkwMHY2Nkg2NjdWMEg1NjZ2NjZoLTY2NnY2OGg2NjZ2NjZoLTY2NnY2OGg2NjZ2NjZoLTY2NnY2OGg2NjZ2NjZoLTY2NnY2OGg2NjZ2NjZINTY2djY4SDY2N3Y2NmgyMzN2NjhIMHY2OGg5MDB2NjhIMFYzNTBoOTAwdjY4SDB6TTU2NiAwdjIwMEgwdi02OGg1NjZ6Ii8+PC9zdmc+');
+}
+
+/* Ireland 🇮🇪 */
+.flag-ie {
+    background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA5MDAgNjAwIj48cGF0aCBmaWxsPSIjZmZmIiBkPSJNMzAwIDBoMzAwdjYwMEgzMDB6Ii8+PHBhdGggZmlsbD0iIzE2OWI2MiIgZD0iTTAgMGgzMDB2NjAwSDB6Ii8+PHBhdGggZmlsbD0iI2ZmODgzZSIgZD0iTTYwMCAwaDMwMHY2MDBINjAweiIvPjwvc3ZnPg==');
+}
+
+/* Canada 🇨🇦 */
+.flag-ca {
+    background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAwIDUwMCI+PHBhdGggZmlsbD0iI2ZmZiIgZD0iTTAgMGgxMDAwdjUwMEgweiIvPjxwYXRoIGZpbGw9IiNmZjAwMDAiIGQ9Ik0wIDBoMjUwdjUwMEgwek03NTAgMGgyNTB2NTAwSDc1MHoiLz48cGF0aCBmaWxsPSIjZmYwMDAwIiBkPSJNNTAwIDI1MGwtNTAgMjVoNzVsLTI1IDc1IDI1LTI1IDI1IDI1LTI1LTc1aDc1bC01MC0yNSAyNS0yNS01MCAxMCAyNS01MGgtNTBsLTI1LTUwLTI1IDUwaC01MGwyNSA1MC01MC0xMCIvPjwvc3ZnPg==');
+}
+
+/* Australia 🇦🇺 */
+.flag-au {
+    background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgMjU2Ij48cGF0aCBmaWxsPSIjMDEyMTY5IiBkPSJNMCAwaDUxMnYyNTZIMHoiLz48L3N2Zz4=');
+}
+
+/* New Zealand 🇳🇿 */
+.flag-nz {
+    background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgMjU2Ij48cGF0aCBmaWxsPSIjMDAxNDg5IiBkPSJNMCAwaDUxMnYyNTZIMHoiLz48L3N2Zz4=');
+}
+
+/* Japan 🇯🇵 */
+.flag-jp {
+    background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA5MDAgNjAwIj48cGF0aCBmaWxsPSIjZmZmIiBkPSJNMCAwaDkwMHY2MDBIMHoiLz48Y2lyY2xlIGZpbGw9IiNiYzAwMmQiIGN4PSI0NTAiIGN5PSIzMDAiIHI9IjE4MCIvPjwvc3ZnPg==');
+}
+
+/* China 🇨🇳 */
+.flag-cn {
+    background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA5MDAgNjAwIj48cGF0aCBmaWxsPSIjZGUyOTEwIiBkPSJNMCAwaDkwMHY2MDBIMHoiLz48cGF0aCBmaWxsPSIjZmZkZTAwIiBkPSJNMTUwIDEyMGw0MiAxMjhoMTM0bC0xMDkgNzkgNDIgMTI4LTEwOS03OS0xMDkgNzkgNDItMTI4LTEwOS03OWgxMzR6bTIxMCAxOGwyMiA2OGg3MWwtNTggNDIgMjIgNjgtNTgtNDItNTggNDIgMjItNjgtNTgtNDJoNzF6bTU1IDEyOGwyMiA2OGg3MWwtNTggNDIgMjIgNjgtNTgtNDItNTggNDIgMjItNjgtNTgtNDJoNzF6bS01NSAxMjhsMjIgNjhoNzFsLTU4IDQyIDIyIDY4LTU4LTQyLTU4IDQyIDIyLTY4LTU4LTQyaDcxem0tNTUgNjBsMjIgNjhoNzFsLTU4IDQyIDIyIDY4LTU4LTQyLTU4IDQyIDIyLTY4LTU4LTQyaDcxeiIvPjwvc3ZnPg==');
+}
+
+/* South Korea 🇰🇷 */
+.flag-kr {
+    background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA5MDAgNjAwIj48cGF0aCBmaWxsPSIjZmZmIiBkPSJNMCAwaDkwMHY2MDBIMHoiLz48Y2lyY2xlIGZpbGw9IiNjNjA4MWEiIGN4PSI0NTAiIGN5PSIzMDAiIHI9IjEyMCIvPjwvc3ZnPg==');
+}
+
+/* Brazil 🇧🇷 */
+.flag-br {
+    background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA3MjAwIDUwNDAiPjxwYXRoIGZpbGw9IiMwMDllNTgiIGQ9Ik0wIDBoNzIwMHY1MDQwSDB6Ii8+PHBhdGggZmlsbD0iI2ZlZGYwMCIgZD0iTTM2MDAgMjc3bDMyMzUgMjI0My0zMjM1IDIyNDNMMzY1IDI1MjB6Ii8+PHBhdGggZmlsbD0iIzAwMmY4NyIgZD0iTTM2MDAgMTQwMGExMTQwIDExNDAgMCAxIDAgMCAyMjgwIDExNDAgMTE0MCAwIDEgMCAwLTIyODB6Ii8+PC9zdmc+');
+}
+
+/* Argentina 🇦🇷 */
+.flag-ar {
+    background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA4MDAgNTAwIj48cGF0aCBmaWxsPSIjNzVhYWRiIiBkPSJNMCAwaDgwMHYxNjdIMHptMCAzMzNoODAwdjE2N0gweiIvPjxwYXRoIGZpbGw9IiNmZmYiIGQ9Ik0wIDE2N2g4MDB2MTY2SDB6Ii8+PC9zdmc+');
+}
+
+/* Mexico 🇲🇽 */
+.flag-mx {
+    background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA4NCAwNCI+PHBhdGggZmlsbD0iI2NlMTEyNiIgZD0iTTU2IDBoMjh2NDBINTF6Ii8+PHBhdGggZmlsbD0iIzAwNmMyZSIgZD0iTTAgMGgyOHYNDBIMHoiLz48cGF0aCBmaWxsPSIjZmZmIiBkPSJNMjggMGgyOHY0MEgyOHoiLz48L3N2Zz4=');
+}
+
+/* South Africa 🇿🇦 */
+.flag-za {
+    background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA5MDAgNjAwIj48cGF0aCBmaWxsPSIjZmZmIiBkPSJNMCAwaDkwMHY2MDBIMHoiLz48cGF0aCBmaWxsPSIjMDAxNDljIiBkPSJNMCAwaDkwMHYyNTBIMHoiLz48cGF0aCBmaWxsPSIjZGUzODMxIiBkPSJNMCAzNTBoOTAwdjI1MEgweiIvPjxwYXRoIGZpbGw9IiMwMDdiNDkiIGQ9Ik0wIDBoNDAwbDUwMCAzMDBMMCA2MDB6Ii8+PHBhdGggZmlsbD0iI2ZmYmIwMCIgZD0iTTAgODBMNzgwIDMwMCAwIDUyMHoiLz48cGF0aCBkPSJNMCAxMzBMNjYwIDMwMCAwIDQ3MHoiLz48L3N2Zz4=');
+}
+
+/* Kenya 🇰🇪 */
+.flag-ke {
+    background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA5MDAgNjAwIj48cGF0aCBmaWxsPSIjZmZmIiBkPSJNMCAxNTBoOTAwdjMwMEgweiIvPjxwYXRoIGQ9Ik0wIDBoOTAwdjE1MEgwem0wIDQ1MGg5MDB2MTUwSDB6Ii8+PHBhdGggZmlsbD0iI2JjMDAyZCIgZD0iTTAgMTgwaDkwMHYyNDBIMHoiLz48L3N2Zz4=');
+}
+
+/* Ethiopia 🇪🇹 */
+.flag-et {
+    background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA5MDAgNjAwIj48cGF0aCBmaWxsPSIjZmZkZTAwIiBkPSJNMCA0MDBoOTAwdjIwMEgweiIvPjxwYXRoIGZpbGw9IiMwMDhlNTEiIGQ9Ik0wIDBoOTAwdjIwMEgweiIvPjxwYXRoIGZpbGw9IiNkYTEyMWEiIGQ9Ik0wIDIwMGg5MDB2MjAwSDB6Ii8+PC9zdmc+');
+}
+
 /* Globe fallback for unknown countries */
 .flag-unknown {
     background: none;
