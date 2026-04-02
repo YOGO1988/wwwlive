@@ -1127,11 +1127,20 @@
 
             html += '</div>'; // End grid-2col
 
-            // Split Times BELOW the 2-column layout (full width)
+            // Split Times BELOW the 2-column layout (full width) - NOW WITH SEPARATE COLUMNS
             if (participant.split_times && participant.split_times.length > 0) {
                 html += '<div class="chronotrack-details-section chronotrack-splits-full-width">';
                 html += '<h3>Międzyczasy</h3>';
-                html += '<table class="chronotrack-details-table">';
+                html += '<table class="chronotrack-details-table chronotrack-splits-table" style="width: 100%;">';
+                // Table header with 4 columns: Punkt, Czas, Miejsce, Tempo
+                html += '<thead><tr>';
+                html += '<th style="text-align: left;">Punkt</th>';
+                html += '<th style="text-align: center;">Czas</th>';
+                html += '<th style="text-align: center;">Miejsce</th>';
+                html += '<th style="text-align: center;">Tempo</th>';
+                html += '</tr></thead>';
+                html += '<tbody>';
+
                 participant.split_times.forEach((split) => {
                     if (split.interval_name && split.formatted_time) {
                         // Build interval name with distance in km if available
@@ -1141,35 +1150,51 @@
                         }
 
                         html += '<tr>';
-                        html += '<th>' + intervalLabel + ':</th>';
-                        html += '<td>';
-                        html += '<span class="chronotrack-time">' + this.escapeHtml(split.formatted_time) + '</span>';
-                        // Add position if available - AFTER the time
+                        html += '<td style="text-align: left; font-weight: bold;">' + intervalLabel + '</td>';
+                        html += '<td style="text-align: center;"><span class="chronotrack-time">' + this.escapeHtml(split.formatted_time) + '</span></td>';
+                        // Place column
+                        html += '<td style="text-align: center;">';
                         if (split.position && split.position > 0) {
-                            html += ' <span class="chronotrack-split-position">(mce: ' + split.position + ')</span>';
+                            html += split.position;
+                        } else {
+                            html += '-';
+                        }
+                        html += '</td>';
+                        // Pace column (segment_pace)
+                        html += '<td style="text-align: center;">';
+                        if (split.segment_pace && split.segment_pace !== '-') {
+                            html += this.escapeHtml(split.segment_pace) + ' min/km';
+                        } else {
+                            html += '-';
                         }
                         html += '</td>';
                         html += '</tr>';
                     }
                 });
 
-                // Add META (finish line) at the end with finish time and overall position
-                html += '<tr>';
-                html += '<th>Meta:</th>';
-                html += '<td>';
-                html += '<span class="chronotrack-time">' + this.escapeHtml(participant.finish_time) + '</span>';
+                // Add META (finish line) at the end with finish time, position, and pace
+                html += '<tr style="border-top: 2px solid #333;">';
+                html += '<td style="text-align: left; font-weight: bold;">Meta</td>';
+                html += '<td style="text-align: center;"><span class="chronotrack-time">' + this.escapeHtml(participant.finish_time) + '</span></td>';
+                // Place column
+                html += '<td style="text-align: center;">';
                 if (participant.position && participant.position > 0) {
-                    html += ' <span class="chronotrack-split-position">(mce: ' + participant.position + ')</span>';
+                    html += participant.position;
+                } else {
+                    html += '-';
                 }
-                // Add pace with unit if available
+                html += '</td>';
+                // Pace column (overall pace)
+                html += '<td style="text-align: center;">';
                 if (participant.pace) {
-                    const paceUnit = 'min/km'; // Default assumption for metric
-                    html += ' <span class="chronotrack-pace">(' + this.escapeHtml(participant.pace) + ' ' + paceUnit + ')</span>';
+                    html += this.escapeHtml(participant.pace) + ' min/km';
+                } else {
+                    html += '-';
                 }
                 html += '</td>';
                 html += '</tr>';
 
-                html += '</table>';
+                html += '</tbody></table>';
                 html += '</div>';
             }
 

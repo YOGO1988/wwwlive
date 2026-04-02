@@ -94,9 +94,9 @@ const CountryFlags = {
     },
 
     /**
-     * Get flag HTML for country name
+     * Get flag emoji for country name
      * @param {string} countryName - Full country name (English or Polish)
-     * @returns {string} HTML with flag icon or empty string if not found
+     * @returns {string} Flag emoji or empty string if not found
      */
     getFlag: function(countryName) {
         if (!countryName) return '';
@@ -104,8 +104,34 @@ const CountryFlags = {
         const code = this.getCountryCode(countryName);
         if (!code) return '';
 
-        // Return HTML with flag CSS class
-        return `<span class="country-flag flag-${code}" title="${countryName}"></span>`;
+        // Convert ISO code to flag emoji
+        return this.codeToEmoji(code);
+    },
+
+    /**
+     * Convert ISO country code to flag emoji
+     * @param {string} code - Two-letter ISO code (e.g., 'pl', 'de')
+     * @returns {string} Flag emoji or empty string
+     */
+    codeToEmoji: function(code) {
+        if (!code || code.length !== 2) return '';
+
+        // Convert to uppercase
+        code = code.toUpperCase();
+
+        // Convert to regional indicator symbols
+        // A = U+1F1E6, B = U+1F1E7, ..., Z = U+1F1FF
+        const firstLetter = code.charCodeAt(0) - 'A'.charCodeAt(0);
+        const secondLetter = code.charCodeAt(1) - 'A'.charCodeAt(0);
+
+        if (firstLetter < 0 || firstLetter > 25 || secondLetter < 0 || secondLetter > 25) {
+            return '';
+        }
+
+        const firstCodepoint = 0x1F1E6 + firstLetter;
+        const secondCodepoint = 0x1F1E6 + secondLetter;
+
+        return String.fromCodePoint(firstCodepoint, secondCodepoint);
     },
 
     /**
