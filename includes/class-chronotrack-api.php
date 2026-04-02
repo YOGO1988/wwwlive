@@ -844,6 +844,53 @@ class ChronoTrack_API {
             return $this->parse_time_to_seconds($a['formatted_time']) - $this->parse_time_to_seconds($b['formatted_time']);
         });
 
+        // Calculate segment times and paces (time between checkpoints)
+        $previous_time_seconds = 0;
+        $previous_distance_km = 0;
+        foreach ($split_times as $index => &$split) {
+            $current_time_seconds = $this->parse_time_to_seconds($split['formatted_time'] ?? '');
+
+            // Extract distance in km from distance_km field (e.g., "5 km" -> 5.0)
+            $current_distance_km = 0;
+            if (!empty($split['distance_km'])) {
+                if (preg_match('/(\d+(?:\.\d+)?)\s*km/', $split['distance_km'], $matches)) {
+                    $current_distance_km = floatval($matches[1]);
+                } elseif (preg_match('/(\d+)\s*m/', $split['distance_km'], $matches)) {
+                    $current_distance_km = floatval($matches[1]) / 1000;
+                }
+            }
+
+            // Calculate segment time (time for this segment only)
+            $segment_time_seconds = $current_time_seconds - $previous_time_seconds;
+            $segment_time = $this->format_seconds_to_time($segment_time_seconds);
+
+            // Calculate segment distance
+            $segment_distance_km = $current_distance_km - $previous_distance_km;
+
+            // Calculate segment pace (min/km for this segment)
+            $segment_pace = '-';
+            if ($segment_distance_km > 0 && $segment_time_seconds > 0) {
+                $segment_pace = $this->calculate_pace($segment_time, $segment_distance_km);
+            }
+
+            // Add calculated fields to split
+            $split['segment_time'] = $segment_time;
+            $split['segment_time_seconds'] = $segment_time_seconds;
+            $split['segment_pace'] = $segment_pace;
+            $split['segment_distance_km'] = $segment_distance_km;
+            $split['segment_distance_m'] = intval($segment_distance_km * 1000);
+
+            // Also add cumulative data with clearer names
+            $split['checkpoint_time'] = $split['formatted_time'];
+            $split['time_seconds'] = $current_time_seconds;
+            $split['rank'] = $split['position'] ?? 0;
+            $split['checkpoint_position'] = $split['position'] ?? 0;
+
+            $previous_time_seconds = $current_time_seconds;
+            $previous_distance_km = $current_distance_km;
+        }
+        unset($split); // Break reference
+
         // CRITICAL FIX: Use stable participant_id based on bib_number
         // This prevents "participant not found" errors after refresh
         // If athlete_id available, use it; otherwise use bib-based ID (stable across refreshes)
@@ -1325,6 +1372,25 @@ class ChronoTrack_API {
         }
 
         return $pace_string;
+    }
+
+    /**
+     * Format seconds to time string (HH:MM:SS or MM:SS)
+     */
+    private function format_seconds_to_time($seconds) {
+        if ($seconds <= 0) {
+            return '-';
+        }
+
+        $hours = floor($seconds / 3600);
+        $minutes = floor(($seconds % 3600) / 60);
+        $secs = $seconds % 60;
+
+        if ($hours > 0) {
+            return sprintf('%02d:%02d:%02d', $hours, $minutes, $secs);
+        } else {
+            return sprintf('%02d:%02d', $minutes, $secs);
+        }
     }
 
     /**

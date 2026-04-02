@@ -657,17 +657,17 @@ class ChronoTrack_PDF_Generator {
 
                     // SWAPPED: Gender detection inverted in PDF
                     // TCPDF FIX: Use direction:rtl for men, direction:ltr for women
-                    // This creates virtual center line effect that works in TCPDF
+                    // Balanced padding (5mm on both sides) to prevent misalignment
                     if ($athlete_gender === 'K' || $athlete_gender === 'F' || $athlete_gender === 'Female') {
                         // K detected but APPLY MEN's style (LEFT side + RIGHT align)
                         // Men should be RIGHT-aligned on LEFT half
                         $text_align = 'right';
-                        $padding_style = 'padding: 2px 8mm 2px 0mm; direction: rtl;';  // RTL for proper right-align
+                        $padding_style = 'padding: 2px 5mm 2px 2mm; direction: rtl;';  // Balanced padding
                     } else if ($athlete_gender === 'M' || $athlete_gender === 'Male' || $athlete_gender === 'Mężczyźni') {
                         // M detected but APPLY WOMEN's style (RIGHT side + LEFT align)
                         // Women should be LEFT-aligned on RIGHT half
                         $text_align = 'left';
-                        $padding_style = 'padding: 2px 0mm 2px 4mm; direction: ltr;';  // LTR for proper left-align
+                        $padding_style = 'padding: 2px 2mm 2px 5mm; direction: ltr;';  // Balanced padding
                     }
                 }
 
