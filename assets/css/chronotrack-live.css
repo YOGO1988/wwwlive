@@ -639,6 +639,17 @@ body.chronotrack-page .container {
     text-align: center;
 }
 
+/* Finish row (META) styling */
+.chronotrack-splits-table .chronotrack-finish-row {
+    background-color: #f8f9fa;
+    border-top: 2px solid #dee2e6;
+}
+
+.chronotrack-splits-table .chronotrack-finish-row td {
+    font-weight: 600;
+    padding: 10px;
+}
+
 .position-change {
     display: inline-block;
     margin-left: 10px;

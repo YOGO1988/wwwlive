@@ -1115,7 +1115,21 @@
             if (participant.split_times && participant.split_times.length > 0) {
                 html += '<div class="chronotrack-details-section chronotrack-splits-full-width">';
                 html += '<h3>Międzyczasy</h3>';
-                html += '<table class="chronotrack-details-table">';
+                html += '<table class="chronotrack-splits-table">';
+
+                // Table header
+                html += '<thead>';
+                html += '<tr>';
+                html += '<th>Punkt</th>';
+                html += '<th>Czas</th>';
+                html += '<th>Miejsce</th>';
+                html += '<th>Średnie tempo</th>';
+                html += '</tr>';
+                html += '</thead>';
+
+                html += '<tbody>';
+
+                // Split times rows
                 participant.split_times.forEach((split) => {
                     if (split.interval_name && split.formatted_time) {
                         // Build interval name with distance in km if available
@@ -1124,35 +1138,41 @@
                             intervalLabel += ' (' + this.escapeHtml(split.distance_km) + ')';
                         }
 
+                        // Calculate average pace
+                        const distanceKm = this.parseDistanceToKm(split.distance_km || '');
+                        const avgPace = this.calculateAveragePace(split.formatted_time, distanceKm);
+
                         html += '<tr>';
-                        html += '<th>' + intervalLabel + ':</th>';
-                        html += '<td>';
-                        html += '<span class="chronotrack-time">' + this.escapeHtml(split.formatted_time) + '</span>';
-                        // Add position if available - AFTER the time
-                        if (split.position && split.position > 0) {
-                            html += ' <span class="chronotrack-split-position">(mce: ' + split.position + ')</span>';
-                        }
-                        html += '</td>';
+                        html += '<td>' + intervalLabel + '</td>';
+                        html += '<td class="chronotrack-time">' + this.escapeHtml(split.formatted_time) + '</td>';
+                        html += '<td class="chronotrack-position">' + (split.position && split.position > 0 ? split.position : '-') + '</td>';
+                        html += '<td class="chronotrack-pace">' + avgPace + '</td>';
                         html += '</tr>';
                     }
                 });
 
-                // Add META (finish line) at the end with finish time and overall position
-                html += '<tr>';
-                html += '<th>Meta:</th>';
-                html += '<td>';
-                html += '<span class="chronotrack-time">' + this.escapeHtml(participant.finish_time) + '</span>';
-                if (participant.position && participant.position > 0) {
-                    html += ' <span class="chronotrack-split-position">(mce: ' + participant.position + ')</span>';
+                // Add META (finish line) at the end
+                // Calculate average pace for finish (need to get total distance from the last split or participant.distance)
+                let finishDistanceKm = 0;
+                if (participant.split_times.length > 0) {
+                    const lastSplit = participant.split_times[participant.split_times.length - 1];
+                    finishDistanceKm = this.parseDistanceToKm(lastSplit.distance_km || '');
                 }
-                // Add pace with unit if available
-                if (participant.pace) {
-                    const paceUnit = 'min/km'; // Default assumption for metric
-                    html += ' <span class="chronotrack-pace">(' + this.escapeHtml(participant.pace) + ' ' + paceUnit + ')</span>';
+                // If no distance from splits, try to parse from participant.distance
+                if (finishDistanceKm === 0 && participant.distance) {
+                    finishDistanceKm = this.parseDistanceToKm(participant.distance);
                 }
-                html += '</td>';
+
+                const finishPace = this.calculateAveragePace(participant.finish_time, finishDistanceKm);
+
+                html += '<tr class="chronotrack-finish-row">';
+                html += '<td><strong>Meta</strong></td>';
+                html += '<td class="chronotrack-time"><strong>' + this.escapeHtml(participant.finish_time) + '</strong></td>';
+                html += '<td class="chronotrack-position"><strong>' + (participant.position && participant.position > 0 ? participant.position : '-') + '</strong></td>';
+                html += '<td class="chronotrack-pace"><strong>' + finishPace + '</strong></td>';
                 html += '</tr>';
 
+                html += '</tbody>';
                 html += '</table>';
                 html += '</div>';
             }
@@ -1650,6 +1670,51 @@
                 return parseInt(parts[0]) * 3600 + parseInt(parts[1]) * 60 + parseInt(parts[2]);
             }
             return 999999;
+        },
+
+        /**
+         * Parse distance from string format "5 km" or "500 m" to kilometers
+         */
+        parseDistanceToKm: function(distanceStr) {
+            if (!distanceStr) return 0;
+
+            // Try to extract km value (e.g., "5 km" -> 5.0)
+            const kmMatch = distanceStr.match(/(\d+(?:\.\d+)?)\s*km/i);
+            if (kmMatch) {
+                return parseFloat(kmMatch[1]);
+            }
+
+            // Try to extract m value (e.g., "500 m" -> 0.5)
+            const mMatch = distanceStr.match(/(\d+(?:\.\d+)?)\s*m/i);
+            if (mMatch) {
+                return parseFloat(mMatch[1]) / 1000;
+            }
+
+            return 0;
+        },
+
+        /**
+         * Calculate average pace (min/km) from time and distance
+         * Returns formatted pace in mm:ss format
+         */
+        calculateAveragePace: function(timeStr, distanceKm) {
+            if (!timeStr || !distanceKm || distanceKm <= 0) {
+                return '-';
+            }
+
+            const seconds = this.parseTimeToSeconds(timeStr);
+            if (seconds === 999999 || seconds <= 0) {
+                return '-';
+            }
+
+            // Calculate pace in seconds per km
+            const paceSeconds = seconds / distanceKm;
+
+            // Convert to min:sec format (mm:ss)
+            const paceMin = Math.floor(paceSeconds / 60);
+            const paceSec = Math.round(paceSeconds % 60);
+
+            return paceMin + ':' + (paceSec < 10 ? '0' : '') + paceSec;
         },
 
         /**
