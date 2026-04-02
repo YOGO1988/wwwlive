@@ -315,9 +315,8 @@ body.chronotrack-page .container {
 }
 
 .chronotrack-results-table td {
-    padding: 4px 5px; /* Reduced from 6px to 4px for tighter rows */
+    padding: 6px 5px;
     border-bottom: 1px solid #eee;
-    line-height: 1.2; /* Dynamic height - adjusts to content */
 }
 
 /* Row colors - using classes instead of nth-child for dynamic filtering */
@@ -355,16 +354,16 @@ body.chronotrack-page .container {
     min-width: 200px;
 }
 
-/* Gender position column (Msc M/K) - RESTORE ORIGINAL: side-by-side layout */
+/* Gender position column (Msc M/K) - fixed width for 6-digit layout */
 .chronotrack-results-table .col-gender_position,
 .chronotrack-results-table .col-sex_place,
 .chronotrack-results-table .col-sex_position {
-    width: 70px; /* RESTORED: original width for side-by-side */
+    width: 70px;
     max-width: 70px;
     min-width: 70px;
     font-family: 'Courier New', monospace;
     font-weight: 600;
-    /* Padding is set by JS inline styles */
+    /* REMOVED padding: 0 !important - was blocking inline padding from JS */
 }
 
 .chronotrack-results-table .col-time {
@@ -621,15 +620,14 @@ body.chronotrack-page .container {
 }
 
 .chronotrack-splits-table th {
-    padding: 8px; /* Reduced from 10px */
+    padding: 10px;
     text-align: left;
     font-weight: 600;
     border-bottom: 2px solid #ddd;
-    font-size: 12px; /* Smaller font for headers */
 }
 
 .chronotrack-splits-table td {
-    padding: 6px 8px; /* Reduced from 8px 10px for tighter spacing */
+    padding: 8px 10px;
     border-bottom: 1px solid #eee;
 }
 
