@@ -1063,6 +1063,17 @@
             html += '<table class="chronotrack-details-table">';
             html += '<tr><th>Numer startowy:</th><td>' + this.escapeHtml(this.cleanValue(participant.bib_number)) + '</td></tr>';
             html += '<tr><th>Płeć:</th><td>' + this.escapeHtml(this.cleanValue(participant.gender)) + '</td></tr>';
+
+            // Add age if available
+            if (participant.age && participant.age > 0) {
+                html += '<tr><th>Wiek:</th><td>' + this.escapeHtml(participant.age) + '</td></tr>';
+            }
+
+            // Add birth year if available
+            if (participant.birth_year) {
+                html += '<tr><th>Rok urodzenia:</th><td>' + this.escapeHtml(participant.birth_year) + '</td></tr>';
+            }
+
             html += '<tr><th>Miejscowość:</th><td>' + this.escapeHtml(this.cleanValue(participant.city)) + '</td></tr>';
             html += '<tr><th>Klub:</th><td>' + this.escapeHtml(this.cleanValue(participant.club)) + '</td></tr>';
             html += '</table>';
@@ -1104,6 +1115,11 @@
 
             html += '<tr><th>Czas brutto:</th><td class="chronotrack-time">' + this.escapeHtml(participant.finish_time) + '</td></tr>';
             html += '<tr><th>Czas netto:</th><td class="chronotrack-time">' + this.escapeHtml(participant.net_time) + '</td></tr>';
+
+            // Add pace (tempo) if available
+            if (participant.pace && participant.pace !== '-' && participant.pace !== '') {
+                html += '<tr><th>Tempo:</th><td class="chronotrack-time">' + this.escapeHtml(participant.pace) + ' min/km</td></tr>';
+            }
 
             html += '</table>';
             html += '</div>';

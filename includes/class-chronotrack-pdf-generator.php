@@ -655,19 +655,17 @@ class ChronoTrack_PDF_Generator {
                     // Get athlete's gender
                     $athlete_gender = $result->gender ?? $result->sex ?? $result->athlete_sex ?? '';
 
-                    // SWAPPED: Gender detection inverted in PDF
-                    // TCPDF FIX: Use direction:rtl for men, direction:ltr for women
-                    // Balanced padding (5mm on both sides) to prevent misalignment
-                    if ($athlete_gender === 'K' || $athlete_gender === 'F' || $athlete_gender === 'Female') {
-                        // K detected but APPLY MEN's style (LEFT side + RIGHT align)
-                        // Men should be RIGHT-aligned on LEFT half
+                    // FIXED: Correct logic for M/K column alignment
+                    // Men (M) on LEFT side with RIGHT alignment
+                    // Women (K) on RIGHT side with LEFT alignment
+                    if ($athlete_gender === 'M' || $athlete_gender === 'Male' || $athlete_gender === 'Mężczyźni') {
+                        // Men: RIGHT-aligned on LEFT half
                         $text_align = 'right';
-                        $padding_style = 'padding: 2px 5mm 2px 2mm; direction: rtl;';  // Balanced padding
-                    } else if ($athlete_gender === 'M' || $athlete_gender === 'Male' || $athlete_gender === 'Mężczyźni') {
-                        // M detected but APPLY WOMEN's style (RIGHT side + LEFT align)
-                        // Women should be LEFT-aligned on RIGHT half
+                        $padding_style = 'padding: 2px 7mm 2px 1mm;';  // More right padding to push left
+                    } else if ($athlete_gender === 'K' || $athlete_gender === 'F' || $athlete_gender === 'Female') {
+                        // Women: LEFT-aligned on RIGHT half
                         $text_align = 'left';
-                        $padding_style = 'padding: 2px 2mm 2px 5mm; direction: ltr;';  // Balanced padding
+                        $padding_style = 'padding: 2px 1mm 2px 7mm;';  // More left padding to push right
                     }
                 }
 

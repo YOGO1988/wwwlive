@@ -244,6 +244,13 @@ class ChronoTrack_Ajax {
      * Format participant details for JSON response
      */
     private function format_participant_details($result) {
+        // Extract pace from raw_data if available
+        $pace = '';
+        if (!empty($result->raw_data)) {
+            $raw_data = is_array($result->raw_data) ? $result->raw_data : array();
+            $pace = $raw_data['pace'] ?? $raw_data['formatted_pace'] ?? '';
+        }
+
         return array(
             'id' => $result->id,
             'participant_id' => $result->participant_id,
@@ -265,6 +272,7 @@ class ChronoTrack_Ajax {
             'gender_position' => $result->gender_position,
             'finish_time' => $result->finish_time,
             'net_time' => $result->net_time,
+            'pace' => $pace,  // Add pace (tempo)
             'split_times' => $result->split_times ?? array(),
             'bracket_positions' => $result->bracket_positions ?? array(),
             'detailed_splits' => $result->detailed_splits ?? array(),
