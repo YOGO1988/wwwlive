@@ -1132,6 +1132,14 @@
                 // Split times rows
                 participant.split_times.forEach((split) => {
                     if (split.interval_name && split.formatted_time) {
+                        // DEBUG: Log split data to see what we have
+                        console.log('📊 Split data:', {
+                            interval_name: split.interval_name,
+                            distance_m: split.distance_m,
+                            distance_km: split.distance_km,
+                            formatted_time: split.formatted_time
+                        });
+
                         // Build interval name with distance in km if available
                         let intervalLabel = this.escapeHtml(split.interval_name);
                         if (split.distance_km) {
@@ -1143,6 +1151,8 @@
                         if (split.distance_m && split.distance_m > 0) {
                             const distanceKm = split.distance_m / 1000;
                             avgPace = this.calculateAveragePace(split.formatted_time, distanceKm);
+                        } else {
+                            console.warn('⚠️ No distance_m for split:', split.interval_name);
                         }
 
                         html += '<tr>';
