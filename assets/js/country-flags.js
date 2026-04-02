@@ -94,11 +94,26 @@ const CountryFlags = {
     },
 
     /**
-     * Get flag emoji for country name
+     * Get flag HTML for country name (for HTML display with CSS)
+     * @param {string} countryName - Full country name (English or Polish)
+     * @returns {string} HTML with flag icon or empty string if not found
+     */
+    getFlag: function(countryName) {
+        if (!countryName) return '';
+
+        const code = this.getCountryCode(countryName);
+        if (!code) return '';
+
+        // Return HTML with flag CSS class (for nice SVG flags in HTML)
+        return `<span class="country-flag flag-${code}" title="${countryName}"></span>`;
+    },
+
+    /**
+     * Get flag emoji for country name (for PDF or plain text)
      * @param {string} countryName - Full country name (English or Polish)
      * @returns {string} Flag emoji or empty string if not found
      */
-    getFlag: function(countryName) {
+    getFlagEmoji: function(countryName) {
         if (!countryName) return '';
 
         const code = this.getCountryCode(countryName);
