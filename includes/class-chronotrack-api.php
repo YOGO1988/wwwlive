@@ -368,7 +368,8 @@ class ChronoTrack_API {
                 error_log("ChronoTrack API: Interval metadata page {$page}: " . count($response['event_intervals']) . " intervals");
 
                 foreach ($response['event_intervals'] as $interval) {
-                    $interval_name = $interval['interval_iv_name'] ?? '';
+                    // Use both possible field names from API
+                    $interval_name = $interval['interval_name'] ?? $interval['interval_iv_name'] ?? '';
                     $distance_m = intval($interval['interval_iv_distance_m'] ?? 0);
 
                     if (!empty($interval_name) && $distance_m > 0) {
@@ -664,8 +665,20 @@ class ChronoTrack_API {
                             }
                         }
 
-                        // Calculate pace using accurate distance from interval metadata
-                        $calculated_pace = $this->calculate_pace($result['results_time'] ?? '', $distance_km_value);
+                        // FIXED: Use results_pace from API directly, only calculate if missing
+                        $pace = '-';
+                        $pace_unit = 'min/km';
+
+                        if (!empty($result['results_pace'])) {
+                            // Use pace from API directly - it's already calculated correctly
+                            $pace = $this->format_pace($result['results_pace']);
+                            $pace_unit = $result['results_pace_unit'] ?? 'min/km';
+                            error_log("Using API pace for '{$interval_name}': {$pace} {$pace_unit}");
+                        } else {
+                            // Only calculate pace if API didn't provide it
+                            $pace = $this->calculate_pace($result['results_time'] ?? '', $distance_km_value);
+                            error_log("Calculated pace for '{$interval_name}': {$pace} (API pace was missing)");
+                        }
 
                         $split_data = array(
                             'interval_name' => $interval_name,
@@ -674,9 +687,10 @@ class ChronoTrack_API {
                             'distance_m' => $distance_meters,  // Add distance in meters for pace calculation
                             'position' => $result['results_rank'] ?? 0,
                             'time' => $result['results_time'] ?? '',
-                            'pace' => $calculated_pace,  // Use calculated pace instead of API pace
+                            'pace' => $pace,  // Use API pace or calculated as fallback
+                            'pace_unit' => $pace_unit,  // Store pace unit from API
                             'formatted_time' => $this->format_time($result['results_time'] ?? ''),
-                            'formatted_pace' => $calculated_pace,  // Already formatted by calculate_pace
+                            'formatted_pace' => $pace,  // Already formatted
                         );
 
                         // Check if we already have this split for this bib
@@ -923,33 +937,41 @@ class ChronoTrack_API {
             // Calculate segment distance
             $segment_distance_km = $current_distance_km - $previous_distance_km;
 
-            // Calculate segment pace (min/km for this segment)
-            // Use seconds directly to avoid string conversion roundtrip
+            // FIXED: Use pace from API if available, only calculate if missing
             $segment_pace = '-';
-            if ($segment_distance_km > 0 && $segment_time_seconds > 0) {
-                $segment_pace = $this->calculate_pace_from_seconds($segment_time_seconds, $segment_distance_km);
-            }
+            $average_pace = '-';
 
-            // Calculate AVERAGE pace (min/km from start to this checkpoint)
-            $average_pace = $this->calculate_pace_from_seconds($current_time_seconds, $current_distance_km);
+            // Check if this split already has pace from API (set in fetch_results)
+            if (!empty($split['pace']) && $split['pace'] !== '-') {
+                // Use API pace directly - it's the average pace from start to this checkpoint
+                $average_pace = $split['pace'];
+                error_log("Using API pace for checkpoint '{$checkpoint_name}': {$average_pace}");
 
-            // CRITICAL FIX: For the last checkpoint (Meta/Finish), use API pace instead of segment pace
-            // The API pace (results_pace) is the overall pace from start to finish
-            $is_last_checkpoint = ($index === $total_splits - 1);
-            if ($is_last_checkpoint && !empty($result['results_pace'])) {
-                // Use API pace for finish line - this is the accurate overall pace
-                $api_pace = $this->format_pace($result['results_pace']);
-                $segment_pace = $api_pace;  // Override segment pace with API pace
-                $average_pace = $api_pace;  // Also set average pace to match
+                // For segment pace, calculate only if we have valid data
+                if ($segment_distance_km > 0 && $segment_time_seconds > 0) {
+                    $segment_pace = $this->calculate_pace_from_seconds($segment_time_seconds, $segment_distance_km);
+                } else {
+                    // If can't calculate segment pace, use average pace
+                    $segment_pace = $average_pace;
+                }
+            } else {
+                // API didn't provide pace - calculate both
+                if ($segment_distance_km > 0 && $segment_time_seconds > 0) {
+                    $segment_pace = $this->calculate_pace_from_seconds($segment_time_seconds, $segment_distance_km);
+                }
+                if ($current_distance_km > 0 && $current_time_seconds > 0) {
+                    $average_pace = $this->calculate_pace_from_seconds($current_time_seconds, $current_distance_km);
+                }
             }
 
             // Get pace configuration for this checkpoint
-            $pace_unit = 'min/km';  // Default
+            // FIXED: Use pace_unit from API if available (already set in fetch_results)
+            $pace_unit = $split['pace_unit'] ?? 'min/km';  // Use API pace_unit or default
             $show_pace = 1;  // Default: show pace
 
-            // Check manual_distances for pace_unit configuration
+            // Check manual_distances for pace_unit configuration (overrides API if set)
             if (!empty($checkpoint_name) && isset($manual_distances[$checkpoint_name])) {
-                $pace_unit = $manual_distances[$checkpoint_name]['pace_unit'] ?? 'min/km';
+                $pace_unit = $manual_distances[$checkpoint_name]['pace_unit'] ?? $pace_unit;
                 // If pace_unit is 'none', don't show pace
                 if ($pace_unit === 'none') {
                     $show_pace = 0;

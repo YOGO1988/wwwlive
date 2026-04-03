@@ -1162,16 +1162,33 @@
                             paceValue = this.escapeHtml(split.segment_pace);
                             paceValue = this.formatPaceTime(paceValue);
 
-                            // Check if this is a time-based pace (MM:SS) or speed (number)
-                            // If it contains ":", it's a pace in min/km format
-                            // If it's a number (speed), show km/h or pace unit from data
-                            if (paceValue.includes(':')) {
-                                // Time-based pace (e.g., "4:58" in min/km)
-                                segmentPace = paceValue + ' min/km';
+                            // Get desired unit from split configuration
+                            const paceUnit = split.pace_unit || 'min/km';
+
+                            // Handle different unit cases
+                            if (paceUnit === 'none' || paceUnit === '-') {
+                                // Don't show pace
+                                segmentPace = '-';
+                            } else if (paceUnit === 'km/h') {
+                                // User wants speed in km/h
+                                if (paceValue.includes(':')) {
+                                    // Value is in pace format (MM:SS), convert to speed
+                                    const speed = this.paceToSpeed(paceValue);
+                                    segmentPace = speed !== '-' ? speed + ' km/h' : '-';
+                                } else {
+                                    // Value is already a speed number
+                                    segmentPace = paceValue + ' km/h';
+                                }
                             } else {
-                                // Speed-based (e.g., "12.5 km/h")
-                                let paceUnit = split.pace_unit || 'km/h';
-                                segmentPace = paceValue + ' ' + paceUnit;
+                                // Default: show as pace (min/km)
+                                if (paceValue.includes(':')) {
+                                    // Value is already in pace format (MM:SS)
+                                    segmentPace = paceValue + ' min/km';
+                                } else {
+                                    // Value is a speed, convert to pace
+                                    const pace = this.speedToPace(paceValue);
+                                    segmentPace = pace !== '-' ? pace + ' min/km' : '-';
+                                }
                             }
                         }
 
@@ -1850,6 +1867,52 @@
                 return parseInt(parts[0]) * 60 + parseInt(parts[1]);
             }
             return 0;
+        },
+
+        /**
+         * Convert pace (MM:SS min/km) to speed (km/h)
+         * Example: "5:00" -> 12.0 km/h
+         */
+        paceToSpeed: function(paceStr) {
+            if (!paceStr || paceStr === '-' || !paceStr.includes(':')) return '-';
+
+            const parts = paceStr.split(':');
+            if (parts.length !== 2) return '-';
+
+            const minutes = parseInt(parts[0]);
+            const seconds = parseInt(parts[1]);
+
+            // Convert to decimal minutes
+            const decimalMinutes = minutes + (seconds / 60);
+
+            if (decimalMinutes === 0) return '-';
+
+            // Speed = 60 / pace (minutes per km)
+            const speed = 60 / decimalMinutes;
+
+            // Format to 1 decimal place
+            return speed.toFixed(1);
+        },
+
+        /**
+         * Convert speed (km/h) to pace (MM:SS min/km)
+         * Example: 12.0 -> "5:00"
+         */
+        speedToPace: function(speedValue) {
+            if (!speedValue || speedValue <= 0) return '-';
+
+            // Parse if it's a string
+            const speed = typeof speedValue === 'string' ? parseFloat(speedValue) : speedValue;
+            if (isNaN(speed) || speed <= 0) return '-';
+
+            // Pace (min/km) = 60 / speed (km/h)
+            const decimalMinutes = 60 / speed;
+
+            const minutes = Math.floor(decimalMinutes);
+            const seconds = Math.round((decimalMinutes - minutes) * 60);
+
+            // Format as MM:SS
+            return minutes + ':' + (seconds < 10 ? '0' : '') + seconds;
         },
 
         /**
