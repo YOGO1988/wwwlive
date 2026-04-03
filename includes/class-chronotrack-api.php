@@ -406,6 +406,17 @@ class ChronoTrack_API {
             return '-';
         }
 
+        return $this->calculate_pace_from_seconds($seconds, $distance_km);
+    }
+
+    /**
+     * Calculate pace from seconds (avoids string conversion roundtrip)
+     */
+    private function calculate_pace_from_seconds($seconds, $distance_km) {
+        if (empty($seconds) || empty($distance_km) || $distance_km <= 0 || $seconds <= 0) {
+            return '-';
+        }
+
         // Calculate pace in seconds per km
         $pace_seconds = $seconds / $distance_km;
 
@@ -882,15 +893,20 @@ class ChronoTrack_API {
             $segment_distance_km = $current_distance_km - $previous_distance_km;
 
             // Calculate segment pace (min/km for this segment)
+            // Use seconds directly to avoid string conversion roundtrip
             $segment_pace = '-';
             if ($segment_distance_km > 0 && $segment_time_seconds > 0) {
-                $segment_pace = $this->calculate_pace($segment_time, $segment_distance_km);
+                $segment_pace = $this->calculate_pace_from_seconds($segment_time_seconds, $segment_distance_km);
             }
+
+            // Calculate AVERAGE pace (min/km from start to this checkpoint)
+            $average_pace = $this->calculate_pace_from_seconds($current_time_seconds, $current_distance_km);
 
             // Add calculated fields to split
             $split['segment_time'] = $segment_time;
             $split['segment_time_seconds'] = $segment_time_seconds;
             $split['segment_pace'] = $segment_pace;
+            $split['average_pace'] = $average_pace;  // NEW: average pace from start
             $split['segment_distance_km'] = $segment_distance_km;
             $split['segment_distance_m'] = intval($segment_distance_km * 1000);
 

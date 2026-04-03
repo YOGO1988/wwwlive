@@ -82,7 +82,8 @@ if (!defined('ABSPATH')) {
                         <th><?php _e('Time', 'chronotrack-live'); ?></th>
                         <th><?php _e('Position', 'chronotrack-live'); ?></th>
                         <th><?php _e('Segment', 'chronotrack-live'); ?></th>
-                        <th><?php _e('Min/km', 'chronotrack-live'); ?></th>
+                        <th><?php _e('Pace', 'chronotrack-live'); ?></th>
+                        <th><?php _e('Avg Pace', 'chronotrack-live'); ?></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -119,6 +120,7 @@ if (!defined('ABSPATH')) {
                         </td>
                         <td class="segment-time"><?php echo esc_html($split->segment_time); ?></td>
                         <td class="segment-pace"><?php echo esc_html($split->segment_pace ?? '-'); ?></td>
+                        <td class="average-pace"><?php echo esc_html($split->average_pace ?? '-'); ?></td>
                     </tr>
                     <?php endforeach; ?>
                 </tbody>
