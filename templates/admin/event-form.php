@@ -174,6 +174,14 @@ $is_edit = $event !== null;
                                     }
                                     ?>
                                 </span>
+                                <label style="margin-left: 15px;">
+                                    Tempo:
+                                    <select name="checkpoint_pace_units[]" style="width: 100px; margin-left: 5px;">
+                                        <option value="min/km" <?php selected(($checkpoint['pace_unit'] ?? 'min/km'), 'min/km'); ?>>min/km</option>
+                                        <option value="km/h" <?php selected(($checkpoint['pace_unit'] ?? 'min/km'), 'km/h'); ?>>km/h</option>
+                                        <option value="none" <?php selected(($checkpoint['pace_unit'] ?? 'min/km'), 'none'); ?>>-</option>
+                                    </select>
+                                </label>
                             </div>
                             <?php
                                 endforeach;
@@ -309,6 +317,12 @@ jQuery(document).ready(function($) {
                         html += 'placeholder="np. 2500" min="0" step="1" style="width: 100px; margin-left: 5px;">';
                         html += '</label>';
                         html += '<span class="description" style="margin-left: 10px; font-style: italic; color: #666;">' + distKm + '</span>';
+                        html += '<label style="margin-left: 15px;">Tempo: ';
+                        html += '<select name="checkpoint_pace_units[]" style="width: 100px; margin-left: 5px;">';
+                        html += '<option value="min/km" selected>min/km</option>';
+                        html += '<option value="km/h">km/h</option>';
+                        html += '<option value="none">-</option>';
+                        html += '</select></label>';
                         html += '</div>';
                     });
 

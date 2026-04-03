@@ -509,7 +509,7 @@ class ChronoTrack_API {
         // Fetch interval metadata for accurate pace calculation
         $intervals_metadata = $this->fetch_intervals_metadata($event_id);
 
-        // FEATURE: Load manual interval distances from event config as fallback
+        // FEATURE: Load manual interval distances and pace config from event config as fallback
         $manual_distances = array();
         $db = chronotrack_live_results()->db;
         $event = $db->get_event($event_id);
@@ -519,6 +519,7 @@ class ChronoTrack_API {
                     $manual_distances[$checkpoint['name']] = array(
                         'distance_m' => intval($checkpoint['distance_m']),
                         'distance_km' => intval($checkpoint['distance_m']) / 1000,
+                        'pace_unit' => $checkpoint['pace_unit'] ?? 'min/km',
                     );
                 }
             }
@@ -942,14 +943,46 @@ class ChronoTrack_API {
                 $average_pace = $api_pace;  // Also set average pace to match
             }
 
+            // Get pace configuration for this checkpoint
+            $pace_unit = 'min/km';  // Default
+            $show_pace = 1;  // Default: show pace
+
+            // Check manual_distances for pace_unit configuration
+            if (!empty($checkpoint_name) && isset($manual_distances[$checkpoint_name])) {
+                $pace_unit = $manual_distances[$checkpoint_name]['pace_unit'] ?? 'min/km';
+                // If pace_unit is 'none', don't show pace
+                if ($pace_unit === 'none') {
+                    $show_pace = 0;
+                    $pace_unit = 'min/km';  // Store as min/km but don't display
+                }
+            }
+
+            // Convert pace if needed (km/h instead of min/km)
+            $display_pace = $segment_pace;
+            if ($pace_unit === 'km/h' && $segment_pace !== '-') {
+                // Convert min/km to km/h
+                // min/km = minutes per kilometer
+                // km/h = 60 / (minutes per kilometer)
+                $pace_parts = explode(':', $segment_pace);
+                if (count($pace_parts) === 2) {
+                    $pace_minutes = floatval($pace_parts[0]) + (floatval($pace_parts[1]) / 60);
+                    if ($pace_minutes > 0) {
+                        $kmh = 60 / $pace_minutes;
+                        $display_pace = number_format($kmh, 2);
+                    }
+                }
+            }
+
             // Add calculated fields to split
             $split['segment_time'] = $segment_time;
             $split['segment_time_seconds'] = $segment_time_seconds;
-            $split['segment_pace'] = $segment_pace;
+            $split['segment_pace'] = $display_pace;  // Use converted pace
             $split['average_pace'] = $average_pace;  // NEW: average pace from start
             $split['segment_distance_km'] = $segment_distance_km;
             $split['segment_distance_m'] = intval($segment_distance_km * 1000);
             $split['distance_km'] = $current_distance_km;  // Store cumulative distance
+            $split['pace_unit'] = $pace_unit;
+            $split['show_pace'] = $show_pace;
 
             // Also add cumulative data with clearer names
             $split['checkpoint_time'] = $split['formatted_time'];

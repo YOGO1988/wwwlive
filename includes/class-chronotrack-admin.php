@@ -180,14 +180,17 @@ class ChronoTrack_Admin {
         if (!empty($_POST['checkpoint_names']) && is_array($_POST['checkpoint_names'])) {
             $checkpoint_names = $_POST['checkpoint_names'];
             $checkpoint_distances = $_POST['checkpoint_distances'] ?? array();
+            $checkpoint_pace_units = $_POST['checkpoint_pace_units'] ?? array();
 
             foreach ($checkpoint_names as $index => $name) {
                 if (!empty($name)) {
                     $distance_m = isset($checkpoint_distances[$index]) ? intval($checkpoint_distances[$index]) : 0;
+                    $pace_unit = isset($checkpoint_pace_units[$index]) ? sanitize_text_field($checkpoint_pace_units[$index]) : 'min/km';
 
                     $split_times_config[] = array(
                         'name' => sanitize_text_field($name),
                         'distance_m' => $distance_m,
+                        'pace_unit' => $pace_unit,
                         'show_in_main' => isset($_POST['split_show_main'][$index]),
                     );
                 }
