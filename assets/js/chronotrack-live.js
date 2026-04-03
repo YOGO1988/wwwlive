@@ -1158,9 +1158,10 @@
                         // Get pace unit from split data (e.g., "min/km" or "km/h")
                         let paceUnit = split.pace_unit || 'min/km';
                         let segmentPace = '-';
+                        let paceValue = '-'; // Declare outside if block for later use
                         if (split.segment_pace && split.segment_pace !== '-') {
                             // Convert HH:MM:SS to MM:SS if needed
-                            let paceValue = this.escapeHtml(split.segment_pace);
+                            paceValue = this.escapeHtml(split.segment_pace);
                             paceValue = this.formatPaceTime(paceValue);
                             // Add unit to pace display
                             segmentPace = paceValue + ' ' + paceUnit;
