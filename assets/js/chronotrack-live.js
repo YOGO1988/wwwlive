@@ -1146,13 +1146,16 @@
                             intervalLabel += ' (' + this.escapeHtml(split.distance_km) + ')';
                         }
 
-                        // Calculate average pace using distance_m if available
+                        // Use average pace calculated by PHP (from start to this checkpoint)
+                        // Fallback to calculation if not available
                         let avgPace = '-';
-                        if (split.distance_m && split.distance_m > 0) {
+                        if (split.average_pace && split.average_pace !== '-') {
+                            avgPace = this.escapeHtml(split.average_pace);
+                        } else if (split.distance_m && split.distance_m > 0) {
                             const distanceKm = split.distance_m / 1000;
                             avgPace = this.calculateAveragePace(split.formatted_time, distanceKm);
                         } else {
-                            console.warn('⚠️ No distance_m for split:', split.interval_name);
+                            console.warn('⚠️ No average_pace or distance_m for split:', split.interval_name);
                         }
 
                         html += '<tr>';
