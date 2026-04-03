@@ -1112,7 +1112,12 @@
             html += '</div>'; // End grid-2col
 
             // Split Times BELOW the 2-column layout (full width)
-            if (participant.split_times && participant.split_times.length > 0) {
+            // Use detailed_splits which has all the enriched data (pace, distance, etc.)
+            const splitsData = participant.detailed_splits && participant.detailed_splits.length > 0
+                ? participant.detailed_splits
+                : participant.split_times;
+
+            if (splitsData && splitsData.length > 0) {
                 html += '<div class="chronotrack-details-section chronotrack-splits-full-width">';
                 html += '<h3>Międzyczasy</h3>';
                 html += '<table class="chronotrack-splits-table">';
@@ -1134,89 +1139,94 @@
                 let previousPosition = 0;
                 let previousPaceSeconds = 0;
 
-                participant.split_times.forEach((split, index) => {
-                    if (split.interval_name && split.formatted_time) {
+                splitsData.forEach((split, index) => {
+                    // Normalize field names between split_times and detailed_splits
+                    const intervalName = split.checkpoint_name || split.interval_name;
+                    const formattedTime = split.checkpoint_time || split.formatted_time;
+                    const position = split.checkpoint_position || split.rank || split.position;
+                    const distanceKm = split.cumulative_distance_km || split.distance_km;
+                    const segmentPace = split.segment_pace;
+                    const paceUnit = split.pace_unit || 'min/km';
+
+                    if (intervalName && formattedTime) {
                         // DEBUG: Log split data to see what we have
                         console.log('📊 Split data:', {
-                            interval_name: split.interval_name,
-                            distance_m: split.distance_m,
-                            distance_km: split.distance_km,
-                            formatted_time: split.formatted_time,
-                            segment_pace: split.segment_pace
+                            interval_name: intervalName,
+                            distance_km: distanceKm,
+                            formatted_time: formattedTime,
+                            segment_pace: segmentPace,
+                            position: position
                         });
 
                         // Interval name WITHOUT distance (distance goes to separate column)
-                        let intervalLabel = this.escapeHtml(split.interval_name);
+                        let intervalLabel = this.escapeHtml(intervalName);
 
                         // Distance in separate column
                         let distanceHtml = '-';
-                        if (split.distance_km) {
-                            distanceHtml = this.escapeHtml(split.distance_km);
+                        if (distanceKm && distanceKm > 0) {
+                            distanceHtml = distanceKm.toFixed(2) + ' km';
                         }
 
                         // Use SEGMENT pace (pace for THIS segment only, not from start)
-                        let segmentPace = '-';
+                        let paceDisplay = '-';
                         let paceValue = '-'; // Declare outside if block for later use
-                        if (split.segment_pace && split.segment_pace !== '-') {
+                        if (segmentPace && segmentPace !== '-') {
                             // Convert HH:MM:SS to MM:SS if needed
-                            paceValue = this.escapeHtml(split.segment_pace);
+                            paceValue = this.escapeHtml(segmentPace);
                             paceValue = this.formatPaceTime(paceValue);
-
-                            // Get desired unit from split configuration
-                            const paceUnit = split.pace_unit || 'min/km';
 
                             // Handle different unit cases
                             if (paceUnit === 'none' || paceUnit === '-') {
                                 // Don't show pace
-                                segmentPace = '-';
+                                paceDisplay = '-';
                             } else if (paceUnit === 'km/h') {
                                 // User wants speed in km/h
                                 if (paceValue.includes(':')) {
                                     // Value is in pace format (MM:SS), convert to speed
                                     const speed = this.paceToSpeed(paceValue);
-                                    segmentPace = speed !== '-' ? speed + ' km/h' : '-';
+                                    paceDisplay = speed !== '-' ? speed + ' km/h' : '-';
                                 } else {
                                     // Value is already a speed number
-                                    segmentPace = paceValue + ' km/h';
+                                    paceDisplay = paceValue + ' km/h';
                                 }
                             } else {
                                 // Default: show as pace (min/km)
                                 if (paceValue.includes(':')) {
                                     // Value is already in pace format (MM:SS)
-                                    segmentPace = paceValue + ' min/km';
+                                    paceDisplay = paceValue + ' min/km';
                                 } else {
                                     // Value is a speed, convert to pace
                                     const pace = this.speedToPace(paceValue);
-                                    segmentPace = pace !== '-' ? pace + ' min/km' : '-';
+                                    paceDisplay = pace !== '-' ? pace + ' min/km' : '-';
                                 }
                             }
                         }
 
                         // Position with trend arrow
                         let positionHtml = '-';
-                        if (split.position && split.position > 0) {
-                            positionHtml = split.position.toString();
+                        if (position && position > 0) {
+                            positionHtml = position.toString();
 
                             if (previousPosition > 0) {
-                                if (split.position < previousPosition) {
+                                if (position < previousPosition) {
                                     // Better position (moved up)
-                                    const gain = previousPosition - split.position;
+                                    const gain = previousPosition - position;
                                     positionHtml += ' <span class="trend-up" title="Awansował o ' + gain + '">▲</span>';
-                                } else if (split.position > previousPosition) {
+                                } else if (position > previousPosition) {
                                     // Worse position (moved down)
-                                    const loss = split.position - previousPosition;
+                                    const loss = position - previousPosition;
                                     positionHtml += ' <span class="trend-down" title="Spadł o ' + loss + '">▼</span>';
                                 } else {
                                     // Same position
                                     positionHtml += ' <span class="trend-same">-</span>';
                                 }
                             }
-                            previousPosition = split.position;
+                            previousPosition = position;
                         }
 
                         // Pace with trend arrow (compare pace in seconds)
-                        let paceHtml = segmentPace;
-                        if (segmentPace !== '-') {
+                        let paceHtml = paceDisplay;
+                        if (paceDisplay !== '-') {
                             // Parse pace to seconds (extract time value before unit)
                             // segmentPace is like "5:12 min/km", we need just "5:12"
                             const paceTimeOnly = paceValue; // Use the formatted time value (before unit was added)
@@ -1240,7 +1250,7 @@
                         html += '<tr>';
                         html += '<td>' + intervalLabel + '</td>';
                         html += '<td class="chronotrack-distance">' + distanceHtml + '</td>';
-                        html += '<td class="chronotrack-time">' + this.escapeHtml(split.formatted_time) + '</td>';
+                        html += '<td class="chronotrack-time">' + this.escapeHtml(formattedTime) + '</td>';
                         html += '<td class="chronotrack-position">' + positionHtml + '</td>';
                         html += '<td class="chronotrack-pace">' + paceHtml + '</td>';
                         html += '</tr>';
@@ -1262,14 +1272,16 @@
                 }
 
                 // Fallback: if no distance from participant, try last split
-                if (finishDistanceKm === 0 && participant.split_times.length > 0) {
-                    const lastSplit = participant.split_times[participant.split_times.length - 1];
-                    if (lastSplit.distance_m && lastSplit.distance_m > 0) {
+                if (finishDistanceKm === 0 && splitsData.length > 0) {
+                    const lastSplit = splitsData[splitsData.length - 1];
+                    // Check for cumulative_distance_km (from detailed_splits) or distance_km (from split_times)
+                    const lastSplitDistance = lastSplit.cumulative_distance_km || lastSplit.distance_km;
+                    if (lastSplitDistance && lastSplitDistance > 0) {
+                        finishDistanceKm = parseFloat(lastSplitDistance);
+                        metaDistanceHtml = finishDistanceKm.toFixed(2) + ' km';
+                    } else if (lastSplit.distance_m && lastSplit.distance_m > 0) {
                         finishDistanceKm = lastSplit.distance_m / 1000;
                         metaDistanceHtml = finishDistanceKm.toFixed(2) + ' km';
-                    } else if (lastSplit.distance_km) {
-                        finishDistanceKm = parseFloat(lastSplit.distance_km);
-                        metaDistanceHtml = lastSplit.distance_km;
                     }
                 }
 
