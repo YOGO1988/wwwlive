@@ -1415,7 +1415,8 @@ class ChronoTrack_API {
     }
 
     /**
-     * Format time from API (seconds to HH:MM:SS)
+     * Format time from API
+     * Returns MM:SS for times under 1 hour, HH:MM:SS for times 1 hour or more
      * Rounds to full seconds (removes hundredths)
      */
     private function format_time($time_string) {
@@ -1423,20 +1424,43 @@ class ChronoTrack_API {
             return '-';
         }
 
-        // If already formatted (HH:MM:SS), check for hundredths
+        // If already formatted (HH:MM:SS or MM:SS), check for hundredths
         if (strpos($time_string, ':') !== false) {
             // Remove hundredths if present (e.g., "01:23:45.67" → "01:23:45")
             $time_string = preg_replace('/\.\d+$/', '', $time_string);
+
+            // If already in correct format (no leading zeros for hours < 1), return as is
+            // Otherwise reformat to ensure MM:SS for < 1 hour
+            $parts = explode(':', $time_string);
+            if (count($parts) === 3) {
+                $hours = intval($parts[0]);
+                $minutes = intval($parts[1]);
+                $secs = intval($parts[2]);
+
+                if ($hours === 0) {
+                    // Under 1 hour: return MM:SS
+                    return sprintf('%02d:%02d', $minutes, $secs);
+                } else {
+                    // 1 hour or more: return HH:MM:SS
+                    return sprintf('%d:%02d:%02d', $hours, $minutes, $secs);
+                }
+            }
             return $time_string;
         }
 
-        // Convert seconds to HH:MM:SS, rounding to full seconds
+        // Convert seconds to appropriate format
         $seconds = round(floatval($time_string)); // Round to remove hundredths
         $hours = floor($seconds / 3600);
         $minutes = floor(($seconds % 3600) / 60);
         $secs = $seconds % 60;
 
-        return sprintf('%02d:%02d:%02d', $hours, $minutes, $secs);
+        if ($hours === 0) {
+            // Under 1 hour: return MM:SS
+            return sprintf('%02d:%02d', $minutes, $secs);
+        } else {
+            // 1 hour or more: return HH:MM:SS
+            return sprintf('%d:%02d:%02d', $hours, $minutes, $secs);
+        }
     }
 
     /**

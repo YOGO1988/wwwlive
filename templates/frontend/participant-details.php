@@ -144,10 +144,10 @@ if (!defined('ABSPATH')) {
                             $previous_pace_seconds = $current_pace_seconds;
                         }
 
-                        // Format distance display
+                        // Format distance display (without rounding)
                         $distance_display = '-';
                         if (!empty($split->cumulative_distance_km) && $split->cumulative_distance_km > 0) {
-                            $distance_display = number_format($split->cumulative_distance_km, 1) . ' km';
+                            $distance_display = $split->cumulative_distance_km . ' km';
                         }
 
                         // Format pace display with unit
