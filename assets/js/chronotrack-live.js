@@ -1121,6 +1121,7 @@
                 html += '<thead>';
                 html += '<tr>';
                 html += '<th>Punkt</th>';
+                html += '<th>Dystans</th>';
                 html += '<th>Czas</th>';
                 html += '<th>Miejsce</th>';
                 html += '<th>Tempo</th>';
@@ -1144,16 +1145,25 @@
                             segment_pace: split.segment_pace
                         });
 
-                        // Build interval name with distance in km if available
+                        // Interval name WITHOUT distance (distance goes to separate column)
                         let intervalLabel = this.escapeHtml(split.interval_name);
+
+                        // Distance in separate column
+                        let distanceHtml = '-';
                         if (split.distance_km) {
-                            intervalLabel += ' (' + this.escapeHtml(split.distance_km) + ')';
+                            distanceHtml = this.escapeHtml(split.distance_km);
                         }
 
                         // Use SEGMENT pace (pace for THIS segment only, not from start)
+                        // Get pace unit from split data (e.g., "min/km" or "km/h")
+                        let paceUnit = split.pace_unit || 'min/km';
                         let segmentPace = '-';
                         if (split.segment_pace && split.segment_pace !== '-') {
-                            segmentPace = this.escapeHtml(split.segment_pace);
+                            // Convert HH:MM:SS to MM:SS if needed
+                            let paceValue = this.escapeHtml(split.segment_pace);
+                            paceValue = this.formatPaceTime(paceValue);
+                            // Add unit to pace display
+                            segmentPace = paceValue + ' ' + paceUnit;
                         }
 
                         // Position with trend arrow
@@ -1181,8 +1191,10 @@
                         // Pace with trend arrow (compare pace in seconds)
                         let paceHtml = segmentPace;
                         if (segmentPace !== '-') {
-                            // Parse pace to seconds (mm:ss format)
-                            const paceSeconds = this.parsePaceToSeconds(segmentPace);
+                            // Parse pace to seconds (extract time value before unit)
+                            // segmentPace is like "5:12 min/km", we need just "5:12"
+                            const paceTimeOnly = paceValue; // Use the formatted time value (before unit was added)
+                            const paceSeconds = this.parsePaceToSeconds(paceTimeOnly);
 
                             if (previousPaceSeconds > 0 && paceSeconds > 0) {
                                 if (paceSeconds < previousPaceSeconds) {
@@ -1201,6 +1213,7 @@
 
                         html += '<tr>';
                         html += '<td>' + intervalLabel + '</td>';
+                        html += '<td class="chronotrack-distance">' + distanceHtml + '</td>';
                         html += '<td class="chronotrack-time">' + this.escapeHtml(split.formatted_time) + '</td>';
                         html += '<td class="chronotrack-position">' + positionHtml + '</td>';
                         html += '<td class="chronotrack-pace">' + paceHtml + '</td>';
@@ -1210,23 +1223,45 @@
 
                 // Add META (finish line) at the end
                 // For META row, show AVERAGE pace (from start to finish)
+                // Get total distance from last split or participant.distance
+                let finishDistanceKm = 0;
+                let metaDistanceHtml = '-';
+                if (participant.split_times.length > 0) {
+                    const lastSplit = participant.split_times[participant.split_times.length - 1];
+                    if (lastSplit.distance_m && lastSplit.distance_m > 0) {
+                        finishDistanceKm = lastSplit.distance_m / 1000;
+                        metaDistanceHtml = finishDistanceKm.toFixed(2) + ' km';
+                    } else if (lastSplit.distance_km) {
+                        finishDistanceKm = parseFloat(lastSplit.distance_km);
+                        metaDistanceHtml = lastSplit.distance_km;
+                    }
+                }
+                // If no distance from splits, try to parse from participant.distance
+                if (finishDistanceKm === 0 && participant.distance) {
+                    finishDistanceKm = this.parseDistanceToKm(participant.distance);
+                    if (finishDistanceKm > 0) {
+                        metaDistanceHtml = finishDistanceKm.toFixed(2) + ' km';
+                    }
+                }
+
+                // Get pace unit from last split (or default to min/km)
+                let metaPaceUnit = 'min/km';
+                if (participant.split_times.length > 0) {
+                    const lastSplit = participant.split_times[participant.split_times.length - 1];
+                    metaPaceUnit = lastSplit.pace_unit || 'min/km';
+                }
+
                 let finishPace = '-';
                 if (participant.pace || participant.formatted_pace) {
-                    finishPace = this.escapeHtml(participant.pace || participant.formatted_pace);
+                    let paceValue = this.escapeHtml(participant.pace || participant.formatted_pace);
+                    paceValue = this.formatPaceTime(paceValue);
+                    finishPace = paceValue + ' ' + metaPaceUnit;
                 } else {
                     // Fallback: calculate from distance
-                    let finishDistanceKm = 0;
-                    if (participant.split_times.length > 0) {
-                        const lastSplit = participant.split_times[participant.split_times.length - 1];
-                        if (lastSplit.distance_m && lastSplit.distance_m > 0) {
-                            finishDistanceKm = lastSplit.distance_m / 1000;
-                        }
+                    const calculatedPace = this.calculateAveragePace(participant.finish_time, finishDistanceKm);
+                    if (calculatedPace !== '-') {
+                        finishPace = calculatedPace + ' ' + metaPaceUnit;
                     }
-                    // If no distance from splits, try to parse from participant.distance
-                    if (finishDistanceKm === 0 && participant.distance) {
-                        finishDistanceKm = this.parseDistanceToKm(participant.distance);
-                    }
-                    finishPace = this.calculateAveragePace(participant.finish_time, finishDistanceKm);
                 }
 
                 // META row: show position and pace with trends
@@ -1249,6 +1284,7 @@
 
                 html += '<tr class="chronotrack-finish-row">';
                 html += '<td><strong>Meta</strong></td>';
+                html += '<td class="chronotrack-distance"><strong>' + metaDistanceHtml + '</strong></td>';
                 html += '<td class="chronotrack-time"><strong>' + this.escapeHtml(participant.finish_time) + '</strong></td>';
                 html += '<td class="chronotrack-position"><strong>' + metaPositionHtml + '</strong></td>';
                 html += '<td class="chronotrack-pace"><strong>' + finishPace + '</strong></td>';
@@ -1759,6 +1795,39 @@
          * Parse pace from mm:ss format to seconds
          * Used for comparing pace values
          */
+        /**
+         * Format pace time from HH:MM:SS or MM:SS to MM:SS
+         * Converts "00:05:21" to "5:21", keeps "5:12" as "5:12"
+         */
+        formatPaceTime: function(paceStr) {
+            if (!paceStr || paceStr === '-') return '-';
+
+            const parts = paceStr.split(':');
+
+            // If HH:MM:SS format (3 parts)
+            if (parts.length === 3) {
+                const hours = parseInt(parts[0]);
+                const minutes = parseInt(parts[1]);
+                const seconds = parseInt(parts[2]);
+
+                // Convert hours to minutes
+                const totalMinutes = hours * 60 + minutes;
+
+                // Return as MM:SS
+                return totalMinutes + ':' + (seconds < 10 ? '0' : '') + seconds;
+            }
+
+            // If MM:SS format (2 parts), return as-is but ensure seconds have 2 digits
+            if (parts.length === 2) {
+                const minutes = parseInt(parts[0]);
+                const seconds = parseInt(parts[1]);
+                return minutes + ':' + (seconds < 10 ? '0' : '') + seconds;
+            }
+
+            // Otherwise return original
+            return paceStr;
+        },
+
         parsePaceToSeconds: function(paceStr) {
             if (!paceStr || paceStr === '-') return 0;
             const parts = paceStr.split(':');
