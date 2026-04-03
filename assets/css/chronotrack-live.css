@@ -668,6 +668,27 @@ body.chronotrack-page .container {
     color: #6c757d;
 }
 
+/* Trend arrows for position and pace */
+.trend-up {
+    color: #28a745;
+    font-weight: bold;
+    font-size: 10px;
+    margin-left: 4px;
+}
+
+.trend-down {
+    color: #dc3545;
+    font-weight: bold;
+    font-size: 10px;
+    margin-left: 4px;
+}
+
+.trend-same {
+    color: #6c757d;
+    font-size: 10px;
+    margin-left: 4px;
+}
+
 .chronotrack-position-legend {
     margin-top: 15px;
     padding: 10px;

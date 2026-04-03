@@ -1123,21 +1123,25 @@
                 html += '<th>Punkt</th>';
                 html += '<th>Czas</th>';
                 html += '<th>Miejsce</th>';
-                html += '<th>Średnie tempo</th>';
+                html += '<th>Tempo</th>';
                 html += '</tr>';
                 html += '</thead>';
 
                 html += '<tbody>';
 
-                // Split times rows
-                participant.split_times.forEach((split) => {
+                // Split times rows - track previous values for trend arrows
+                let previousPosition = 0;
+                let previousPaceSeconds = 0;
+
+                participant.split_times.forEach((split, index) => {
                     if (split.interval_name && split.formatted_time) {
                         // DEBUG: Log split data to see what we have
                         console.log('📊 Split data:', {
                             interval_name: split.interval_name,
                             distance_m: split.distance_m,
                             distance_km: split.distance_km,
-                            formatted_time: split.formatted_time
+                            formatted_time: split.formatted_time,
+                            segment_pace: split.segment_pace
                         });
 
                         // Build interval name with distance in km if available
@@ -1146,29 +1150,66 @@
                             intervalLabel += ' (' + this.escapeHtml(split.distance_km) + ')';
                         }
 
-                        // Use average pace calculated by PHP (from start to this checkpoint)
-                        // Fallback to calculation if not available
-                        let avgPace = '-';
-                        if (split.average_pace && split.average_pace !== '-') {
-                            avgPace = this.escapeHtml(split.average_pace);
-                        } else if (split.distance_m && split.distance_m > 0) {
-                            const distanceKm = split.distance_m / 1000;
-                            avgPace = this.calculateAveragePace(split.formatted_time, distanceKm);
-                        } else {
-                            console.warn('⚠️ No average_pace or distance_m for split:', split.interval_name);
+                        // Use SEGMENT pace (pace for THIS segment only, not from start)
+                        let segmentPace = '-';
+                        if (split.segment_pace && split.segment_pace !== '-') {
+                            segmentPace = this.escapeHtml(split.segment_pace);
+                        }
+
+                        // Position with trend arrow
+                        let positionHtml = '-';
+                        if (split.position && split.position > 0) {
+                            positionHtml = split.position.toString();
+
+                            if (previousPosition > 0) {
+                                if (split.position < previousPosition) {
+                                    // Better position (moved up)
+                                    const gain = previousPosition - split.position;
+                                    positionHtml += ' <span class="trend-up" title="Awansował o ' + gain + '">▲</span>';
+                                } else if (split.position > previousPosition) {
+                                    // Worse position (moved down)
+                                    const loss = split.position - previousPosition;
+                                    positionHtml += ' <span class="trend-down" title="Spadł o ' + loss + '">▼</span>';
+                                } else {
+                                    // Same position
+                                    positionHtml += ' <span class="trend-same">-</span>';
+                                }
+                            }
+                            previousPosition = split.position;
+                        }
+
+                        // Pace with trend arrow (compare pace in seconds)
+                        let paceHtml = segmentPace;
+                        if (segmentPace !== '-') {
+                            // Parse pace to seconds (mm:ss format)
+                            const paceSeconds = this.parsePaceToSeconds(segmentPace);
+
+                            if (previousPaceSeconds > 0 && paceSeconds > 0) {
+                                if (paceSeconds < previousPaceSeconds) {
+                                    // Faster pace (better)
+                                    paceHtml += ' <span class="trend-up" title="Szybciej">▲</span>';
+                                } else if (paceSeconds > previousPaceSeconds) {
+                                    // Slower pace (worse)
+                                    paceHtml += ' <span class="trend-down" title="Wolniej">▼</span>';
+                                } else {
+                                    // Same pace
+                                    paceHtml += ' <span class="trend-same">-</span>';
+                                }
+                            }
+                            previousPaceSeconds = paceSeconds;
                         }
 
                         html += '<tr>';
                         html += '<td>' + intervalLabel + '</td>';
                         html += '<td class="chronotrack-time">' + this.escapeHtml(split.formatted_time) + '</td>';
-                        html += '<td class="chronotrack-position">' + (split.position && split.position > 0 ? split.position : '-') + '</td>';
-                        html += '<td class="chronotrack-pace">' + avgPace + '</td>';
+                        html += '<td class="chronotrack-position">' + positionHtml + '</td>';
+                        html += '<td class="chronotrack-pace">' + paceHtml + '</td>';
                         html += '</tr>';
                     }
                 });
 
                 // Add META (finish line) at the end
-                // Use results_pace from API if available, otherwise calculate
+                // For META row, show AVERAGE pace (from start to finish)
                 let finishPace = '-';
                 if (participant.pace || participant.formatted_pace) {
                     finishPace = this.escapeHtml(participant.pace || participant.formatted_pace);
@@ -1188,10 +1229,28 @@
                     finishPace = this.calculateAveragePace(participant.finish_time, finishDistanceKm);
                 }
 
+                // META row: show position and pace with trends
+                let metaPositionHtml = '-';
+                if (participant.position && participant.position > 0) {
+                    metaPositionHtml = participant.position.toString();
+
+                    if (previousPosition > 0) {
+                        if (participant.position < previousPosition) {
+                            const gain = previousPosition - participant.position;
+                            metaPositionHtml += ' <span class="trend-up" title="Awansował o ' + gain + '">▲</span>';
+                        } else if (participant.position > previousPosition) {
+                            const loss = participant.position - previousPosition;
+                            metaPositionHtml += ' <span class="trend-down" title="Spadł o ' + loss + '">▼</span>';
+                        } else {
+                            metaPositionHtml += ' <span class="trend-same">-</span>';
+                        }
+                    }
+                }
+
                 html += '<tr class="chronotrack-finish-row">';
                 html += '<td><strong>Meta</strong></td>';
                 html += '<td class="chronotrack-time"><strong>' + this.escapeHtml(participant.finish_time) + '</strong></td>';
-                html += '<td class="chronotrack-position"><strong>' + (participant.position && participant.position > 0 ? participant.position : '-') + '</strong></td>';
+                html += '<td class="chronotrack-position"><strong>' + metaPositionHtml + '</strong></td>';
                 html += '<td class="chronotrack-pace"><strong>' + finishPace + '</strong></td>';
                 html += '</tr>';
 
@@ -1694,6 +1753,19 @@
                 return parseInt(parts[0]) * 3600 + parseInt(parts[1]) * 60 + parseFloat(parts[2]);
             }
             return 999999;
+        },
+
+        /**
+         * Parse pace from mm:ss format to seconds
+         * Used for comparing pace values
+         */
+        parsePaceToSeconds: function(paceStr) {
+            if (!paceStr || paceStr === '-') return 0;
+            const parts = paceStr.split(':');
+            if (parts.length === 2) {
+                return parseInt(parts[0]) * 60 + parseInt(parts[1]);
+            }
+            return 0;
         },
 
         /**

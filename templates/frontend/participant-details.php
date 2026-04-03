@@ -83,29 +83,62 @@ if (!defined('ABSPATH')) {
                         <th><?php _e('Position', 'chronotrack-live'); ?></th>
                         <th><?php _e('Segment', 'chronotrack-live'); ?></th>
                         <th><?php _e('Pace', 'chronotrack-live'); ?></th>
-                        <th><?php _e('Avg Pace', 'chronotrack-live'); ?></th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php
                     $previous_position = 0;
+                    $previous_pace_seconds = 0;
+
+                    // Helper function to parse pace to seconds
+                    $parse_pace_to_seconds = function($pace_str) {
+                        if (empty($pace_str) || $pace_str === '-') return 0;
+                        $parts = explode(':', $pace_str);
+                        if (count($parts) === 2) {
+                            return intval($parts[0]) * 60 + intval($parts[1]);
+                        }
+                        return 0;
+                    };
+
                     foreach ($result->detailed_splits as $split):
                         $position_change = '';
                         $position_class = '';
 
+                        // Position trend
                         if ($previous_position > 0) {
                             if ($split->checkpoint_position < $previous_position) {
-                                $position_change = '↑ ' . ($previous_position - $split->checkpoint_position);
-                                $position_class = 'position-up';
+                                $position_change = '▲';
+                                $position_class = 'trend-up';
                             } elseif ($split->checkpoint_position > $previous_position) {
-                                $position_change = '↓ ' . ($split->checkpoint_position - $previous_position);
-                                $position_class = 'position-down';
+                                $position_change = '▼';
+                                $position_class = 'trend-down';
                             } else {
-                                $position_change = '=';
-                                $position_class = 'position-same';
+                                $position_change = '-';
+                                $position_class = 'trend-same';
                             }
                         }
                         $previous_position = $split->checkpoint_position;
+
+                        // Pace trend
+                        $pace_change = '';
+                        $pace_class = '';
+                        $current_pace = $split->segment_pace ?? '-';
+                        if ($current_pace !== '-') {
+                            $current_pace_seconds = $parse_pace_to_seconds($current_pace);
+                            if ($previous_pace_seconds > 0 && $current_pace_seconds > 0) {
+                                if ($current_pace_seconds < $previous_pace_seconds) {
+                                    $pace_change = '▲'; // Faster
+                                    $pace_class = 'trend-up';
+                                } elseif ($current_pace_seconds > $previous_pace_seconds) {
+                                    $pace_change = '▼'; // Slower
+                                    $pace_class = 'trend-down';
+                                } else {
+                                    $pace_change = '-';
+                                    $pace_class = 'trend-same';
+                                }
+                            }
+                            $previous_pace_seconds = $current_pace_seconds;
+                        }
                     ?>
                     <tr>
                         <td class="checkpoint-name"><?php echo esc_html($split->checkpoint_name); ?></td>
@@ -113,14 +146,20 @@ if (!defined('ABSPATH')) {
                         <td class="checkpoint-position">
                             <?php echo esc_html($split->checkpoint_position); ?>
                             <?php if ($position_change): ?>
-                                <span class="position-change <?php echo $position_class; ?>">
+                                <span class="<?php echo $position_class; ?>">
                                     <?php echo esc_html($position_change); ?>
                                 </span>
                             <?php endif; ?>
                         </td>
                         <td class="segment-time"><?php echo esc_html($split->segment_time); ?></td>
-                        <td class="segment-pace"><?php echo esc_html($split->segment_pace ?? '-'); ?></td>
-                        <td class="average-pace"><?php echo esc_html($split->average_pace ?? '-'); ?></td>
+                        <td class="segment-pace">
+                            <?php echo esc_html($current_pace); ?>
+                            <?php if ($pace_change): ?>
+                                <span class="<?php echo $pace_class; ?>">
+                                    <?php echo esc_html($pace_change); ?>
+                                </span>
+                            <?php endif; ?>
+                        </td>
                     </tr>
                     <?php endforeach; ?>
                 </tbody>
@@ -128,9 +167,9 @@ if (!defined('ABSPATH')) {
 
             <div class="chronotrack-position-legend">
                 <p>
-                    <span class="position-up">↑</span> <?php _e('Passed others', 'chronotrack-live'); ?> &nbsp;
-                    <span class="position-down">↓</span> <?php _e('Was passed', 'chronotrack-live'); ?> &nbsp;
-                    <span class="position-same">=</span> <?php _e('Position unchanged', 'chronotrack-live'); ?>
+                    <span class="trend-up">▲</span> <?php _e('Better (higher position or faster pace)', 'chronotrack-live'); ?> &nbsp;
+                    <span class="trend-down">▼</span> <?php _e('Worse (lower position or slower pace)', 'chronotrack-live'); ?> &nbsp;
+                    <span class="trend-same">-</span> <?php _e('No change', 'chronotrack-live'); ?>
                 </p>
             </div>
         </div>
