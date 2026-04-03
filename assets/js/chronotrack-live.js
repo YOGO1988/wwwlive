@@ -611,6 +611,11 @@
         },
 
         getColumnValue: function(result, column) {
+            // DEBUG: Log raw result object to see all available fields
+            if (column.label === 'Rok ur.' || column.label.includes('Dystans') || column.label.includes('Tempo')) {
+                console.log('🔴 RAW RESULT for column "' + column.label + '":', result);
+            }
+
             // Try each API attribute in order until we find a value
             if (column.api_attributes && column.api_attributes.length > 0) {
                 for (let i = 0; i < column.api_attributes.length; i++) {
@@ -706,19 +711,30 @@
                     // CRITICAL: Handle birth_year - extract year from date if needed
                     if (attr === 'birth_year' || attr === 'birthdate' || attr === 'athlete_birthdate') {
                         let birthValue = result[attr] || result.birth_year || result.birthdate || result.athlete_birthdate;
+                        console.log('🔴 BIRTH_YEAR DEBUG:', {
+                            attr: attr,
+                            birthValue: birthValue,
+                            'result[attr]': result[attr],
+                            'result.birth_year': result.birth_year,
+                            'result.birthdate': result.birthdate,
+                            'result.athlete_birthdate': result.athlete_birthdate
+                        });
                         if (birthValue) {
                             // If it's a full date (YYYY-MM-DD or similar), extract year
                             if (typeof birthValue === 'string' && birthValue.includes('-')) {
                                 const year = birthValue.split('-')[0];
                                 if (year && year.length === 4) {
+                                    console.log('🔴 BIRTH_YEAR EXTRACTED FROM DATE:', year);
                                     return year;
                                 }
                             }
                             // If it's already just a year (number or 4-digit string), return it
                             if (typeof birthValue === 'number' || (typeof birthValue === 'string' && birthValue.length === 4)) {
+                                console.log('🔴 BIRTH_YEAR DIRECT:', birthValue);
                                 return birthValue;
                             }
                         }
+                        console.log('🔴 BIRTH_YEAR NOT FOUND - returning "-"');
                     }
 
                     // Try direct attribute - accept 0 as valid value (except for category_position handled above)
@@ -1140,17 +1156,30 @@
                 let previousPaceSeconds = 0;
 
                 splitsData.forEach((split, index) => {
+                    // DEBUG: Log RAW split data BEFORE any transformation
+                    console.log('🔴 RAW SPLIT DATA:', split);
+
                     // Normalize field names between split_times and detailed_splits
                     const intervalName = split.checkpoint_name || split.interval_name;
                     const formattedTime = split.checkpoint_time || split.formatted_time;
                     const position = split.checkpoint_position || split.rank || split.position;
-                    const distanceKm = split.cumulative_distance_km || split.distance_km;
+
+                    // Convert cumulative_distance from METERS to KM
+                    let distanceKm = 0;
+                    if (split.cumulative_distance && split.cumulative_distance > 0) {
+                        distanceKm = split.cumulative_distance / 1000; // Convert meters to km
+                    } else if (split.cumulative_distance_km && split.cumulative_distance_km > 0) {
+                        distanceKm = split.cumulative_distance_km;
+                    } else if (split.distance_km && split.distance_km > 0) {
+                        distanceKm = split.distance_km;
+                    }
+
                     const segmentPace = split.segment_pace;
                     const paceUnit = split.pace_unit || 'min/km';
 
                     if (intervalName && formattedTime) {
-                        // DEBUG: Log split data to see what we have
-                        console.log('📊 Split data:', {
+                        // DEBUG: Log transformed split data
+                        console.log('📊 TRANSFORMED Split data:', {
                             interval_name: intervalName,
                             distance_km: distanceKm,
                             formatted_time: formattedTime,
