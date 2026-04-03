@@ -509,6 +509,24 @@ class ChronoTrack_API {
         // Fetch interval metadata for accurate pace calculation
         $intervals_metadata = $this->fetch_intervals_metadata($event_id);
 
+        // FEATURE: Load manual interval distances from event config as fallback
+        $manual_distances = array();
+        $db = chronotrack_live_results()->db;
+        $event = $db->get_event($event_id);
+        if ($event && !empty($event->split_times_config) && is_array($event->split_times_config)) {
+            foreach ($event->split_times_config as $checkpoint) {
+                if (!empty($checkpoint['name']) && !empty($checkpoint['distance_m'])) {
+                    $manual_distances[$checkpoint['name']] = array(
+                        'distance_m' => intval($checkpoint['distance_m']),
+                        'distance_km' => intval($checkpoint['distance_m']) / 1000,
+                    );
+                }
+            }
+            if (!empty($manual_distances)) {
+                error_log("ChronoTrack API: Loaded " . count($manual_distances) . " manual interval distances from config");
+            }
+        }
+
         // OPTIMIZATION: Skip expensive entries fetch for live updates
         $entries_by_bib = array();
         if ($mode === 'full') {
@@ -613,14 +631,20 @@ class ChronoTrack_API {
                         $distance_meters = 0;
                         $distance_km_value = 0;
 
-                        // Try to get distance from interval metadata first (most accurate)
+                        // Try to get distance from interval metadata first (most accurate - from API)
                         if (isset($intervals_metadata[$interval_name])) {
                             $distance_meters = $intervals_metadata[$interval_name]['distance_m'];
                             $distance_km_value = $intervals_metadata[$interval_name]['distance_km'];
                             error_log("Using interval metadata for '{$interval_name}': {$distance_meters}m");
                         }
+                        // Fallback: manual distance configuration (from event settings)
+                        elseif (isset($manual_distances[$interval_name])) {
+                            $distance_meters = $manual_distances[$interval_name]['distance_m'];
+                            $distance_km_value = $manual_distances[$interval_name]['distance_km'];
+                            error_log("Using MANUAL distance config for '{$interval_name}': {$distance_meters}m");
+                        }
                         // Fallback: extract from interval name
-                        else if (preg_match('/(\d+)\s*m/', $interval_name, $matches)) {
+                        elseif (preg_match('/(\d+)\s*m/', $interval_name, $matches)) {
                             $distance_meters = intval($matches[1]);
                             $distance_km_value = $distance_meters / 1000;
                         } elseif (preg_match('/(\d+(?:\.\d+)?)\s*km/', $interval_name, $matches)) {
@@ -806,7 +830,7 @@ class ChronoTrack_API {
                 $first_bib_logged = true;
             }
 
-            $processed_result = $this->process_single_result($result, $data['split_times'], $entry, $sex_data, $age_data, $bracket_positions, $intervals_metadata);
+            $processed_result = $this->process_single_result($result, $data['split_times'], $entry, $sex_data, $age_data, $bracket_positions, $intervals_metadata, $manual_distances);
             if ($processed_result) {
                 // Debug first processed result
                 if (count($processed_results) === 0) {
@@ -851,7 +875,7 @@ class ChronoTrack_API {
      * Process single result from API
      * Merges result data with entry data (for city, club, etc.) and bracket data
      */
-    private function process_single_result($result, $split_times = array(), $entry = array(), $sex_data = array(), $age_data = array(), $bracket_positions = array(), $intervals_metadata = array()) {
+    private function process_single_result($result, $split_times = array(), $entry = array(), $sex_data = array(), $age_data = array(), $bracket_positions = array(), $intervals_metadata = array(), $manual_distances = array()) {
         // Sort split times by time (shortest first)
         usort($split_times, function($a, $b) {
             return $this->parse_time_to_seconds($a['formatted_time']) - $this->parse_time_to_seconds($b['formatted_time']);
@@ -871,6 +895,10 @@ class ChronoTrack_API {
             // Try intervals_metadata first (preferred - accurate from API)
             if (!empty($checkpoint_name) && isset($intervals_metadata[$checkpoint_name])) {
                 $current_distance_km = $intervals_metadata[$checkpoint_name]['distance_km'];
+            }
+            // Fallback: manual distance configuration (from event settings)
+            elseif (!empty($checkpoint_name) && isset($manual_distances[$checkpoint_name])) {
+                $current_distance_km = $manual_distances[$checkpoint_name]['distance_km'];
             }
             // Fallback: use existing distance_m if available (from split_data)
             elseif (!empty($split['distance_m']) && $split['distance_m'] > 0) {

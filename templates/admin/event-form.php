@@ -130,6 +130,65 @@ $is_edit = $event !== null;
                 </td>
             </tr>
 
+            <?php if ($is_edit): ?>
+            <tr>
+                <th scope="row">
+                    <label><?php _e('Konfiguracja punktów kontrolnych', 'chronotrack-live'); ?></label>
+                </th>
+                <td>
+                    <div id="split-checkpoints-config">
+                        <p class="description">
+                            <?php _e('Skonfiguruj dystanse dla punktów kontrolnych. System najpierw próbuje pobrać dystanse z API ChronoTrack. Jeśli API nie dostarcza danych, użyte zostaną wartości podane poniżej.', 'chronotrack-live'); ?>
+                        </p>
+                        <button type="button" id="load-checkpoints" class="button" style="margin: 10px 0;">
+                            <?php _e('Załaduj punkty kontrolne z API', 'chronotrack-live'); ?>
+                        </button>
+                        <span id="load-checkpoints-status" style="margin-left: 10px;"></span>
+
+                        <div id="checkpoints-list" style="margin-top: 15px;">
+                            <?php
+                            $split_config = $event->split_times_config ?? array();
+                            if (!empty($split_config) && is_array($split_config)):
+                                foreach ($split_config as $index => $checkpoint):
+                            ?>
+                            <div class="checkpoint-row" style="margin-bottom: 10px; padding: 10px; background: #f9f9f9; border-left: 3px solid #2271b1;">
+                                <label style="display: inline-block; width: 150px; font-weight: bold;">
+                                    <?php echo esc_html($checkpoint['name'] ?? ''); ?>
+                                </label>
+                                <input type="hidden" name="checkpoint_names[]" value="<?php echo esc_attr($checkpoint['name'] ?? ''); ?>">
+                                <label style="margin-left: 15px;">
+                                    Dystans (m):
+                                    <input type="number"
+                                           name="checkpoint_distances[]"
+                                           value="<?php echo esc_attr($checkpoint['distance_m'] ?? ''); ?>"
+                                           placeholder="np. 2500"
+                                           min="0"
+                                           step="1"
+                                           style="width: 100px; margin-left: 5px;">
+                                </label>
+                                <span class="description" style="margin-left: 10px; font-style: italic; color: #666;">
+                                    <?php
+                                    $dist = $checkpoint['distance_m'] ?? 0;
+                                    if ($dist > 0) {
+                                        echo '(' . ($dist >= 1000 ? number_format($dist/1000, 2) . ' km' : $dist . ' m') . ')';
+                                    }
+                                    ?>
+                                </span>
+                            </div>
+                            <?php
+                                endforeach;
+                            else:
+                            ?>
+                            <p class="description">
+                                <?php _e('Kliknij "Załaduj punkty kontrolne z API" aby pobrać listę punktów kontrolnych.', 'chronotrack-live'); ?>
+                            </p>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                </td>
+            </tr>
+            <?php endif; ?>
+
         </table>
 
         <p class="submit">
@@ -198,6 +257,72 @@ jQuery(document).ready(function($) {
             },
             complete: function() {
                 $button.prop('disabled', false).text('<?php _e('Pobierz z API', 'chronotrack-live'); ?>');
+            }
+        });
+    });
+
+    // Load checkpoints from API (for edit mode)
+    $('#load-checkpoints').on('click', function() {
+        const eventId = '<?php echo $is_edit ? esc_js($event->event_id) : ''; ?>';
+
+        if (!eventId) {
+            alert('<?php _e('Event ID is missing', 'chronotrack-live'); ?>');
+            return;
+        }
+
+        const $button = $(this);
+        const $status = $('#load-checkpoints-status');
+        const $checkpointsList = $('#checkpoints-list');
+
+        $button.prop('disabled', true).text('<?php _e('Ładowanie...', 'chronotrack-live'); ?>');
+        $status.html('<span style="color: #999;">⏳ <?php _e('Pobieranie punktów kontrolnych...', 'chronotrack-live'); ?></span>');
+
+        $.ajax({
+            url: ajaxurl,
+            type: 'POST',
+            data: {
+                action: 'chronotrack_load_checkpoints',
+                event_id: eventId,
+                nonce: '<?php echo wp_create_nonce('chronotrack_load_checkpoints'); ?>'
+            },
+            success: function(response) {
+                if (response.success && response.data.checkpoints) {
+                    const checkpoints = response.data.checkpoints;
+
+                    if (checkpoints.length === 0) {
+                        $status.html('<span style="color: #dc3232;">✗ <?php _e('Nie znaleziono punktów kontrolnych', 'chronotrack-live'); ?></span>');
+                        return;
+                    }
+
+                    // Build checkpoints HTML
+                    let html = '';
+                    checkpoints.forEach(function(checkpoint) {
+                        const distKm = checkpoint.distance_m > 0 && checkpoint.distance_m >= 1000 ?
+                            '(' + (checkpoint.distance_m / 1000).toFixed(2) + ' km)' :
+                            (checkpoint.distance_m > 0 ? '(' + checkpoint.distance_m + ' m)' : '');
+
+                        html += '<div class="checkpoint-row" style="margin-bottom: 10px; padding: 10px; background: #f9f9f9; border-left: 3px solid #2271b1;">';
+                        html += '<label style="display: inline-block; width: 150px; font-weight: bold;">' + checkpoint.name + '</label>';
+                        html += '<input type="hidden" name="checkpoint_names[]" value="' + checkpoint.name + '">';
+                        html += '<label style="margin-left: 15px;">Dystans (m): ';
+                        html += '<input type="number" name="checkpoint_distances[]" value="' + (checkpoint.distance_m || '') + '" ';
+                        html += 'placeholder="np. 2500" min="0" step="1" style="width: 100px; margin-left: 5px;">';
+                        html += '</label>';
+                        html += '<span class="description" style="margin-left: 10px; font-style: italic; color: #666;">' + distKm + '</span>';
+                        html += '</div>';
+                    });
+
+                    $checkpointsList.html(html);
+                    $status.html('<span style="color: #46b450;">✓ <?php _e('Załadowano punkty kontrolne', 'chronotrack-live'); ?></span>');
+                } else {
+                    $status.html('<span style="color: #dc3232;">✗ ' + (response.data.message || '<?php _e('Błąd ładowania', 'chronotrack-live'); ?>') + '</span>');
+                }
+            },
+            error: function() {
+                $status.html('<span style="color: #dc3232;">✗ <?php _e('Błąd połączenia', 'chronotrack-live'); ?></span>');
+            },
+            complete: function() {
+                $button.prop('disabled', false).text('<?php _e('Załaduj punkty kontrolne z API', 'chronotrack-live'); ?>');
             }
         });
     });

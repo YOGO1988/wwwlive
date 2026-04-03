@@ -18,6 +18,7 @@ class ChronoTrack_Admin {
         add_action('admin_post_chronotrack_clean_duplicates', array($this, 'clean_duplicates'));
         add_action('admin_enqueue_scripts', array($this, 'enqueue_admin_scripts'));
         add_action('wp_ajax_chronotrack_fetch_event_info', array($this, 'ajax_fetch_event_info'));
+        add_action('wp_ajax_chronotrack_load_checkpoints', array($this, 'ajax_load_checkpoints'));
     }
 
     /**
@@ -174,11 +175,31 @@ class ChronoTrack_Admin {
 
         // Parse split times configuration
         $split_times_config = array();
-        if (!empty($_POST['split_checkpoints'])) {
+
+        // NEW FORMAT: checkpoint_names and checkpoint_distances arrays
+        if (!empty($_POST['checkpoint_names']) && is_array($_POST['checkpoint_names'])) {
+            $checkpoint_names = $_POST['checkpoint_names'];
+            $checkpoint_distances = $_POST['checkpoint_distances'] ?? array();
+
+            foreach ($checkpoint_names as $index => $name) {
+                if (!empty($name)) {
+                    $distance_m = isset($checkpoint_distances[$index]) ? intval($checkpoint_distances[$index]) : 0;
+
+                    $split_times_config[] = array(
+                        'name' => sanitize_text_field($name),
+                        'distance_m' => $distance_m,
+                        'show_in_main' => isset($_POST['split_show_main'][$index]),
+                    );
+                }
+            }
+        }
+        // OLD FORMAT: for backwards compatibility (without distance data)
+        elseif (!empty($_POST['split_checkpoints'])) {
             foreach ($_POST['split_checkpoints'] as $index => $checkpoint) {
                 if (!empty($checkpoint)) {
                     $split_times_config[] = array(
                         'name' => sanitize_text_field($checkpoint),
+                        'distance_m' => 0,
                         'show_in_main' => isset($_POST['split_show_main'][$index]),
                     );
                 }
@@ -536,6 +557,86 @@ class ChronoTrack_Admin {
         } else {
             wp_send_json_error(array('message' => 'Nie można pobrać danych wydarzenia z API. Sprawdź czy Event ID jest prawidłowy.'));
         }
+    }
+
+    /**
+     * AJAX handler: Load checkpoints with distance data from API
+     */
+    public function ajax_load_checkpoints() {
+        check_ajax_referer('chronotrack_load_checkpoints', 'nonce');
+
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(array('message' => 'Unauthorized'));
+            return;
+        }
+
+        $event_id = sanitize_text_field($_POST['event_id'] ?? '');
+
+        if (empty($event_id)) {
+            wp_send_json_error(array('message' => 'Brak Event ID'));
+            return;
+        }
+
+        $api = chronotrack_live_results()->api;
+
+        // Fetch interval metadata (includes distance data)
+        $intervals_metadata = $api->fetch_intervals_metadata($event_id);
+
+        // Also fetch split times from results to get all checkpoints (even those without distance in metadata)
+        $all_checkpoints = array();
+
+        // Add intervals from metadata first (these have distance data)
+        foreach ($intervals_metadata as $name => $data) {
+            $all_checkpoints[$name] = array(
+                'name' => $name,
+                'distance_m' => $data['distance_m'],
+                'source' => 'metadata',
+            );
+        }
+
+        // Fetch results to find additional checkpoints
+        try {
+            for ($page = 1; $page <= 3; $page++) {
+                $results = $api->fetch_results_page($event_id, $page, 100);
+
+                if (!empty($results)) {
+                    foreach ($results as $result) {
+                        if (isset($result['split_times']) && is_array($result['split_times'])) {
+                            foreach ($result['split_times'] as $split) {
+                                $interval_name = $split['interval_name'] ?? '';
+                                if (!empty($interval_name) && !isset($all_checkpoints[$interval_name])) {
+                                    // Try to extract distance from name
+                                    $distance_m = 0;
+                                    if (preg_match('/(\d+)\s*m/', $interval_name, $matches)) {
+                                        $distance_m = intval($matches[1]);
+                                    } elseif (preg_match('/(\d+(?:\.\d+)?)\s*km/', $interval_name, $matches)) {
+                                        $distance_m = floatval($matches[1]) * 1000;
+                                    }
+
+                                    $all_checkpoints[$interval_name] = array(
+                                        'name' => $interval_name,
+                                        'distance_m' => $distance_m,
+                                        'source' => 'results',
+                                    );
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    break;
+                }
+            }
+        } catch (Exception $e) {
+            error_log("AJAX: Error loading checkpoints: " . $e->getMessage());
+        }
+
+        // Convert to array and return
+        $checkpoints = array_values($all_checkpoints);
+
+        wp_send_json_success(array(
+            'checkpoints' => $checkpoints,
+            'count' => count($checkpoints),
+        ));
     }
 
     /**
