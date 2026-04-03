@@ -1155,16 +1155,24 @@
                         }
 
                         // Use SEGMENT pace (pace for THIS segment only, not from start)
-                        // Get pace unit from split data (e.g., "min/km" or "km/h")
-                        let paceUnit = split.pace_unit || 'min/km';
                         let segmentPace = '-';
                         let paceValue = '-'; // Declare outside if block for later use
                         if (split.segment_pace && split.segment_pace !== '-') {
                             // Convert HH:MM:SS to MM:SS if needed
                             paceValue = this.escapeHtml(split.segment_pace);
                             paceValue = this.formatPaceTime(paceValue);
-                            // Add unit to pace display
-                            segmentPace = paceValue + ' ' + paceUnit;
+
+                            // Check if this is a time-based pace (MM:SS) or speed (number)
+                            // If it contains ":", it's a pace in min/km format
+                            // If it's a number (speed), show km/h or pace unit from data
+                            if (paceValue.includes(':')) {
+                                // Time-based pace (e.g., "4:58" in min/km)
+                                segmentPace = paceValue + ' min/km';
+                            } else {
+                                // Speed-based (e.g., "12.5 km/h")
+                                let paceUnit = split.pace_unit || 'km/h';
+                                segmentPace = paceValue + ' ' + paceUnit;
+                            }
                         }
 
                         // Position with trend arrow
@@ -1224,10 +1232,20 @@
 
                 // Add META (finish line) at the end
                 // For META row, show AVERAGE pace (from start to finish)
-                // Get total distance from last split or participant.distance
+                // CRITICAL: Get total distance from participant.distance (race distance), NOT from last split
                 let finishDistanceKm = 0;
                 let metaDistanceHtml = '-';
-                if (participant.split_times.length > 0) {
+
+                // First, try to get distance from participant.distance (race distance)
+                if (participant.distance) {
+                    finishDistanceKm = this.parseDistanceToKm(participant.distance);
+                    if (finishDistanceKm > 0) {
+                        metaDistanceHtml = finishDistanceKm.toFixed(2) + ' km';
+                    }
+                }
+
+                // Fallback: if no distance from participant, try last split
+                if (finishDistanceKm === 0 && participant.split_times.length > 0) {
                     const lastSplit = participant.split_times[participant.split_times.length - 1];
                     if (lastSplit.distance_m && lastSplit.distance_m > 0) {
                         finishDistanceKm = lastSplit.distance_m / 1000;
@@ -1237,31 +1255,27 @@
                         metaDistanceHtml = lastSplit.distance_km;
                     }
                 }
-                // If no distance from splits, try to parse from participant.distance
-                if (finishDistanceKm === 0 && participant.distance) {
-                    finishDistanceKm = this.parseDistanceToKm(participant.distance);
-                    if (finishDistanceKm > 0) {
-                        metaDistanceHtml = finishDistanceKm.toFixed(2) + ' km';
-                    }
-                }
 
-                // Get pace unit from last split (or default to min/km)
-                let metaPaceUnit = 'min/km';
-                if (participant.split_times.length > 0) {
-                    const lastSplit = participant.split_times[participant.split_times.length - 1];
-                    metaPaceUnit = lastSplit.pace_unit || 'min/km';
-                }
-
+                // Calculate META pace (average pace from start to finish)
                 let finishPace = '-';
                 if (participant.pace || participant.formatted_pace) {
                     let paceValue = this.escapeHtml(participant.pace || participant.formatted_pace);
                     paceValue = this.formatPaceTime(paceValue);
-                    finishPace = paceValue + ' ' + metaPaceUnit;
-                } else {
-                    // Fallback: calculate from distance
+
+                    // Check if this is time-based pace (MM:SS) or speed (number)
+                    if (paceValue.includes(':')) {
+                        // Time-based pace (e.g., "4:58" in min/km)
+                        finishPace = paceValue + ' min/km';
+                    } else {
+                        // Speed-based (e.g., "12.5 km/h")
+                        finishPace = paceValue + ' km/h';
+                    }
+                } else if (finishDistanceKm > 0 && participant.finish_time) {
+                    // Fallback: calculate from finish time and distance
                     const calculatedPace = this.calculateAveragePace(participant.finish_time, finishDistanceKm);
                     if (calculatedPace !== '-') {
-                        finishPace = calculatedPace + ' ' + metaPaceUnit;
+                        // Calculated pace is always in min/km format (MM:SS)
+                        finishPace = calculatedPace + ' min/km';
                     }
                 }
 
