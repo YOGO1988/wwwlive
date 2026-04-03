@@ -664,11 +664,11 @@ class ChronoTrackApiClient:
                 return 999999  # For sorting purposes
             if ':' in time_str:
                 parts = time_str.split(':')
-                if len(parts) == 3:  # HH:MM:SS
-                    return int(parts[0]) * 3600 + int(parts[1]) * 60 + int(parts[2])
-                elif len(parts) == 2:  # MM:SS
-                    return int(parts[0]) * 60 + int(parts[1])
-            return int(time_str)
+                if len(parts) == 3:  # HH:MM:SS.mmm - use float for seconds to preserve milliseconds
+                    return int(parts[0]) * 3600 + int(parts[1]) * 60 + float(parts[2])
+                elif len(parts) == 2:  # MM:SS.mmm - use float for seconds to preserve milliseconds
+                    return int(parts[0]) * 60 + float(parts[1])
+            return float(time_str)
 
         split_times.sort(key=lambda x: parse_time_to_seconds(x.get('formatted_time', '')))
 

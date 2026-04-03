@@ -1423,15 +1423,15 @@ class ChronoTrack_API {
         if (strpos($time_string, ':') !== false) {
             $parts = explode(':', $time_string);
             if (count($parts) === 3) {
-                // HH:MM:SS
-                return intval($parts[0]) * 3600 + intval($parts[1]) * 60 + intval($parts[2]);
+                // HH:MM:SS.mmm - use floatval for seconds to preserve milliseconds
+                return intval($parts[0]) * 3600 + intval($parts[1]) * 60 + floatval($parts[2]);
             } elseif (count($parts) === 2) {
-                // MM:SS
-                return intval($parts[0]) * 60 + intval($parts[1]);
+                // MM:SS.mmm - use floatval for seconds to preserve milliseconds
+                return intval($parts[0]) * 60 + floatval($parts[1]);
             }
         }
 
-        return intval($time_string);
+        return floatval($time_string);
     }
 
     /**

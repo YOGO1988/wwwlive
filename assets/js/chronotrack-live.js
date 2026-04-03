@@ -1687,7 +1687,8 @@
             if (!timeStr || timeStr === '-') return 999999;
             const parts = timeStr.split(':');
             if (parts.length === 3) {
-                return parseInt(parts[0]) * 3600 + parseInt(parts[1]) * 60 + parseInt(parts[2]);
+                // Use parseFloat for seconds to preserve milliseconds (e.g., "43.420")
+                return parseInt(parts[0]) * 3600 + parseInt(parts[1]) * 60 + parseFloat(parts[2]);
             }
             return 999999;
         },
