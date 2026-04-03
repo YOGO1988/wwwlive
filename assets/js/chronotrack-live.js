@@ -612,7 +612,7 @@
 
         getColumnValue: function(result, column) {
             // DEBUG: Log raw result object to see all available fields
-            if (column.label === 'Rok ur.' || column.label.includes('Dystans') || column.label.includes('Tempo')) {
+            if (column.label && (column.label === 'Rok ur.' || column.label.includes('Dystans') || column.label.includes('Tempo'))) {
                 console.log('🔴 RAW RESULT for column "' + column.label + '":', result);
             }
 
