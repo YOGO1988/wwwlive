@@ -153,10 +153,38 @@ class ChronoTrack_API {
             $location = trim(substr($location, 0, strpos($location, ',')));
         }
 
+        // Convert event_end_time to MySQL datetime format
+        $event_end_time = '';
+        if (!empty($event_data['event_end_time'])) {
+            $end_time = $event_data['event_end_time'];
+
+            try {
+                // If it's a Unix timestamp (numeric)
+                if (is_numeric($end_time)) {
+                    $dt = new DateTime('@' . intval($end_time));
+                    $dt->setTimezone(new DateTimeZone($timezone));
+                    $event_end_time = $dt->format('Y-m-d H:i:s');
+                }
+                // If it's already a datetime string
+                else if (strtotime($end_time)) {
+                    $dt = new DateTime($end_time, new DateTimeZone($timezone));
+                    $event_end_time = $dt->format('Y-m-d H:i:s');
+                }
+            } catch (Exception $e) {
+                error_log("ChronoTrack: event_end_time conversion error: " . $e->getMessage());
+                if (is_numeric($end_time)) {
+                    $event_end_time = date('Y-m-d H:i:s', intval($end_time));
+                } else if (strtotime($end_time)) {
+                    $event_end_time = date('Y-m-d H:i:s', strtotime($end_time));
+                }
+            }
+        }
+
         return array(
             'event_id' => $event_data['event_id'] ?? '',
             'event_name' => $event_data['event_name'] ?? '',
             'event_date' => $event_date,
+            'event_end_time' => $event_end_time,
             'timezone' => $timezone,
             'location' => $location,
             'status' => ($event_data['event_is_published'] ?? '0') === '1' ? 'active' : 'inactive',
@@ -296,8 +324,15 @@ class ChronoTrack_API {
                                 }
                             }
 
-                            // Extract distance/race name
-                            $distance = $entry['race_distance'] ?? $entry['race_name'] ?? $entry['reg_choice_name'] ?? '';
+                            // Extract distance/race name (FIXED: race_distance doesn't exist in entry API)
+                            $distance = $entry['race_name'] ?? $entry['reg_choice_name'] ?? '';
+
+                            // Extract birth year from birthdate (format: RRRR-MM-DD)
+                            $birthdate = $entry['athlete_birthdate'] ?? $entry['reg_transaction_account_birthdate'] ?? '';
+                            $birth_year = '';
+                            if (!empty($birthdate) && strlen($birthdate) >= 4) {
+                                $birth_year = substr($birthdate, 0, 4); // Extract RRRR
+                            }
 
                             $all_entries[$bib] = array(
                                 'city' => $city,
@@ -305,7 +340,8 @@ class ChronoTrack_API {
                                 'athlete_city' => $city,
                                 'athlete_club' => $club,
                                 'location_city' => $entry['location_city'] ?? '',
-                                'birthdate' => $entry['athlete_birthdate'] ?? $entry['reg_transaction_account_birthdate'] ?? '',
+                                'birthdate' => $birthdate,
+                                'birth_year' => $birth_year,
                                 'distance' => $distance,
                                 'race_name' => $distance,
                                 // Country data - CRITICAL for nationality flags!
@@ -368,12 +404,17 @@ class ChronoTrack_API {
                 error_log("ChronoTrack API: Interval metadata page {$page}: " . count($response['event_intervals']) . " intervals");
 
                 foreach ($response['event_intervals'] as $interval) {
-                    // Use both possible field names from API
-                    $interval_name = $interval['interval_name'] ?? $interval['interval_iv_name'] ?? '';
+                    // Use both possible field names from API (FIXED: interval_iv_name doesn't exist)
+                    $interval_name = $interval['interval_name'] ?? '';
                     $distance_m = intval($interval['interval_iv_distance_m'] ?? 0);
+                    $race_name = $interval['race_name'] ?? '';
+                    $interval_event_id = $interval['event_id'] ?? $event_id;
 
                     if (!empty($interval_name) && $distance_m > 0) {
                         $intervals_data[$interval_name] = array(
+                            'event_id' => $interval_event_id,
+                            'race_name' => $race_name,
+                            'interval_name' => $interval_name,
                             'distance_m' => $distance_m,
                             'distance_km' => $distance_m / 1000,
                         );
@@ -1045,7 +1086,7 @@ class ChronoTrack_API {
         // City - prefer entry data
         $city = $entry['city'] ?? $result['results_city'] ?? '';
 
-        // Country code → name mapping (used multiple times below)
+        // Country code → name mapping (ISO codes to full names)
         $country_code_map = array(
             'PL' => 'Poland',
             'DE' => 'Germany',
@@ -1086,59 +1127,35 @@ class ChronoTrack_API {
             'ET' => 'Ethiopia',
         );
 
-        // Country - prefer entry data (try country_name first - it's the most reliable!)
-        $country = $entry['country_name'] ?? $entry['country'] ?? $result['results_country'] ?? '';
+        // SIMPLIFIED LOGIC: Only 2 priorities as per documentation
+        // PRIORITY 1: Entry API - country/nationality from entry
+        $country = $entry['country'] ?? '';
+        $nationality = $entry['nationality'] ?? '';
 
-        // Convert location_country code to name (PL → Poland)
-        if (empty($country) && !empty($entry['location_country'])) {
-            $location_country_code = $entry['location_country'];
-            $country = $country_code_map[$location_country_code] ?? $location_country_code;
+        // Convert country code to full name if needed (PL → Poland)
+        if (!empty($country) && isset($country_code_map[$country])) {
+            $country = $country_code_map[$country];
         }
 
-        // If no country yet, try to extract from results_hometown (e.g., "Września, Poland")
-        // ONLY if country is still empty!
-        if (empty($country) && !empty($result['results_hometown'])) {
-            $hometown_parts = explode(',', $result['results_hometown']);
-            if (count($hometown_parts) > 1) {
-                $last_part = trim($hometown_parts[count($hometown_parts) - 1]);
-                // Only use if it looks like a country name (not a city)
-                // Check if it's in our known countries or is already "Poland" etc.
-                if (in_array($last_part, $country_code_map) || strlen($last_part) <= 2) {
-                    // It's a code or known country
-                    $country = $country_code_map[$last_part] ?? $last_part;
+        // PRIORITY 2: Parse hometown/city if PRIORITY 1 is empty
+        if (empty($country) && !empty($city)) {
+            // Format: "Września, Poland" or "Warsaw, PL"
+            if (strpos($city, ',') !== false) {
+                $parts = explode(',', $city);
+                $last_part = trim($parts[count($parts) - 1]);
+
+                // Convert code to name if it's an ISO code
+                if (isset($country_code_map[$last_part])) {
+                    $country = $country_code_map[$last_part];
                 } else {
-                    // Likely a country name like "Poland"
-                    $country = $last_part;
+                    $country = $last_part; // Already a country name
                 }
             }
         }
 
-        // If still no country, check results_country_code and convert to country name
-        if (empty($country) && !empty($result['results_country_code'])) {
-            $country_code = $result['results_country_code'];
-            $country = $country_code_map[$country_code] ?? '';
-        }
-
-        // Nationality - prefer entry data
-        $nationality = $entry['nationality'] ?? $result['results_nationality'] ?? $country;
-
-        // DEBUG: Log all available country-related fields
-        error_log("COUNTRY DEBUG for BIB {$result['results_bib']}: entry[country_name]=" . ($entry['country_name'] ?? 'NULL') .
-                  ", entry[country]=" . ($entry['country'] ?? 'NULL') .
-                  ", result[results_country]=" . ($result['results_country'] ?? 'NULL') .
-                  ", result[results_country_code]=" . ($result['results_country_code'] ?? 'NULL') .
-                  ", result[results_hometown]=" . ($result['results_hometown'] ?? 'NULL') .
-                  ", entry[location_country]=" . ($entry['location_country'] ?? 'NULL') .
-                  ", entry[nationality]=" . ($entry['nationality'] ?? 'NULL') .
-                  ", result[results_nationality]=" . ($result['results_nationality'] ?? 'NULL') .
-                  ", FINAL country={$country}, nationality={$nationality}");
-
-        // SMART FIX: If country is still empty, try to detect from city or club
-        if (empty($country) && !empty($city)) {
-            $country = $this->detect_country_from_city($city);
-            if (!empty($country) && empty($nationality)) {
-                $nationality = $country; // Also set nationality if detected
-            }
+        // If nationality is still empty, use country
+        if (empty($nationality) && !empty($country)) {
+            $nationality = $country;
         }
 
         // Club - prefer entry data
