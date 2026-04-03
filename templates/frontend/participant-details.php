@@ -79,6 +79,7 @@ if (!defined('ABSPATH')) {
                 <thead>
                     <tr>
                         <th><?php _e('Checkpoint', 'chronotrack-live'); ?></th>
+                        <th><?php _e('Distance', 'chronotrack-live'); ?></th>
                         <th><?php _e('Time', 'chronotrack-live'); ?></th>
                         <th><?php _e('Position', 'chronotrack-live'); ?></th>
                         <th><?php _e('Segment', 'chronotrack-live'); ?></th>
@@ -123,6 +124,9 @@ if (!defined('ABSPATH')) {
                         $pace_change = '';
                         $pace_class = '';
                         $current_pace = $split->segment_pace ?? '-';
+                        $pace_unit = $split->pace_unit ?? 'min/km';
+                        $show_pace = $split->show_pace ?? 1;
+
                         if ($current_pace !== '-') {
                             $current_pace_seconds = $parse_pace_to_seconds($current_pace);
                             if ($previous_pace_seconds > 0 && $current_pace_seconds > 0) {
@@ -139,23 +143,40 @@ if (!defined('ABSPATH')) {
                             }
                             $previous_pace_seconds = $current_pace_seconds;
                         }
+
+                        // Format distance display
+                        $distance_display = '-';
+                        if (!empty($split->cumulative_distance_km) && $split->cumulative_distance_km > 0) {
+                            $distance_display = number_format($split->cumulative_distance_km, 1) . ' km';
+                        }
+
+                        // Format pace display with unit
+                        $pace_display = '';
+                        if ($show_pace && $current_pace !== '-') {
+                            $pace_display = $current_pace . ' ' . $pace_unit;
+                        } elseif (!$show_pace) {
+                            $pace_display = '-';
+                        } else {
+                            $pace_display = $current_pace;
+                        }
                     ?>
                     <tr>
                         <td class="checkpoint-name"><?php echo esc_html($split->checkpoint_name); ?></td>
+                        <td class="checkpoint-distance"><?php echo esc_html($distance_display); ?></td>
                         <td class="checkpoint-time"><?php echo esc_html($split->checkpoint_time); ?></td>
                         <td class="checkpoint-position">
                             <?php echo esc_html($split->checkpoint_position); ?>
                             <?php if ($position_change): ?>
-                                <span class="<?php echo $position_class; ?>">
+                                <span class="position-trend <?php echo $position_class; ?>">
                                     <?php echo esc_html($position_change); ?>
                                 </span>
                             <?php endif; ?>
                         </td>
                         <td class="segment-time"><?php echo esc_html($split->segment_time); ?></td>
                         <td class="segment-pace">
-                            <?php echo esc_html($current_pace); ?>
-                            <?php if ($pace_change): ?>
-                                <span class="<?php echo $pace_class; ?>">
+                            <?php echo esc_html($pace_display); ?>
+                            <?php if ($pace_change && $show_pace): ?>
+                                <span class="pace-trend <?php echo $pace_class; ?>">
                                     <?php echo esc_html($pace_change); ?>
                                 </span>
                             <?php endif; ?>

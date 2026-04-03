@@ -884,6 +884,8 @@ class ChronoTrack_API {
         // Calculate segment times and paces (time between checkpoints)
         $previous_time_seconds = 0;
         $previous_distance_km = 0;
+        $total_splits = count($split_times);
+
         foreach ($split_times as $index => &$split) {
             $current_time_seconds = $this->parse_time_to_seconds($split['formatted_time'] ?? '');
 
@@ -930,6 +932,16 @@ class ChronoTrack_API {
             // Calculate AVERAGE pace (min/km from start to this checkpoint)
             $average_pace = $this->calculate_pace_from_seconds($current_time_seconds, $current_distance_km);
 
+            // CRITICAL FIX: For the last checkpoint (Meta/Finish), use API pace instead of segment pace
+            // The API pace (results_pace) is the overall pace from start to finish
+            $is_last_checkpoint = ($index === $total_splits - 1);
+            if ($is_last_checkpoint && !empty($result['results_pace'])) {
+                // Use API pace for finish line - this is the accurate overall pace
+                $api_pace = $this->format_pace($result['results_pace']);
+                $segment_pace = $api_pace;  // Override segment pace with API pace
+                $average_pace = $api_pace;  // Also set average pace to match
+            }
+
             // Add calculated fields to split
             $split['segment_time'] = $segment_time;
             $split['segment_time_seconds'] = $segment_time_seconds;
@@ -937,6 +949,7 @@ class ChronoTrack_API {
             $split['average_pace'] = $average_pace;  // NEW: average pace from start
             $split['segment_distance_km'] = $segment_distance_km;
             $split['segment_distance_m'] = intval($segment_distance_km * 1000);
+            $split['distance_km'] = $current_distance_km;  // Store cumulative distance
 
             // Also add cumulative data with clearer names
             $split['checkpoint_time'] = $split['formatted_time'];

@@ -669,23 +669,29 @@ body.chronotrack-page .container {
 }
 
 /* Trend arrows for position and pace */
-.trend-up {
+.trend-up,
+.position-trend.trend-up,
+.pace-trend.trend-up {
     color: #28a745;
     font-weight: bold;
-    font-size: 10px;
+    font-size: 14px;
     margin-left: 4px;
 }
 
-.trend-down {
+.trend-down,
+.position-trend.trend-down,
+.pace-trend.trend-down {
     color: #dc3545;
     font-weight: bold;
-    font-size: 10px;
+    font-size: 14px;
     margin-left: 4px;
 }
 
-.trend-same {
+.trend-same,
+.position-trend.trend-same,
+.pace-trend.trend-same {
     color: #6c757d;
-    font-size: 10px;
+    font-size: 14px;
     margin-left: 4px;
 }
 

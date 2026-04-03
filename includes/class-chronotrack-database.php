@@ -19,7 +19,7 @@ class ChronoTrack_Database {
      */
     private function maybe_run_migrations() {
         $db_version = get_option('chronotrack_db_version', '0');
-        $current_version = '4.0.8';
+        $current_version = '4.1.0';
 
         if (version_compare($db_version, $current_version, '<')) {
             $this->run_migrations();
@@ -60,6 +60,22 @@ class ChronoTrack_Database {
         if (empty($bracket_positions_exists)) {
             error_log("Migration: Adding bracket_positions column to $results_table");
             $wpdb->query("ALTER TABLE $results_table ADD COLUMN bracket_positions TEXT AFTER split_times");
+        }
+
+        // Migration 4: Add pace and distance columns to splits table
+        $splits_table = $wpdb->prefix . 'chronotrack_splits';
+
+        $segment_pace_exists = $wpdb->get_results(
+            "SHOW COLUMNS FROM $splits_table LIKE 'segment_pace'"
+        );
+        if (empty($segment_pace_exists)) {
+            error_log("Migration: Adding pace and distance columns to $splits_table");
+            $wpdb->query("ALTER TABLE $splits_table ADD COLUMN segment_pace varchar(50) AFTER segment_time_seconds");
+            $wpdb->query("ALTER TABLE $splits_table ADD COLUMN average_pace varchar(50) AFTER segment_pace");
+            $wpdb->query("ALTER TABLE $splits_table ADD COLUMN segment_distance_km decimal(10,3) AFTER average_pace");
+            $wpdb->query("ALTER TABLE $splits_table ADD COLUMN cumulative_distance_km decimal(10,3) AFTER segment_distance_km");
+            $wpdb->query("ALTER TABLE $splits_table ADD COLUMN pace_unit varchar(20) DEFAULT 'min/km' AFTER cumulative_distance_km");
+            $wpdb->query("ALTER TABLE $splits_table ADD COLUMN show_pace tinyint(1) DEFAULT 1 AFTER pace_unit");
         }
     }
 
@@ -140,6 +156,12 @@ class ChronoTrack_Database {
             checkpoint_position int(11),
             segment_time varchar(50),
             segment_time_seconds int(11),
+            segment_pace varchar(50),
+            average_pace varchar(50),
+            segment_distance_km decimal(10,3),
+            cumulative_distance_km decimal(10,3),
+            pace_unit varchar(20) DEFAULT 'min/km',
+            show_pace tinyint(1) DEFAULT 1,
             created_at datetime DEFAULT CURRENT_TIMESTAMP,
             PRIMARY KEY  (id),
             KEY result_id (result_id),
@@ -420,6 +442,12 @@ class ChronoTrack_Database {
                     'checkpoint_position' => absint($split['rank'] ?? $split['checkpoint_position'] ?? 0),
                     'segment_time' => sanitize_text_field($split['segment_time'] ?? ''),
                     'segment_time_seconds' => absint($split['segment_time_seconds'] ?? 0),
+                    'segment_pace' => sanitize_text_field($split['segment_pace'] ?? ''),
+                    'average_pace' => sanitize_text_field($split['average_pace'] ?? ''),
+                    'segment_distance_km' => floatval($split['segment_distance_km'] ?? 0),
+                    'cumulative_distance_km' => floatval($split['distance_km'] ?? $split['cumulative_distance_km'] ?? 0),
+                    'pace_unit' => sanitize_text_field($split['pace_unit'] ?? 'min/km'),
+                    'show_pace' => absint($split['show_pace'] ?? 1),
                 ));
             }
         }
