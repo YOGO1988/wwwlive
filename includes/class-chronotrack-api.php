@@ -638,6 +638,13 @@ class ChronoTrack_API {
         // Fetch interval metadata for accurate pace calculation
         $intervals_metadata = $this->fetch_intervals_metadata($event_id);
 
+        // NEW FALLBACK: If intervals_metadata is empty, try to extract from results directly
+        if (empty($intervals_metadata)) {
+            error_log("⚠️ Intervals metadata is empty, will try to extract from results");
+            // We'll populate this from the results as we process them
+            // This is handled below in the results processing loop
+        }
+
         // FEATURE: Load manual interval distances and pace config from event config as fallback
         $manual_distances = array();
         $db = chronotrack_live_results()->db;
@@ -776,6 +783,20 @@ class ChronoTrack_API {
                             $distance_meters = $interval_data['distance_m'];
                             $distance_km_value = $interval_data['distance_km'];
                             error_log("✅ FOUND in metadata for '{$interval_name}': {$distance_meters}m");
+                        }
+                        // NEW FALLBACK: Check if result itself contains distance data
+                        elseif (isset($result['interval_iv_distance_m']) && intval($result['interval_iv_distance_m']) > 0) {
+                            $distance_meters = intval($result['interval_iv_distance_m']);
+                            $distance_km_value = $distance_meters / 1000;
+                            error_log("✅ Using RESULT distance data for '{$interval_name}': {$distance_meters}m (from result record)");
+                            // Also populate intervals_metadata for future use
+                            if (!isset($intervals_metadata[$interval_name])) {
+                                $intervals_metadata[$interval_name] = array(
+                                    'interval_name' => $interval_name,
+                                    'distance_m' => $distance_meters,
+                                    'distance_km' => $distance_km_value,
+                                );
+                            }
                         }
                         // Fallback: manual distance configuration (from event settings)
                         elseif (isset($manual_distances[$interval_name])) {
