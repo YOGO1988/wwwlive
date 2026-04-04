@@ -19,7 +19,7 @@ class ChronoTrack_Database {
      */
     private function maybe_run_migrations() {
         $db_version = get_option('chronotrack_db_version', '0');
-        $current_version = '4.1.0';
+        $current_version = '4.2.0';  // UPDATED: Increment version for birthdate migration
 
         if (version_compare($db_version, $current_version, '<')) {
             $this->run_migrations();
@@ -77,6 +77,26 @@ class ChronoTrack_Database {
             $wpdb->query("ALTER TABLE $splits_table ADD COLUMN pace_unit varchar(20) DEFAULT 'min/km' AFTER cumulative_distance_km");
             $wpdb->query("ALTER TABLE $splits_table ADD COLUMN show_pace tinyint(1) DEFAULT 1 AFTER pace_unit");
         }
+
+        // Migration 5: Add country and nationality columns to results table
+        $country_exists = $wpdb->get_results(
+            "SHOW COLUMNS FROM $results_table LIKE 'country'"
+        );
+        if (empty($country_exists)) {
+            error_log("Migration: Adding country and nationality columns to $results_table");
+            $wpdb->query("ALTER TABLE $results_table ADD COLUMN country varchar(255) AFTER city");
+            $wpdb->query("ALTER TABLE $results_table ADD COLUMN nationality varchar(255) AFTER country");
+        }
+
+        // Migration 6: Add birthdate and birth_year columns to results table
+        $birthdate_exists = $wpdb->get_results(
+            "SHOW COLUMNS FROM $results_table LIKE 'birthdate'"
+        );
+        if (empty($birthdate_exists)) {
+            error_log("Migration: Adding birthdate and birth_year columns to $results_table");
+            $wpdb->query("ALTER TABLE $results_table ADD COLUMN birthdate varchar(50) AFTER club");
+            $wpdb->query("ALTER TABLE $results_table ADD COLUMN birth_year varchar(10) AFTER birthdate");
+        }
     }
 
     /**
@@ -120,7 +140,11 @@ class ChronoTrack_Database {
             age int(11),
             gender varchar(10),
             city varchar(255),
+            country varchar(255),
+            nationality varchar(255),
             club varchar(255),
+            birthdate varchar(50),
+            birth_year varchar(10),
             distance varchar(255),
             category varchar(255),
             position int(11),
@@ -367,6 +391,8 @@ class ChronoTrack_Database {
                 'country' => sanitize_text_field($result['country'] ?? ''),
                 'nationality' => sanitize_text_field($result['nationality'] ?? ''),
                 'club' => sanitize_text_field($result['club'] ?? ''),
+                'birthdate' => sanitize_text_field($result['birthdate'] ?? ''),  // NEW: Save birthdate
+                'birth_year' => sanitize_text_field($result['birth_year'] ?? ''),  // NEW: Save birth_year
                 'distance' => sanitize_text_field($result['distance'] ?? ''),
                 'category' => sanitize_text_field($result['category'] ?? ''),
                 'position' => absint($result['position'] ?? 0),
@@ -630,7 +656,9 @@ class ChronoTrack_Database {
             array('id' => 'full_name', 'name' => 'Nazwisko Imię', 'description' => 'Nazwisko i imię zawodnika', 'api_options' => array('full_name', 'athlete_last_name,athlete_first_name'), 'selected' => true),
             array('id' => 'city', 'name' => 'Miejscowość', 'description' => 'Miejscowość zawodnika', 'api_options' => array('city', 'results_city', 'athlete_city'), 'selected' => true),
             array('id' => 'club', 'name' => 'Klub', 'description' => 'Klub zawodnika', 'api_options' => array('club', 'results_club', 'athlete_club'), 'selected' => true),
+            array('id' => 'birthdate', 'name' => 'Data Ur.', 'description' => 'Data urodzenia', 'api_options' => array('birthdate', 'athlete_birthdate'), 'selected' => false),
             array('id' => 'birth_year', 'name' => 'Rok Ur', 'description' => 'Rok urodzenia', 'api_options' => array('birth_year', 'birthdate', 'athlete_birthdate'), 'selected' => false),
+            array('id' => 'distance', 'name' => 'Dystans', 'description' => 'Dystans (nazwa)', 'api_options' => array('distance', 'race_name', 'race_distance'), 'selected' => false),
             array('id' => 'category', 'name' => 'Kat', 'description' => 'Kategoria wiekowa', 'api_options' => array('category', 'bracket_name', 'results_primary_bracket_name'), 'selected' => true),
             array('id' => 'category_position', 'name' => 'Msc Kat', 'description' => 'Miejsce w kategorii wiekowej', 'api_options' => array('category_position', 'division_place', 'results_division_rank'), 'selected' => true),
             array('id' => 'gender_position', 'name' => 'Msc M/K', 'description' => 'Miejsce w kategorii płci', 'api_options' => array('gender_position', 'sex_place', 'results_sex_rank'), 'selected' => true),
