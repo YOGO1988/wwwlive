@@ -439,19 +439,47 @@ class ChronoTrack_API {
             $endpoint = "/api/event/{$event_id}/interval";
             $response = $this->make_api_request($endpoint, $params);
 
-            if ($response && isset($response['event_intervals']) && !empty($response['event_intervals'])) {
-                error_log("ChronoTrack API: Interval metadata page {$page}: " . count($response['event_intervals']) . " intervals");
+            // DEBUG: Log response structure to diagnose format issues
+            if ($response) {
+                error_log("🔍 INTERVAL API RESPONSE KEYS (page {$page}): " . implode(', ', array_keys($response)));
+                if (count($response) > 0) {
+                    $first_key = array_key_first($response);
+                    error_log("🔍 FIRST KEY: '{$first_key}' | TYPE: " . gettype($response[$first_key]) . " | COUNT: " . (is_countable($response[$first_key]) ? count($response[$first_key]) : 'N/A'));
+                    if (is_array($response[$first_key]) && !empty($response[$first_key])) {
+                        error_log("🔍 FIRST ITEM IN '{$first_key}': " . print_r(array_slice($response[$first_key], 0, 1), true));
+                    }
+                }
+            } else {
+                error_log("⚠️ INTERVAL API RESPONSE IS NULL OR FALSE");
+            }
+
+            // FIXED: Handle both response formats - nested under 'event_intervals' or direct array
+            $intervals_array = null;
+            if (isset($response['event_intervals']) && !empty($response['event_intervals'])) {
+                $intervals_array = $response['event_intervals'];
+                error_log("✅ Using nested format: response['event_intervals']");
+            } elseif (is_array($response) && !empty($response)) {
+                // Check if response is a flat array of intervals (check first item for interval fields)
+                $first_item = reset($response);
+                if (is_array($first_item) && (isset($first_item['interval_name']) || isset($first_item['interval_iv_distance_m']))) {
+                    $intervals_array = $response;
+                    error_log("✅ Using flat array format: direct response array");
+                }
+            }
+
+            if ($intervals_array && !empty($intervals_array)) {
+                error_log("ChronoTrack API: Interval metadata page {$page}: " . count($intervals_array) . " intervals");
 
                 // DEBUG: Log first interval to see raw API data
                 static $first_interval_logged = false;
-                if (!$first_interval_logged && !empty($response['event_intervals'])) {
+                if (!$first_interval_logged && !empty($intervals_array)) {
                     error_log("========== FIRST RAW INTERVAL FROM API ==========");
-                    error_log(print_r($response['event_intervals'][0], true));
+                    error_log(print_r($intervals_array[0], true));
                     error_log("=================================================");
                     $first_interval_logged = true;
                 }
 
-                foreach ($response['event_intervals'] as $interval) {
+                foreach ($intervals_array as $interval) {
                     // Use both possible field names from API (FIXED: interval_iv_name doesn't exist)
                     $interval_name = trim($interval['interval_name'] ?? '');
                     $distance_m = intval($interval['interval_iv_distance_m'] ?? 0);
