@@ -655,6 +655,8 @@ class ChronoTrack_Database {
             array('id' => 'entry_bib', 'name' => 'Nr Start', 'description' => 'Numer startowy', 'api_options' => array('entry_bib', 'bib_number', 'results_bib'), 'selected' => true),
             array('id' => 'full_name', 'name' => 'Nazwisko Imię', 'description' => 'Nazwisko i imię zawodnika', 'api_options' => array('full_name', 'athlete_last_name,athlete_first_name'), 'selected' => true),
             array('id' => 'city', 'name' => 'Miejscowość', 'description' => 'Miejscowość zawodnika', 'api_options' => array('city', 'results_city', 'athlete_city'), 'selected' => true),
+            array('id' => 'country', 'name' => 'Kraj', 'description' => 'Kraj (miejscowość)', 'api_options' => array('country', 'athlete_country', 'location_country'), 'selected' => false),
+            array('id' => 'nationality', 'name' => 'Narodowość', 'description' => 'Narodowość zawodnika', 'api_options' => array('nationality', 'athlete_nationality'), 'selected' => false),
             array('id' => 'club', 'name' => 'Klub', 'description' => 'Klub zawodnika', 'api_options' => array('club', 'results_club', 'athlete_club'), 'selected' => true),
             array('id' => 'birthdate', 'name' => 'Data Ur.', 'description' => 'Data urodzenia', 'api_options' => array('birthdate', 'athlete_birthdate'), 'selected' => false),
             array('id' => 'birth_year', 'name' => 'Rok Ur', 'description' => 'Rok urodzenia', 'api_options' => array('birth_year', 'birthdate', 'athlete_birthdate'), 'selected' => false),
