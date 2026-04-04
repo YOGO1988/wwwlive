@@ -748,8 +748,6 @@ class ChronoTrack_API {
                             $distance_meters = $interval_data['distance_m'];
                             $distance_km_value = $interval_data['distance_km'];
                             error_log("✅ FOUND in metadata for '{$interval_name}': {$distance_meters}m");
-                        } else {
-                            error_log("❌ NOT FOUND in metadata for '{$interval_name}', trying fallbacks...");
                         }
                         // Fallback: manual distance configuration (from event settings)
                         elseif (isset($manual_distances[$interval_name])) {
