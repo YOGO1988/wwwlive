@@ -511,7 +511,7 @@
                               result.athlete_country || result.country_code || result.CountryCode;
             let flagEmoji = '';
             if (countryCode && typeof CountryFlags !== 'undefined') {
-                flagEmoji = CountryFlags.getFlag(countryCode) || '';
+                flagEmoji = CountryFlags.getFlagEmoji(countryCode) || '';
             }
 
             // Use dynamic columns if available
@@ -1042,7 +1042,7 @@
             // Add country flag before name if available
             let flagEmoji = '';
             if (participant.country && typeof CountryFlags !== 'undefined') {
-                flagEmoji = CountryFlags.getFlag(participant.country);
+                flagEmoji = CountryFlags.getFlagEmoji(participant.country);
                 if (flagEmoji) {
                     flagEmoji = flagEmoji + ' '; // Add space after flag
                 }
@@ -1156,36 +1156,17 @@
                 let previousPaceSeconds = 0;
 
                 splitsData.forEach((split, index) => {
-                    // DEBUG: Log RAW split data BEFORE any transformation
-                    console.log('🔴 RAW SPLIT DATA:', split);
+                    console.log('🔴 SPLIT:', split);
 
-                    // Normalize field names between split_times and detailed_splits
+                    // Use data directly from API
                     const intervalName = split.checkpoint_name || split.interval_name;
                     const formattedTime = split.checkpoint_time || split.formatted_time;
                     const position = split.checkpoint_position || split.rank || split.position;
-
-                    // Convert cumulative_distance from METERS to KM
-                    let distanceKm = 0;
-                    if (split.cumulative_distance && split.cumulative_distance > 0) {
-                        distanceKm = split.cumulative_distance / 1000; // Convert meters to km
-                    } else if (split.cumulative_distance_km && split.cumulative_distance_km > 0) {
-                        distanceKm = split.cumulative_distance_km;
-                    } else if (split.distance_km && split.distance_km > 0) {
-                        distanceKm = split.distance_km;
-                    }
-
+                    const distanceKm = split.distance_km;
                     const segmentPace = split.segment_pace;
                     const paceUnit = split.pace_unit || 'min/km';
 
                     if (intervalName && formattedTime) {
-                        // DEBUG: Log transformed split data
-                        console.log('📊 TRANSFORMED Split data:', {
-                            interval_name: intervalName,
-                            distance_km: distanceKm,
-                            formatted_time: formattedTime,
-                            segment_pace: segmentPace,
-                            position: position
-                        });
 
                         // Interval name WITHOUT distance (distance goes to separate column)
                         let intervalLabel = this.escapeHtml(intervalName);
