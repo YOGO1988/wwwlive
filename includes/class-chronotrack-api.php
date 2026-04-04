@@ -429,6 +429,11 @@ class ChronoTrack_API {
         }
 
         error_log("ChronoTrack API: Found " . count($intervals_data) . " intervals with distance data");
+        if (!empty($intervals_data)) {
+            foreach ($intervals_data as $name => $data) {
+                error_log("📏 Interval metadata: '{$name}' = {$data['distance_m']}m ({$data['distance_km']}km)");
+            }
+        }
         return $intervals_data;
     }
 
@@ -720,11 +725,11 @@ class ChronoTrack_API {
                             // Use pace from API directly - it's already calculated correctly
                             $pace = $this->format_pace($result['results_pace']);
                             $pace_unit = $result['results_pace_unit'] ?? 'min/km';
-                            error_log("Using API pace for '{$interval_name}': {$pace} {$pace_unit}");
+                            error_log("✅ Using API pace for '{$interval_name}': {$pace} {$pace_unit}");
                         } else {
                             // Only calculate pace if API didn't provide it
                             $pace = $this->calculate_pace($result['results_time'] ?? '', $distance_km_value);
-                            error_log("Calculated pace for '{$interval_name}': {$pace} (API pace was missing)");
+                            error_log("⚠️ Calculated pace for '{$interval_name}': {$pace} (API pace was missing, distance_km={$distance_km_value})");
                         }
 
                         $split_data = array(
@@ -739,6 +744,8 @@ class ChronoTrack_API {
                             'formatted_time' => $this->format_time($result['results_time'] ?? ''),
                             'formatted_pace' => $pace,  // Already formatted
                         );
+
+                        error_log("🔵 SPLIT DATA for '{$interval_name}': distance={$distance_km} ({$distance_meters}m), pace={$pace} {$pace_unit}, time=" . ($result['results_time'] ?? ''));
 
                         // Check if we already have this split for this bib
                         $existing = false;

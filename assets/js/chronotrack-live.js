@@ -1154,6 +1154,7 @@
                 // Split times rows - track previous values for trend arrows
                 let previousPosition = 0;
                 let previousPaceSeconds = 0;
+                let fullCoursePace = null;  // Store pace from Full Course for Meta row
 
                 splitsData.forEach((split, index) => {
                     console.log('🔴 SPLIT:', split);
@@ -1167,6 +1168,20 @@
                     const averagePace = split.average_pace;  // Average pace from start (from API)
                     const paceUnit = split.pace_unit || 'min/km';
                     const showPace = split.show_pace !== 0;  // show_pace = 0 means hide pace
+
+                    // Skip "Full Course" - it's the same as Meta (net time)
+                    // But save its pace to use in Meta row
+                    if (intervalName === 'Full Course') {
+                        const paceToUse = averagePace || segmentPace || split.pace || split.formatted_pace;
+                        if (paceToUse && paceToUse !== '-') {
+                            fullCoursePace = {
+                                value: paceToUse,
+                                unit: paceUnit
+                            };
+                            console.log('💾 Saved Full Course pace for Meta:', fullCoursePace);
+                        }
+                        return;  // Skip rendering this row
+                    }
 
                     if (intervalName && formattedTime) {
 
@@ -1307,8 +1322,34 @@
                 }
 
                 // Calculate META pace (average pace from start to finish)
+                // PRIORITY: Use pace from Full Course (net time pace from API)
                 let finishPace = '-';
-                if (participant.pace || participant.formatted_pace) {
+                if (fullCoursePace) {
+                    // Use pace from Full Course split (this is the net time pace)
+                    let paceValue = this.escapeHtml(fullCoursePace.value);
+                    paceValue = this.formatPaceTime(paceValue);
+                    const paceUnit = fullCoursePace.unit || 'min/km';
+
+                    if (paceUnit === 'none' || paceUnit === '-') {
+                        finishPace = '-';
+                    } else if (paceUnit === 'km/h') {
+                        if (paceValue.includes(':')) {
+                            const speed = this.paceToSpeed(paceValue);
+                            finishPace = speed !== '-' ? speed + ' km/h' : '-';
+                        } else {
+                            finishPace = paceValue + ' km/h';
+                        }
+                    } else {
+                        if (paceValue.includes(':')) {
+                            finishPace = paceValue + ' min/km';
+                        } else {
+                            const pace = this.speedToPace(paceValue);
+                            finishPace = pace !== '-' ? pace + ' min/km' : '-';
+                        }
+                    }
+                    console.log('✅ Using Full Course pace for Meta:', finishPace);
+                } else if (participant.pace || participant.formatted_pace) {
+                    // Fallback: use participant pace
                     let paceValue = this.escapeHtml(participant.pace || participant.formatted_pace);
                     paceValue = this.formatPaceTime(paceValue);
 
