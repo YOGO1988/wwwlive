@@ -1247,16 +1247,20 @@
                             positionHtml = position.toString();
 
                             if (previousPosition > 0) {
+                                console.log(`Position trend: current=${position}, previous=${previousPosition}, checkpoint=${intervalName}`);
                                 if (position < previousPosition) {
-                                    // Better position (moved up)
+                                    // Better position (moved up) - LOWER position number is BETTER
                                     const gain = previousPosition - position;
+                                    console.log(`→ BETTER (moved up ${gain} positions) - showing GREEN UP arrow`);
                                     positionHtml += ' <span class="trend-up" title="Awansował o ' + gain + '">▲</span>';
                                 } else if (position > previousPosition) {
-                                    // Worse position (moved down)
+                                    // Worse position (moved down) - HIGHER position number is WORSE
                                     const loss = position - previousPosition;
+                                    console.log(`→ WORSE (moved down ${loss} positions) - showing RED DOWN arrow`);
                                     positionHtml += ' <span class="trend-down" title="Spadł o ' + loss + '">▼</span>';
                                 } else {
                                     // Same position
+                                    console.log(`→ SAME position - showing neutral`);
                                     positionHtml += ' <span class="trend-same">-</span>';
                                 }
                             }

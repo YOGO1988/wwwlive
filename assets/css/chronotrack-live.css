@@ -410,12 +410,12 @@ body.chronotrack-page .container {
     height: 100%;
     overflow: auto;
     background-color: rgba(0,0,0,0.5);
-    padding-top: 60px; /* Reduced padding for better positioning */
+    padding-top: 20px; /* Reduced padding for better positioning */
 }
 
 .chronotrack-modal-content {
     background-color: #fefefe;
-    margin: 20px auto 30px auto; /* Top margin */
+    margin: 10px auto 30px auto; /* Reduced top margin for higher positioning */
     padding: 15px;
     border: 1px solid #888;
     border-radius: 8px;
@@ -775,7 +775,7 @@ body.chronotrack-page .container {
 
     .chronotrack-modal-content {
         width: 95%;
-        margin: 10% auto;
+        margin: 5% auto; /* Reduced top margin for mobile */
         padding: 20px;
     }
 
