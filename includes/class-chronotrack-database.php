@@ -211,7 +211,6 @@ class ChronoTrack_Database {
             'event_id' => sanitize_text_field($event_data['event_id']),
             'event_name' => sanitize_text_field($event_data['event_name']),
             'event_date' => sanitize_text_field($event_data['event_date']),
-            'event_end_time' => !empty($event_data['event_end_time']) ? sanitize_text_field($event_data['event_end_time']) : null,
             'event_location' => sanitize_text_field($event_data['event_location'] ?? ''),
             'event_logo_url' => esc_url_raw($event_data['event_logo_url'] ?? ''),
             'sponsor_logo_url' => esc_url_raw($event_data['sponsor_logo_url'] ?? ''),
@@ -231,7 +230,7 @@ class ChronoTrack_Database {
                 $table,
                 $data,
                 array('event_id' => $data['event_id']),
-                array('%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%s'),  // FIXED: 10 format specifiers for 10 fields
+                array('%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%s'),  // 9 format specifiers for 9 fields
                 array('%s')
             );
             error_log("Event updated: {$data['event_id']} (DB ID: {$existing->id})");
@@ -240,7 +239,7 @@ class ChronoTrack_Database {
             $result = $wpdb->insert(
                 $table,
                 $data,
-                array('%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%s')  // ADDED: format specifiers for INSERT
+                array('%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%s')  // 9 format specifiers for 9 fields
             );
 
             if ($result === false) {
