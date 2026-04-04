@@ -1163,7 +1163,16 @@
                     const intervalName = split.checkpoint_name || split.interval_name;
                     const formattedTime = split.checkpoint_time || split.formatted_time;
                     const position = split.checkpoint_position || split.rank || split.position;
-                    const distanceKm = split.cumulative_distance_km || split.distance_km;
+
+                    // CRITICAL: Try multiple field names for distance (detailed_splits uses cumulative_distance_km)
+                    let distanceKm = parseFloat(split.cumulative_distance_km) || parseFloat(split.distance_km) || 0;
+                    console.log('📏 DISTANCE DEBUG:', {
+                        'checkpoint': intervalName,
+                        'cumulative_distance_km (raw)': split.cumulative_distance_km,
+                        'distance_km (raw)': split.distance_km,
+                        'distanceKm (parsed)': distanceKm
+                    });
+
                     const segmentPace = split.segment_pace;
                     const averagePace = split.average_pace;  // Average pace from start (from API)
                     const paceUnit = split.pace_unit || 'min/km';
@@ -1190,14 +1199,9 @@
 
                         // Distance in separate column
                         let distanceHtml = '-';
-                        if (distanceKm) {
-                            if (typeof distanceKm === 'number' && distanceKm > 0) {
-                                // Numeric value - format it
-                                distanceHtml = distanceKm.toFixed(2) + ' km';
-                            } else if (typeof distanceKm === 'string' && distanceKm !== '-') {
-                                // Already formatted string (e.g., "1.66 km")
-                                distanceHtml = distanceKm;
-                            }
+                        if (distanceKm > 0) {
+                            // Numeric value - format it
+                            distanceHtml = distanceKm.toFixed(2) + ' km';
                         }
 
                         // Use AVERAGE pace from API (pace from start to this checkpoint - results_pace from API)
