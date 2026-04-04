@@ -405,12 +405,13 @@ class ChronoTrack_API {
 
                 foreach ($response['event_intervals'] as $interval) {
                     // Use both possible field names from API (FIXED: interval_iv_name doesn't exist)
-                    $interval_name = $interval['interval_name'] ?? '';
+                    $interval_name = trim($interval['interval_name'] ?? '');
                     $distance_m = intval($interval['interval_iv_distance_m'] ?? 0);
                     $race_name = $interval['race_name'] ?? '';
                     $interval_event_id = $interval['event_id'] ?? $event_id;
 
                     if (!empty($interval_name) && $distance_m > 0) {
+                        // Store with trimmed key for easier matching
                         $intervals_data[$interval_name] = array(
                             'event_id' => $interval_event_id,
                             'race_name' => $race_name,
@@ -649,7 +650,7 @@ class ChronoTrack_API {
                         );
                     }
 
-                    $interval_name = $result['results_interval_name'] ?? '';
+                    $interval_name = trim($result['results_interval_name'] ?? '');
 
                     // Determine if this is main result or split time
                     $is_main_result = false;
@@ -669,7 +670,12 @@ class ChronoTrack_API {
                         if ($all_results_by_bib[$bib]['main_result'] === null) {
                             $all_results_by_bib[$bib]['main_result'] = $result;
                         }
-                    } else {
+                        // ALSO add Full Course as a split time (for Międzyczasy table)
+                        // This allows showing Meta in the splits popup
+                    }
+
+                    // Process as split time (for ALL intervals including Full Course)
+                    if (true) {  // Always process as split, even if also main_result
                         // Split time - use interval metadata for accurate distance
                         $distance_meters = 0;
                         $distance_km_value = 0;
@@ -1043,7 +1049,8 @@ class ChronoTrack_API {
             $split['average_pace'] = $average_pace;  // NEW: average pace from start
             $split['segment_distance_km'] = $segment_distance_km;
             $split['segment_distance_m'] = intval($segment_distance_km * 1000);
-            $split['distance_km'] = $current_distance_km;  // Store cumulative distance
+            $split['cumulative_distance_km'] = $current_distance_km;  // Store cumulative distance as FLOAT (for calculations)
+            // DON'T overwrite $split['distance_km'] - it's already formatted string from fetch_results (e.g., "1.66 km")
             $split['pace_unit'] = $pace_unit;
             $split['show_pace'] = $show_pace;
 

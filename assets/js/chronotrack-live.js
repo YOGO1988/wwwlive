@@ -511,7 +511,7 @@
                               result.athlete_country || result.country_code || result.CountryCode;
             let flagEmoji = '';
             if (countryCode && typeof CountryFlags !== 'undefined') {
-                flagEmoji = CountryFlags.getFlagEmoji(countryCode) || '';
+                flagEmoji = CountryFlags.getFlag(countryCode) || '';
             }
 
             // Use dynamic columns if available
@@ -1040,15 +1040,15 @@
             let html = '<div class="chronotrack-participant-details">';
 
             // Add country flag before name if available
-            let flagEmoji = '';
+            let flagHtml = '';
             if (participant.country && typeof CountryFlags !== 'undefined') {
-                flagEmoji = CountryFlags.getFlagEmoji(participant.country);
-                if (flagEmoji) {
-                    flagEmoji = flagEmoji + ' '; // Add space after flag
+                flagHtml = CountryFlags.getFlag(participant.country);
+                if (flagHtml) {
+                    flagHtml = flagHtml + ' '; // Add space after flag
                 }
             }
 
-            html += '<h2>' + flagEmoji + this.escapeHtml(participant.full_name) + '</h2>';
+            html += '<h2>' + flagHtml + this.escapeHtml(participant.full_name) + '</h2>';
 
             // Event info header
             if (event) {
@@ -1162,9 +1162,11 @@
                     const intervalName = split.checkpoint_name || split.interval_name;
                     const formattedTime = split.checkpoint_time || split.formatted_time;
                     const position = split.checkpoint_position || split.rank || split.position;
-                    const distanceKm = split.distance_km;
+                    const distanceKm = split.cumulative_distance_km || split.distance_km;
                     const segmentPace = split.segment_pace;
+                    const averagePace = split.average_pace;  // Average pace from start (from API)
                     const paceUnit = split.pace_unit || 'min/km';
+                    const showPace = split.show_pace !== 0;  // show_pace = 0 means hide pace
 
                     if (intervalName && formattedTime) {
 
@@ -1173,16 +1175,25 @@
 
                         // Distance in separate column
                         let distanceHtml = '-';
-                        if (distanceKm && distanceKm > 0) {
-                            distanceHtml = distanceKm.toFixed(2) + ' km';
+                        if (distanceKm) {
+                            if (typeof distanceKm === 'number' && distanceKm > 0) {
+                                // Numeric value - format it
+                                distanceHtml = distanceKm.toFixed(2) + ' km';
+                            } else if (typeof distanceKm === 'string' && distanceKm !== '-') {
+                                // Already formatted string (e.g., "1.66 km")
+                                distanceHtml = distanceKm;
+                            }
                         }
 
-                        // Use SEGMENT pace (pace for THIS segment only, not from start)
+                        // Use AVERAGE pace from API (pace from start to this checkpoint - results_pace from API)
+                        // Fallback to segment pace if average not available
                         let paceDisplay = '-';
-                        let paceValue = '-'; // Declare outside if block for later use
-                        if (segmentPace && segmentPace !== '-') {
+                        let paceValue = '-';
+                        const paceToUse = averagePace || segmentPace;  // Prefer average pace from API
+
+                        if (paceToUse && paceToUse !== '-' && showPace) {
                             // Convert HH:MM:SS to MM:SS if needed
-                            paceValue = this.escapeHtml(segmentPace);
+                            paceValue = this.escapeHtml(paceToUse);
                             paceValue = this.formatPaceTime(paceValue);
 
                             // Handle different unit cases
