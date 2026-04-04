@@ -377,6 +377,45 @@ class ChronoTrack_API {
     }
 
     /**
+     * Find interval metadata by name with fuzzy matching
+     * Handles case-insensitive matching and whitespace variations
+     *
+     * @param string $interval_name Interval name to find
+     * @param array $intervals_metadata Array of intervals metadata
+     * @return array|null Interval data or null if not found
+     */
+    private function find_interval_metadata($interval_name, $intervals_metadata) {
+        if (empty($interval_name) || empty($intervals_metadata)) {
+            return null;
+        }
+
+        // 1. Exact match (case-sensitive)
+        if (isset($intervals_metadata[$interval_name])) {
+            return $intervals_metadata[$interval_name];
+        }
+
+        // 2. Case-insensitive match
+        $interval_name_lower = strtolower(trim($interval_name));
+        foreach ($intervals_metadata as $key => $data) {
+            if (strtolower(trim($key)) === $interval_name_lower) {
+                error_log("🔍 Matched '{$interval_name}' to '{$key}' (case-insensitive)");
+                return $data;
+            }
+        }
+
+        // 3. Partial match (interval name contains metadata key or vice versa)
+        foreach ($intervals_metadata as $key => $data) {
+            $key_lower = strtolower(trim($key));
+            if (strpos($interval_name_lower, $key_lower) !== false || strpos($key_lower, $interval_name_lower) !== false) {
+                error_log("🔍 Matched '{$interval_name}' to '{$key}' (partial match)");
+                return $data;
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * Fetch interval metadata from ChronoTrack API
      * This provides accurate distance data (interval_iv_distance_m) for pace calculation
      *
@@ -402,6 +441,15 @@ class ChronoTrack_API {
 
             if ($response && isset($response['event_intervals']) && !empty($response['event_intervals'])) {
                 error_log("ChronoTrack API: Interval metadata page {$page}: " . count($response['event_intervals']) . " intervals");
+
+                // DEBUG: Log first interval to see raw API data
+                static $first_interval_logged = false;
+                if (!$first_interval_logged && !empty($response['event_intervals'])) {
+                    error_log("========== FIRST RAW INTERVAL FROM API ==========");
+                    error_log(print_r($response['event_intervals'][0], true));
+                    error_log("=================================================");
+                    $first_interval_logged = true;
+                }
 
                 foreach ($response['event_intervals'] as $interval) {
                     // Use both possible field names from API (FIXED: interval_iv_name doesn't exist)
@@ -433,9 +481,11 @@ class ChronoTrack_API {
 
         error_log("ChronoTrack API: Found " . count($intervals_data) . " intervals with distance data");
         if (!empty($intervals_data)) {
+            error_log("========== INTERVALS METADATA ==========");
             foreach ($intervals_data as $name => $data) {
-                error_log("📏 Interval metadata: '{$name}' = {$data['distance_m']}m ({$data['distance_km']}km)");
+                error_log("📏 KEY: '" . bin2hex($name) . "' (hex) = '{$name}' | distance: {$data['distance_m']}m ({$data['distance_km']}km)");
             }
+            error_log("========================================");
         }
         return $intervals_data;
     }
@@ -688,11 +738,18 @@ class ChronoTrack_API {
                         $distance_meters = 0;
                         $distance_km_value = 0;
 
+                        // DEBUG: Log the lookup attempt
+                        error_log("🔍 Looking for interval: '" . bin2hex($interval_name) . "' (hex) = '{$interval_name}'");
+                        error_log("🔍 Available in metadata: " . implode(", ", array_map(function($k) { return "'{$k}'"; }, array_keys($intervals_metadata))));
+
                         // Try to get distance from interval metadata first (most accurate - from API)
-                        if (isset($intervals_metadata[$interval_name]) && $intervals_metadata[$interval_name]['distance_m'] > 0) {
-                            $distance_meters = $intervals_metadata[$interval_name]['distance_m'];
-                            $distance_km_value = $intervals_metadata[$interval_name]['distance_km'];
-                            error_log("✅ Using interval metadata for '{$interval_name}': {$distance_meters}m");
+                        $interval_data = $this->find_interval_metadata($interval_name, $intervals_metadata);
+                        if ($interval_data && $interval_data['distance_m'] > 0) {
+                            $distance_meters = $interval_data['distance_m'];
+                            $distance_km_value = $interval_data['distance_km'];
+                            error_log("✅ FOUND in metadata for '{$interval_name}': {$distance_meters}m");
+                        } else {
+                            error_log("❌ NOT FOUND in metadata for '{$interval_name}', trying fallbacks...");
                         }
                         // Fallback: manual distance configuration (from event settings)
                         elseif (isset($manual_distances[$interval_name])) {
@@ -974,8 +1031,9 @@ class ChronoTrack_API {
             $checkpoint_name = $split['checkpoint_name'] ?? '';
 
             // Try intervals_metadata first (preferred - accurate from API)
-            if (!empty($checkpoint_name) && isset($intervals_metadata[$checkpoint_name]) && $intervals_metadata[$checkpoint_name]['distance_km'] > 0) {
-                $current_distance_km = $intervals_metadata[$checkpoint_name]['distance_km'];
+            $checkpoint_interval_data = $this->find_interval_metadata($checkpoint_name, $intervals_metadata);
+            if ($checkpoint_interval_data && $checkpoint_interval_data['distance_km'] > 0) {
+                $current_distance_km = $checkpoint_interval_data['distance_km'];
             }
             // Fallback: manual distance configuration (from event settings)
             elseif (!empty($checkpoint_name) && isset($manual_distances[$checkpoint_name])) {
