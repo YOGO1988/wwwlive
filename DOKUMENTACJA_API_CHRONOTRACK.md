@@ -179,7 +179,14 @@ $all_results_by_bib[$bib] = array(
 ---
 
 ### 1.4. GET /api/event/{event_id}/interval
-**Cel:** Pobranie metadanych punktów pośrednich (dystanse w metrach)
+**Cel:** Pobranie metadanych punktów pośrednich (TYLKO nazwy i dystanse, BEZ wyników!)
+
+**UWAGA:** Ten endpoint NIE zwraca:
+- ❌ `bib` (numerów startowych)
+- ❌ `interval_time` (czasów na punktach)
+- ❌ wyników zawodników
+
+**Czasy międzyczasowe są w:** `/api/event/{event_id}/results` (sekcja 1.3)
 
 **Parametry:**
 ```
@@ -189,7 +196,7 @@ $all_results_by_bib[$bib] = array(
 &size=50
 ```
 
-**Zbierane atrybuty:**
+**Zbierane atrybuty (tylko metadane):**
 ```php
 'interval_name' => nazwa punktu (np. "PK", "PK2")
 'interval_iv_name' => alternatywna nazwa
@@ -205,6 +212,7 @@ $intervals_metadata[$interval_name] = array(
 ```
 
 **Do czego służy:** Obliczanie tempa (pace) na podstawie czasu i dystansu.
+**Wyniki z czasami są w:** sekcja 1.3 - `/api/event/{event_id}/results`
 
 ---
 
