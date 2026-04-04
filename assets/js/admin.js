@@ -6,49 +6,8 @@
     'use strict';
 
     $(document).ready(function() {
-        // Auto-fetch event info from API when Event ID is entered
-        $('#event_id').on('blur', function() {
-            const eventId = $(this).val().trim();
-            if (!eventId || $(this).attr('readonly')) {
-                return;
-            }
-
-            // Check if event name is already filled
-            if ($('#event_name').val().trim()) {
-                return;
-            }
-
-            // Fetch event info from API
-            // NOTE: We can't use chronotrackAdmin.nonce here because it's 'chronotrack_admin',
-            // but we need 'chronotrack_fetch_event_info' nonce. This blur handler is disabled
-            // because the proper flow is to use the "Pobierz z API" button which has the correct nonce.
-            return; // DISABLED: Use the "Pobierz z API" button instead
-
-            $.ajax({
-                url: chronotrackAdmin.ajaxUrl,
-                type: 'POST',
-                data: {
-                    action: 'chronotrack_fetch_event_info',
-                    event_id: eventId,
-                    nonce: chronotrackAdmin.nonce
-                },
-                success: function(response) {
-                    if (response.success && response.data) {
-                        $('#event_name').val(response.data.event_name);
-                        if (response.data.event_date) {
-                            // Convert to datetime-local format
-                            const date = new Date(response.data.event_date);
-                            const formatted = date.toISOString().slice(0, 16);
-                            $('#event_date').val(formatted);
-                        }
-                        alert('Dane wydarzenia pobrane z ChronoTrack API!');
-                    }
-                },
-                error: function() {
-                    console.log('Nie udało się pobrać danych wydarzenia');
-                }
-            });
-        });
+        // Auto-fetch is disabled - use the "Pobierz z API" button instead
+        // The blur handler is removed because it used wrong nonce and caused issues
 
         // Initialize sortable columns
         if ($('.chronotrack-columns-list').length) {

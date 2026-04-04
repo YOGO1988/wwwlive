@@ -211,7 +211,7 @@ class ChronoTrack_Database {
             'event_id' => sanitize_text_field($event_data['event_id']),
             'event_name' => sanitize_text_field($event_data['event_name']),
             'event_date' => sanitize_text_field($event_data['event_date']),
-            'event_end_time' => sanitize_text_field($event_data['event_end_time'] ?? ''),
+            'event_end_time' => !empty($event_data['event_end_time']) ? sanitize_text_field($event_data['event_end_time']) : null,
             'event_location' => sanitize_text_field($event_data['event_location'] ?? ''),
             'event_logo_url' => esc_url_raw($event_data['event_logo_url'] ?? ''),
             'sponsor_logo_url' => esc_url_raw($event_data['sponsor_logo_url'] ?? ''),
