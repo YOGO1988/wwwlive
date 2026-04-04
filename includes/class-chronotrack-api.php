@@ -410,7 +410,10 @@ class ChronoTrack_API {
                     $race_name = $interval['race_name'] ?? '';
                     $interval_event_id = $interval['event_id'] ?? $event_id;
 
-                    if (!empty($interval_name) && $distance_m > 0) {
+                    // FIXED: Store ALL intervals, even with distance=0
+                    // We need to store them so they can be found later,
+                    // and fallback methods (manual_distances, regex) can still work
+                    if (!empty($interval_name)) {
                         // Store with trimmed key for easier matching
                         $intervals_data[$interval_name] = array(
                             'event_id' => $interval_event_id,
@@ -686,24 +689,31 @@ class ChronoTrack_API {
                         $distance_km_value = 0;
 
                         // Try to get distance from interval metadata first (most accurate - from API)
-                        if (isset($intervals_metadata[$interval_name])) {
+                        if (isset($intervals_metadata[$interval_name]) && $intervals_metadata[$interval_name]['distance_m'] > 0) {
                             $distance_meters = $intervals_metadata[$interval_name]['distance_m'];
                             $distance_km_value = $intervals_metadata[$interval_name]['distance_km'];
-                            error_log("Using interval metadata for '{$interval_name}': {$distance_meters}m");
+                            error_log("✅ Using interval metadata for '{$interval_name}': {$distance_meters}m");
                         }
                         // Fallback: manual distance configuration (from event settings)
                         elseif (isset($manual_distances[$interval_name])) {
                             $distance_meters = $manual_distances[$interval_name]['distance_m'];
                             $distance_km_value = $manual_distances[$interval_name]['distance_km'];
-                            error_log("Using MANUAL distance config for '{$interval_name}': {$distance_meters}m");
+                            error_log("✅ Using MANUAL distance config for '{$interval_name}': {$distance_meters}m");
                         }
                         // Fallback: extract from interval name
                         elseif (preg_match('/(\d+)\s*m/', $interval_name, $matches)) {
                             $distance_meters = intval($matches[1]);
                             $distance_km_value = $distance_meters / 1000;
+                            error_log("✅ Using REGEX (meters) for '{$interval_name}': {$distance_meters}m");
                         } elseif (preg_match('/(\d+(?:\.\d+)?)\s*km/', $interval_name, $matches)) {
                             $distance_meters = floatval($matches[1]) * 1000;
                             $distance_km_value = floatval($matches[1]);
+                            error_log("✅ Using REGEX (km) for '{$interval_name}': {$distance_meters}m");
+                        }
+
+                        // Log warning if still no distance
+                        if ($distance_meters == 0) {
+                            error_log("⚠️ No distance found for '{$interval_name}' - pace calculation may be inaccurate");
                         }
 
                         // Format distance for display
@@ -964,7 +974,7 @@ class ChronoTrack_API {
             $checkpoint_name = $split['checkpoint_name'] ?? '';
 
             // Try intervals_metadata first (preferred - accurate from API)
-            if (!empty($checkpoint_name) && isset($intervals_metadata[$checkpoint_name])) {
+            if (!empty($checkpoint_name) && isset($intervals_metadata[$checkpoint_name]) && $intervals_metadata[$checkpoint_name]['distance_km'] > 0) {
                 $current_distance_km = $intervals_metadata[$checkpoint_name]['distance_km'];
             }
             // Fallback: manual distance configuration (from event settings)

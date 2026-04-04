@@ -151,6 +151,23 @@ class ChronoTrack_Admin {
 
         $db = chronotrack_live_results()->db;
 
+        // CRITICAL: Validate required fields
+        $event_id = sanitize_text_field($_POST['event_id']);
+        $event_name = sanitize_text_field($_POST['event_name']);
+        $event_date = sanitize_text_field($_POST['event_date']);
+
+        if (empty($event_id)) {
+            wp_die(__('Event ID is required', 'chronotrack-live'));
+        }
+
+        if (empty($event_name)) {
+            wp_die(__('Event name is required. Please click "Pobierz z API" to fetch event details first.', 'chronotrack-live'));
+        }
+
+        if (empty($event_date)) {
+            wp_die(__('Event date is required. Please click "Pobierz z API" to fetch event details first.', 'chronotrack-live'));
+        }
+
         // Handle logo uploads
         $event_logo_url = '';
         $sponsor_logo_url = '';
@@ -210,9 +227,9 @@ class ChronoTrack_Admin {
         }
 
         $event_data = array(
-            'event_id' => sanitize_text_field($_POST['event_id']),
-            'event_name' => sanitize_text_field($_POST['event_name']),
-            'event_date' => sanitize_text_field($_POST['event_date']),
+            'event_id' => $event_id,
+            'event_name' => $event_name,
+            'event_date' => $event_date,
             'event_location' => sanitize_text_field($_POST['event_location'] ?? ''),
             'event_logo_url' => $event_logo_url,
             'sponsor_logo_url' => $sponsor_logo_url,
@@ -221,25 +238,40 @@ class ChronoTrack_Admin {
         );
 
         // Save event
+        error_log("=== SAVING EVENT: {$event_data['event_id']} ({$event_data['event_name']}) ===");
         $event_db_id = $db->save_event($event_data);
+
+        if (!$event_db_id) {
+            error_log("ERROR: Failed to save event! DB error: " . $wpdb->last_error);
+            wp_die(__('Failed to save event. Please check error logs.', 'chronotrack-live'));
+        }
+
+        error_log("Event saved successfully with DB ID: {$event_db_id}");
 
         // Initialize default columns for new events
         $existing_columns = $db->get_event_columns($event_data['event_id'], false);
         if (empty($existing_columns)) {
+            error_log("Initializing default columns for event {$event_data['event_id']}");
             $db->initialize_default_columns($event_data['event_id']);
         }
 
         // Create or update page
+        error_log("Creating/updating page for event {$event_data['event_id']}");
         $page_id = $this->create_event_page($event_data['event_id'], $event_data['event_name']);
 
         if ($page_id) {
+            error_log("Page created/updated: ID {$page_id}");
             global $wpdb;
             $wpdb->update(
                 $wpdb->prefix . 'chronotrack_events',
                 array('page_id' => $page_id),
                 array('id' => $event_db_id)
             );
+        } else {
+            error_log("WARNING: Failed to create page for event {$event_data['event_id']}");
         }
+
+        error_log("=== EVENT SAVE COMPLETE: Redirecting to events list ===");
 
         wp_redirect(add_query_arg(
             array('page' => 'chronotrack-live', 'message' => 'saved'),

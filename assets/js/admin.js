@@ -19,6 +19,11 @@
             }
 
             // Fetch event info from API
+            // NOTE: We can't use chronotrackAdmin.nonce here because it's 'chronotrack_admin',
+            // but we need 'chronotrack_fetch_event_info' nonce. This blur handler is disabled
+            // because the proper flow is to use the "Pobierz z API" button which has the correct nonce.
+            return; // DISABLED: Use the "Pobierz z API" button instead
+
             $.ajax({
                 url: chronotrackAdmin.ajaxUrl,
                 type: 'POST',

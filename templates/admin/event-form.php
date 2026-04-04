@@ -340,5 +340,20 @@ jQuery(document).ready(function($) {
             }
         });
     });
+
+    // CRITICAL: Validate form before submit (only for new events)
+    <?php if (!$is_edit): ?>
+    $('form').on('submit', function(e) {
+        const eventName = $('#event_name').val().trim();
+        const eventDate = $('#event_date').val().trim();
+
+        if (!eventName || !eventDate) {
+            e.preventDefault();
+            alert('<?php _e('Proszę najpierw kliknąć "Pobierz z API" aby pobrać dane wydarzenia!', 'chronotrack-live'); ?>');
+            $('#event_id').focus();
+            return false;
+        }
+    });
+    <?php endif; ?>
 });
 </script>

@@ -231,12 +231,24 @@ class ChronoTrack_Database {
                 $table,
                 $data,
                 array('event_id' => $data['event_id']),
-                array('%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%s'),
+                array('%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%s'),  // FIXED: 10 format specifiers for 10 fields
                 array('%s')
             );
+            error_log("Event updated: {$data['event_id']} (DB ID: {$existing->id})");
             return $existing->id;
         } else {
-            $wpdb->insert($table, $data);
+            $result = $wpdb->insert(
+                $table,
+                $data,
+                array('%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%s')  // ADDED: format specifiers for INSERT
+            );
+
+            if ($result === false) {
+                error_log("ERROR saving event: " . $wpdb->last_error);
+                return false;
+            }
+
+            error_log("Event created: {$data['event_id']} (DB ID: {$wpdb->insert_id})");
             return $wpdb->insert_id;
         }
     }
