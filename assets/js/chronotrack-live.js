@@ -1142,7 +1142,6 @@
                 html += '<thead>';
                 html += '<tr>';
                 html += '<th>Punkt</th>';
-                html += '<th>Dystans</th>';
                 html += '<th>Czas</th>';
                 html += '<th>Miejsce</th>';
                 html += '<th>Tempo</th>';
@@ -1289,7 +1288,6 @@
 
                         html += '<tr>';
                         html += '<td>' + intervalLabel + '</td>';
-                        html += '<td class="chronotrack-distance">' + distanceHtml + '</td>';
                         html += '<td class="chronotrack-time">' + this.escapeHtml(formattedTime) + '</td>';
                         html += '<td class="chronotrack-position">' + positionHtml + '</td>';
                         html += '<td class="chronotrack-pace">' + paceHtml + '</td>';
@@ -1394,7 +1392,6 @@
 
                 html += '<tr class="chronotrack-finish-row">';
                 html += '<td><strong>Meta</strong></td>';
-                html += '<td class="chronotrack-distance"><strong>' + metaDistanceHtml + '</strong></td>';
                 html += '<td class="chronotrack-time"><strong>' + this.escapeHtml(participant.finish_time) + '</strong></td>';
                 html += '<td class="chronotrack-position"><strong>' + metaPositionHtml + '</strong></td>';
                 html += '<td class="chronotrack-pace"><strong>' + finishPace + '</strong></td>';

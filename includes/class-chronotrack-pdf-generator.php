@@ -582,13 +582,11 @@ class ChronoTrack_PDF_Generator {
                 line-height: 1.2;
             }
             td {
+                text-align: center;
                 padding: 2px 1px;
                 border-top: 0.5px solid #CCCCCC;
                 border-bottom: 0.5px solid #CCCCCC;
                 line-height: 1.3;
-            }
-            td:not([style*="text-align"]) {
-                text-align: center;
             }
             .small-text {
                 font-size: 5.5pt;
@@ -604,26 +602,8 @@ class ChronoTrack_PDF_Generator {
         // Table header with explicit widths
         $html .= '<thead><tr>';
         foreach ($columns as $index => $col) {
-            $column_name = $col->column_name;
-            $column_id = $col->column_id ?? '';
-
-            // CRITICAL: Split column names into two lines for better readability
-            // Split on first space (e.g., "Msc M/K" -> "Msc<br>M/K")
-            if (strpos($column_name, ' ') !== false) {
-                $parts = explode(' ', $column_name, 2); // Split on first space only
-                $column_name = htmlspecialchars($parts[0], ENT_QUOTES, 'UTF-8') . '<br>' .
-                               htmlspecialchars($parts[1], ENT_QUOTES, 'UTF-8');
-            } else {
-                $column_name = htmlspecialchars($column_name, ENT_QUOTES, 'UTF-8');
-            }
-
             $html .= '<th class="col' . $index . '" style="width:' . round($col_widths[$index], 2) . 'mm;">' .
-                     $column_name . '</th>';
-
-            // CRITICAL: Add empty flag column RIGHT AFTER name column (same as HTML version)
-            if ($column_id === 'full_name' || strpos($column_id, 'name') !== false) {
-                $html .= '<th class="col-flag" style="width: 8mm;"></th>';
-            }
+                     htmlspecialchars($col->column_name, ENT_QUOTES, 'UTF-8') . '</th>';
         }
         $html .= '</tr></thead>';
 
@@ -634,19 +614,6 @@ class ChronoTrack_PDF_Generator {
             $row_number++;
             // STRIPED ROWS: odd=white, even=gray
             $bgcolor = ($row_number % 2 == 1) ? '#FFFFFF' : '#F5F5F5';
-
-            // CRITICAL: Get country flag for this athlete (will be added AFTER name column)
-            $country_code = $result->country ?? $result->Country ?? $result->nationality ?? $result->Nationality ??
-                          $result->athlete_country ?? $result->country_code ?? $result->CountryCode ?? '';
-            $flag_emoji = '';
-            if ($country_code) {
-                // Get 2-letter ISO code
-                $iso_code = $this->get_country_code($country_code);
-                if ($iso_code) {
-                    // Convert to flag emoji
-                    $flag_emoji = $this->country_code_to_flag($iso_code);
-                }
-            }
 
             $html .= '<tr nobr="true" bgcolor="' . $bgcolor . '">';
             foreach ($columns as $index => $col) {
@@ -659,54 +626,9 @@ class ChronoTrack_PDF_Generator {
                     $escaped_value = '<span class="small-text">' . $escaped_value . '</span>';
                 }
 
-                // CRITICAL: Gender position column alignment (Msc M/K)
-                // Detect by: column_id, column_name, OR fixed 15mm width
-                $text_align = 'center'; // Default alignment
-                $padding_style = '';
-                $column_id = $col->column_id ?? '';
-                $column_name = $col->column_name ?? '';
-                $is_mk_column = false;
-
-                // Method 1: Check column ID/name
-                if ($column_id === 'gender_position' || $column_id === 'sex_place' || $column_id === 'sex_position' ||
-                    stripos($column_id, 'gender_position') !== false || stripos($column_id, 'sex_place') !== false ||
-                    stripos($column_id, 'm/k') !== false || stripos($column_id, 'k/m') !== false ||
-                    stripos($column_name, 'M/K') !== false || stripos($column_name, 'K/M') !== false) {
-                    $is_mk_column = true;
-                }
-
-                // Method 2: Fallback - check if column width is exactly 15mm (our fixed width)
-                if (!$is_mk_column && round($col_widths[$index], 2) == 15) {
-                    $is_mk_column = true;
-                }
-
-                if ($is_mk_column) {
-                    // Get athlete's gender
-                    $athlete_gender = $result->gender ?? $result->sex ?? $result->athlete_sex ?? '';
-
-                    // FIXED: Correct logic for M/K column alignment
-                    // Men (M) on LEFT side with RIGHT alignment
-                    // Women (K) on RIGHT side with LEFT alignment
-                    if ($athlete_gender === 'M' || $athlete_gender === 'Male' || $athlete_gender === 'Mężczyźni') {
-                        // Men: RIGHT-aligned on LEFT half
-                        $text_align = 'right';
-                        $padding_style = 'padding: 2px 7mm 2px 1mm;';  // More right padding to push left
-                    } else if ($athlete_gender === 'K' || $athlete_gender === 'F' || $athlete_gender === 'Female') {
-                        // Women: LEFT-aligned on RIGHT half
-                        $text_align = 'left';
-                        $padding_style = 'padding: 2px 1mm 2px 7mm;';  // More left padding to push right
-                    }
-                }
-
-                // CRITICAL: Apply same width to data cells as headers + alignment + padding
-                $html .= '<td class="col' . $index . '" style="width:' . round($col_widths[$index], 2) . 'mm; text-align: ' . $text_align . '; ' . $padding_style . '">' .
+                // CRITICAL: Apply same width to data cells as headers
+                $html .= '<td class="col' . $index . '" style="width:' . round($col_widths[$index], 2) . 'mm;">' .
                          $escaped_value . '</td>';
-
-                // CRITICAL: Add flag cell RIGHT AFTER name column (same as HTML version)
-                if ($column_id === 'full_name' || strpos($column_id, 'name') !== false) {
-                    $html .= '<td class="col-flag" style="width: 8mm; text-align: center; font-size: 12pt;">' .
-                             htmlspecialchars($flag_emoji, ENT_QUOTES, 'UTF-8') . '</td>';
-                }
             }
             $html .= '</tr>';
         }
@@ -774,24 +696,6 @@ class ChronoTrack_PDF_Generator {
                 }
             }
 
-            // CRITICAL: Handle birth_year - extract year from date if needed
-            if ($attr === 'birth_year' || $attr === 'birthdate' || $attr === 'athlete_birthdate') {
-                $birth_value = $result->{$attr} ?? $result->birth_year ?? $result->birthdate ?? $result->athlete_birthdate ?? null;
-                if ($birth_value) {
-                    // If it's a full date (YYYY-MM-DD or similar), extract year
-                    if (is_string($birth_value) && strpos($birth_value, '-') !== false) {
-                        $year = explode('-', $birth_value)[0];
-                        if (strlen($year) === 4) {
-                            return $year;
-                        }
-                    }
-                    // If it's already just a year (number or 4-digit string), return it
-                    if (is_numeric($birth_value) || (is_string($birth_value) && strlen($birth_value) === 4)) {
-                        return $birth_value;
-                    }
-                }
-            }
-
             // Handle pace/tempo (formatted_pace or pace_formatted or pace)
             if ($attr === 'formatted_pace' || $attr === 'pace_formatted' || $attr === 'pace') {
                 // Try formatted_pace first
@@ -841,136 +745,17 @@ class ChronoTrack_PDF_Generator {
     }
 
     /**
-     * Convert ISO country code to flag emoji
-     * @param string $country_code Two-letter ISO country code (e.g., 'PL', 'DE')
-     * @return string Flag emoji or empty string
-     */
-    private function country_code_to_flag($country_code) {
-        if (empty($country_code)) {
-            return '';
-        }
-
-        // Normalize to uppercase
-        $country_code = strtoupper($country_code);
-
-        // Validate length
-        if (strlen($country_code) !== 2) {
-            return '';
-        }
-
-        // Convert to regional indicator symbols
-        // A = U+1F1E6, B = U+1F1E7, ..., Z = U+1F1FF
-        // Formula: codepoint = 0x1F1E6 + (letter - 'A')
-        $first_letter = ord($country_code[0]) - ord('A');
-        $second_letter = ord($country_code[1]) - ord('A');
-
-        if ($first_letter < 0 || $first_letter > 25 || $second_letter < 0 || $second_letter > 25) {
-            return '';
-        }
-
-        $first_codepoint = 0x1F1E6 + $first_letter;
-        $second_codepoint = 0x1F1E6 + $second_letter;
-
-        // Convert codepoints to UTF-8
-        return mb_chr($first_codepoint, 'UTF-8') . mb_chr($second_codepoint, 'UTF-8');
-    }
-
-    /**
-     * Get country code from country name
-     * @param string $country_name Full country name (English or Polish)
-     * @return string Two-letter ISO code or empty string
-     */
-    private function get_country_code($country_name) {
-        if (empty($country_name)) {
-            return '';
-        }
-
-        // Mapping of country names to ISO codes (same as country-flags.js)
-        $country_map = array(
-            'Polska' => 'PL', 'Poland' => 'PL',
-            'Germany' => 'DE', 'Niemcy' => 'DE',
-            'United States' => 'US', 'USA' => 'US', 'Stany Zjednoczone' => 'US',
-            'United Kingdom' => 'GB', 'UK' => 'GB', 'Wielka Brytania' => 'GB',
-            'France' => 'FR', 'Francja' => 'FR',
-            'Italy' => 'IT', 'Włochy' => 'IT',
-            'Spain' => 'ES', 'Hiszpania' => 'ES',
-            'Czech Republic' => 'CZ', 'Czechy' => 'CZ',
-            'Slovakia' => 'SK', 'Słowacja' => 'SK',
-            'Ukraine' => 'UA', 'Ukraina' => 'UA',
-            'Belarus' => 'BY', 'Białoruś' => 'BY',
-            'Lithuania' => 'LT', 'Litwa' => 'LT',
-            'Latvia' => 'LV', 'Łotwa' => 'LV',
-            'Estonia' => 'EE', 'Eesti' => 'EE',
-            'Russia' => 'RU', 'Rosja' => 'RU',
-            'Netherlands' => 'NL', 'Holandia' => 'NL',
-            'Belgium' => 'BE', 'Belgia' => 'BE',
-            'Switzerland' => 'CH', 'Szwajcaria' => 'CH',
-            'Austria' => 'AT',
-            'Hungary' => 'HU', 'Węgry' => 'HU',
-            'Romania' => 'RO', 'Rumunia' => 'RO',
-            'Bulgaria' => 'BG', 'Bułgaria' => 'BG',
-            'Sweden' => 'SE', 'Szwecja' => 'SE',
-            'Norway' => 'NO', 'Norwegia' => 'NO',
-            'Denmark' => 'DK', 'Dania' => 'DK',
-            'Finland' => 'FI', 'Finlandia' => 'FI',
-            'Portugal' => 'PT', 'Portugalia' => 'PT',
-            'Greece' => 'GR', 'Grecja' => 'GR',
-            'Ireland' => 'IE', 'Irlandia' => 'IE',
-            'Canada' => 'CA', 'Kanada' => 'CA',
-            'Australia' => 'AU',
-            'New Zealand' => 'NZ', 'Nowa Zelandia' => 'NZ',
-            'Japan' => 'JP', 'Japonia' => 'JP',
-            'China' => 'CN', 'Chiny' => 'CN',
-            'South Korea' => 'KR', 'Korea Południowa' => 'KR',
-            'Brazil' => 'BR', 'Brazylia' => 'BR',
-            'Argentina' => 'AR', 'Argentyna' => 'AR',
-            'Mexico' => 'MX', 'Meksyk' => 'MX',
-            'South Africa' => 'ZA', 'RPA' => 'ZA',
-            'Kenya' => 'KE', 'Kenia' => 'KE',
-            'Ethiopia' => 'ET', 'Etiopia' => 'ET',
-        );
-
-        // Try exact match first
-        if (isset($country_map[$country_name])) {
-            return $country_map[$country_name];
-        }
-
-        // Try case-insensitive match
-        $lower_name = strtolower($country_name);
-        foreach ($country_map as $name => $code) {
-            if (strtolower($name) === $lower_name) {
-                return $code;
-            }
-        }
-
-        // If it's already a 2-letter code, return it
-        if (strlen($country_name) === 2) {
-            return strtoupper($country_name);
-        }
-
-        return '';
-    }
-
-    /**
      * Calculate optimal column widths based on headers
      * Based on logic from generator_offline.py
      */
     private function calculate_column_widths($columns, $available_width) {
         $proportions = array();
-        $fixed_widths = array(); // Store fixed widths for specific columns
 
-        foreach ($columns as $index => $col) {
+        foreach ($columns as $col) {
             $name_lower = strtolower($col->column_name);
 
-            // CRITICAL: Gender position column (M/K) - FIXED width for 6-digit layout
-            if (preg_match('/(m\/k|k\/m)/i', $name_lower) ||
-                ($col->column_id ?? '') === 'gender_position' ||
-                ($col->column_id ?? '') === 'sex_place') {
-                $proportions[] = 0;  // Will be replaced with fixed width
-                $fixed_widths[$index] = 15; // 15mm for 6 digits (~2.5mm per digit)
-            }
             // Numbers and positions - narrow
-            else if (preg_match('/(msc|mce|nr|start|kat)/i', $name_lower)) {
+            if (preg_match('/(msc|mce|nr|start|kat)/i', $name_lower)) {
                 $proportions[] = 0.5;
             }
             // Times, pace, and split times - medium
@@ -992,21 +777,11 @@ class ChronoTrack_PDF_Generator {
         }
 
         // Calculate actual widths
-        // First, subtract fixed widths from available width
-        $total_fixed_width = array_sum($fixed_widths);
-        $remaining_width = $available_width - $total_fixed_width;
-
         $total_proportion = array_sum($proportions);
         $widths = array();
 
-        foreach ($proportions as $index => $proportion) {
-            if (isset($fixed_widths[$index])) {
-                // Use fixed width for specific columns
-                $widths[] = $fixed_widths[$index];
-            } else {
-                // Calculate proportional width from remaining space
-                $widths[] = ($proportion / $total_proportion) * $remaining_width;
-            }
+        foreach ($proportions as $proportion) {
+            $widths[] = ($proportion / $total_proportion) * $available_width;
         }
 
         return $widths;
