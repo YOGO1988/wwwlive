@@ -471,6 +471,18 @@ class ChronoTrack_Database {
         // Insert new splits
         if (!empty($result['split_times']) && is_array($result['split_times'])) {
             foreach ($result['split_times'] as $split) {
+                $cumulative_km = floatval($split['cumulative_distance_km'] ?? ($split['distance_m'] ?? 0) / 1000);
+
+                // DEBUG: Log distance data for first few splits
+                static $split_log_count = 0;
+                if ($split_log_count < 5) {
+                    error_log("💾 SAVING SPLIT: checkpoint='" . ($split['interval_name'] ?? $split['checkpoint_name'] ?? '') .
+                        "' | cumulative_distance_km=" . ($split['cumulative_distance_km'] ?? 'NULL') .
+                        " | distance_m=" . ($split['distance_m'] ?? 'NULL') .
+                        " | FINAL cumulative_km=" . $cumulative_km);
+                    $split_log_count++;
+                }
+
                 $wpdb->insert($splits_table, array(
                     'result_id' => $result_id,
                     'event_id' => sanitize_text_field($event_id),
@@ -484,7 +496,7 @@ class ChronoTrack_Database {
                     'segment_pace' => sanitize_text_field($split['segment_pace'] ?? ''),
                     'average_pace' => sanitize_text_field($split['average_pace'] ?? ''),
                     'segment_distance_km' => floatval($split['segment_distance_km'] ?? 0),
-                    'cumulative_distance_km' => floatval($split['cumulative_distance_km'] ?? ($split['distance_m'] ?? 0) / 1000),
+                    'cumulative_distance_km' => $cumulative_km,
                     'pace_unit' => sanitize_text_field($split['pace_unit'] ?? 'min/km'),
                     'show_pace' => absint($split['show_pace'] ?? 1),
                 ));
