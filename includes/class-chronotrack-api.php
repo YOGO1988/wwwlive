@@ -1630,6 +1630,22 @@ class ChronoTrack_API {
             'przelewice', 'strzałkowo', 'strzalkowo', // Event locations
         );
 
+        // US cities (major cities and states)
+        $us_cities = array(
+            'new york', 'los angeles', 'chicago', 'houston', 'phoenix', 'philadelphia',
+            'san antonio', 'san diego', 'dallas', 'san jose', 'austin', 'jacksonville',
+            'san francisco', 'columbus', 'indianapolis', 'fort worth', 'charlotte',
+            'seattle', 'denver', 'washington', 'boston', 'nashville', 'baltimore',
+            'oklahoma', 'portland', 'las vegas', 'detroit', 'memphis', 'louisville',
+            'milwaukee', 'albuquerque', 'tucson', 'fresno', 'sacramento', 'atlanta',
+            'kansas city', 'miami', 'cleveland', 'virginia beach', 'omaha', 'oakland',
+            'minneapolis', 'tulsa', 'tampa', 'arlington', 'new orleans', 'brooklyn',
+            'manhattan', 'queens', 'bronx', 'staten island', // NYC boroughs
+            // State names
+            'california', 'texas', 'florida', 'new york state', 'pennsylvania',
+            'illinois', 'ohio', 'georgia', 'north carolina', 'michigan',
+        );
+
         // German cities
         $german_cities = array('berlin', 'hamburg', 'münchen', 'munchen', 'köln', 'koln',
             'frankfurt', 'stuttgart', 'düsseldorf', 'dusseldorf', 'dortmund', 'essen', 'leipzig', 'bremen');
@@ -1637,7 +1653,24 @@ class ChronoTrack_API {
         // Czech cities
         $czech_cities = array('praha', 'prague', 'brno', 'ostrava', 'plzeň', 'plzen', 'liberec', 'olomouc');
 
-        // Check for matches
+        // UK cities
+        $uk_cities = array('london', 'manchester', 'birmingham', 'leeds', 'glasgow', 'liverpool',
+            'newcastle', 'sheffield', 'bristol', 'edinburgh', 'leicester', 'coventry');
+
+        // Other European cities
+        $french_cities = array('paris', 'marseille', 'lyon', 'toulouse', 'nice', 'nantes', 'strasbourg');
+        $italian_cities = array('roma', 'rome', 'milano', 'milan', 'napoli', 'naples', 'torino', 'turin', 'firenze', 'florence');
+        $spanish_cities = array('madrid', 'barcelona', 'valencia', 'sevilla', 'seville', 'zaragoza', 'malaga');
+        $dutch_cities = array('amsterdam', 'rotterdam', 'den haag', 'utrecht', 'eindhoven');
+        $ukrainian_cities = array('kyiv', 'kiev', 'kharkiv', 'odessa', 'dnipro', 'lviv');
+
+        // Check for matches (order matters - check US first since it's the most common international)
+        foreach ($us_cities as $us_city) {
+            if (strpos($city_lower, $us_city) !== false) {
+                return 'United States';
+            }
+        }
+
         foreach ($polish_cities as $polish_city) {
             if (strpos($city_lower, $polish_city) !== false) {
                 return 'Poland';
@@ -1647,6 +1680,42 @@ class ChronoTrack_API {
         foreach ($german_cities as $german_city) {
             if (strpos($city_lower, $german_city) !== false) {
                 return 'Germany';
+            }
+        }
+
+        foreach ($uk_cities as $uk_city) {
+            if (strpos($city_lower, $uk_city) !== false) {
+                return 'United Kingdom';
+            }
+        }
+
+        foreach ($french_cities as $french_city) {
+            if (strpos($city_lower, $french_city) !== false) {
+                return 'France';
+            }
+        }
+
+        foreach ($italian_cities as $italian_city) {
+            if (strpos($city_lower, $italian_city) !== false) {
+                return 'Italy';
+            }
+        }
+
+        foreach ($spanish_cities as $spanish_city) {
+            if (strpos($city_lower, $spanish_city) !== false) {
+                return 'Spain';
+            }
+        }
+
+        foreach ($dutch_cities as $dutch_city) {
+            if (strpos($city_lower, $dutch_city) !== false) {
+                return 'Netherlands';
+            }
+        }
+
+        foreach ($ukrainian_cities as $ukrainian_city) {
+            if (strpos($city_lower, $ukrainian_city) !== false) {
+                return 'Ukraine';
             }
         }
 
