@@ -1256,17 +1256,41 @@ class ChronoTrack_API {
             'ET' => 'Ethiopia',
         );
 
-        // SIMPLIFIED LOGIC: Only 2 priorities as per documentation
-        // PRIORITY 1: Entry API - country/nationality from entry
-        $country = $entry['country'] ?? '';
-        $nationality = $entry['nationality'] ?? '';
+        // RESTORED LOGIC: Multiple fallbacks for country/nationality detection
+        // PRIORITY 1: Entry API - try country_name first (most reliable), then country, then results_country
+        $country = $entry['country_name'] ?? $entry['country'] ?? $result['results_country'] ?? '';
 
-        // Convert country code to full name if needed (PL → Poland)
-        if (!empty($country) && isset($country_code_map[$country])) {
-            $country = $country_code_map[$country];
+        // Convert location_country code to name (PL → Poland)
+        if (empty($country) && !empty($entry['location_country'])) {
+            $location_country_code = $entry['location_country'];
+            $country = $country_code_map[$location_country_code] ?? $location_country_code;
         }
 
-        // PRIORITY 2: Parse hometown/city if PRIORITY 1 is empty
+        // PRIORITY 2: Try to extract from results_hometown (e.g., "Września, Poland")
+        // ONLY if country is still empty!
+        if (empty($country) && !empty($result['results_hometown'])) {
+            $hometown_parts = explode(',', $result['results_hometown']);
+            if (count($hometown_parts) > 1) {
+                $last_part = trim($hometown_parts[count($hometown_parts) - 1]);
+                // Only use if it looks like a country name (not a city)
+                // Check if it's in our known countries or is already "Poland" etc.
+                if (in_array($last_part, $country_code_map) || strlen($last_part) <= 2) {
+                    // It's a code or known country
+                    $country = $country_code_map[$last_part] ?? $last_part;
+                } else {
+                    // Likely a country name like "Poland"
+                    $country = $last_part;
+                }
+            }
+        }
+
+        // PRIORITY 3: If still no country, check results_country_code and convert to country name
+        if (empty($country) && !empty($result['results_country_code'])) {
+            $country_code = $result['results_country_code'];
+            $country = $country_code_map[$country_code] ?? '';
+        }
+
+        // PRIORITY 4: Parse from city field (e.g., "Września, Poland")
         if (empty($country) && !empty($city)) {
             // First try: Parse from "City, Country" format
             if (strpos($city, ',') !== false) {
@@ -1290,10 +1314,23 @@ class ChronoTrack_API {
             }
         }
 
-        // If nationality is still empty, use country
+        // Nationality - prefer entry data, fallback to results_nationality, then country
+        $nationality = $entry['nationality'] ?? $result['results_nationality'] ?? '';
         if (empty($nationality) && !empty($country)) {
             $nationality = $country;
         }
+
+        // DEBUG: Log all available country-related fields for diagnostics
+        error_log("COUNTRY DEBUG for BIB {$result['results_bib']}: entry[country_name]=" . ($entry['country_name'] ?? 'NULL') .
+                  ", entry[country]=" . ($entry['country'] ?? 'NULL') .
+                  ", result[results_country]=" . ($result['results_country'] ?? 'NULL') .
+                  ", result[results_country_code]=" . ($result['results_country_code'] ?? 'NULL') .
+                  ", result[results_hometown]=" . ($result['results_hometown'] ?? 'NULL') .
+                  ", entry[location_country]=" . ($entry['location_country'] ?? 'NULL') .
+                  ", entry[nationality]=" . ($entry['nationality'] ?? 'NULL') .
+                  ", result[results_nationality]=" . ($result['results_nationality'] ?? 'NULL') .
+                  ", city={$city}" .
+                  ", FINAL country={$country}, nationality={$nationality}");
 
         // Club - prefer entry data
         $club = $entry['club'] ?? $result['results_club'] ?? '';
