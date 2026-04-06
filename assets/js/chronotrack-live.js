@@ -514,31 +514,9 @@
                 .attr('data-bracket-positions', JSON.stringify(result.bracket_positions || {}));
 
             // Get country flag for separate column (will be added AFTER name column)
-            let countryCode = result.country || result.Country || result.nationality || result.Nationality ||
+            const countryCode = result.country || result.Country || result.nationality || result.Nationality ||
                               result.athlete_country || result.country_code || result.CountryCode;
-
-            // FALLBACK: If no country data, try to parse from city field
-            // Format: "Września, Poland" or "Warsaw, PL"
-            if (!countryCode && result.city && result.city.includes(',')) {
-                const cityParts = result.city.split(',');
-                const lastPart = cityParts[cityParts.length - 1].trim();
-                // Use last part as country (could be full name or code)
-                countryCode = lastPart;
-            }
-
             let flagEmoji = '';
-
-            // DEBUG: Log country data for first few results
-            if (Math.random() < 0.1) {  // Log 10% of results
-                console.log('🏴 Country debug for BIB', result.bib_number, ':', {
-                    country: result.country,
-                    nationality: result.nationality,
-                    city: result.city,
-                    countryCode: countryCode,
-                    full_name: result.full_name
-                });
-            }
-
             if (countryCode && typeof CountryFlags !== 'undefined') {
                 flagEmoji = CountryFlags.getFlag(countryCode) || '';
             }

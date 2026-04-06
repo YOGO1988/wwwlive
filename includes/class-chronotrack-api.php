@@ -1268,7 +1268,7 @@ class ChronoTrack_API {
 
         // PRIORITY 2: Parse hometown/city if PRIORITY 1 is empty
         if (empty($country) && !empty($city)) {
-            // Format: "Września, Poland" or "Warsaw, PL"
+            // First try: Parse from "City, Country" format
             if (strpos($city, ',') !== false) {
                 $parts = explode(',', $city);
                 $last_part = trim($parts[count($parts) - 1]);
@@ -1278,6 +1278,14 @@ class ChronoTrack_API {
                     $country = $country_code_map[$last_part];
                 } else {
                     $country = $last_part; // Already a country name
+                }
+            }
+
+            // Second try: Detect country from city name (e.g., "Strzałkowo" → "Poland")
+            if (empty($country)) {
+                $country = $this->detect_country_from_city($city);
+                if (!empty($country) && empty($nationality)) {
+                    $nationality = $country; // Also set nationality if detected
                 }
             }
         }
@@ -1582,7 +1590,7 @@ class ChronoTrack_API {
             'stargard', 'piła', 'pila', 'głogów', 'glogów', 'gniezno', 'zamość', 'zamosc',
             'pruszków', 'pruszkow', 'racibórz', 'raciborz', 'oświęcim', 'oswiecim',
             'świnoujście', 'swinoujscie', 'stalowa wola', 'mielec', 'kędzierzyn', 'kedzierzyn',
-            'przelewice', // Event location
+            'przelewice', 'strzałkowo', 'strzalkowo', // Event locations
         );
 
         // German cities
