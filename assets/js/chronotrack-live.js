@@ -392,18 +392,27 @@
                     return false;
                 }
 
-                // CRITICAL: Also check status to exclude DNF, DNS, or checkpoint-only participants
-                // Status can be: "Finished", "OK" (finished), "DNF" (did not finish), "DNS" (did not start)
+                // CRITICAL: Check status to exclude DNF, DNS
                 if (r.status && (r.status === 'DNF' || r.status === 'DNS')) {
                     console.log('🚫 Filtering out', r.first_name, r.last_name, 'status:', r.status);
                     return false;
                 }
 
-                // Also check if position exists (finished participants have positions)
-                // People only at checkpoints won't have overall position
+                // Check if position exists (finished participants have positions)
+                // IMPORTANT: This relies on API returning position=0 for checkpoint-only
                 if (!r.position || r.position === 0 || r.position === '0') {
                     console.log('🚫 Filtering out', r.first_name, r.last_name, 'no position (checkpoint only)');
                     return false;
+                }
+
+                // DEBUG: Log first few results to see what data we have
+                if (typeof window.debugFilterCount === 'undefined') {
+                    window.debugFilterCount = 0;
+                }
+                if (window.debugFilterCount < 5) {
+                    console.log('✅ Keeping:', r.first_name, r.last_name,
+                        'pos:', r.position, 'time:', time, 'status:', r.status || 'MISSING');
+                    window.debugFilterCount++;
                 }
 
                 return true;
