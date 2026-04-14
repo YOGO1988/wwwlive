@@ -19,7 +19,7 @@ class ChronoTrack_Database {
      */
     private function maybe_run_migrations() {
         $db_version = get_option('chronotrack_db_version', '0');
-        $current_version = '4.2.0';  // UPDATED: Increment version for birthdate migration
+        $current_version = '4.3.0';  // UPDATED: Increment version for status column migration
 
         if (version_compare($db_version, $current_version, '<')) {
             $this->run_migrations();
@@ -97,6 +97,16 @@ class ChronoTrack_Database {
             $wpdb->query("ALTER TABLE $results_table ADD COLUMN birthdate varchar(50) AFTER club");
             $wpdb->query("ALTER TABLE $results_table ADD COLUMN birth_year varchar(10) AFTER birthdate");
         }
+
+        // Migration 7: Add status column to results table
+        // CRITICAL: Needed to distinguish Finished from DNF/DNS/checkpoint-only
+        $status_exists = $wpdb->get_results(
+            "SHOW COLUMNS FROM $results_table LIKE 'status'"
+        );
+        if (empty($status_exists)) {
+            error_log("Migration: Adding status column to $results_table");
+            $wpdb->query("ALTER TABLE $results_table ADD COLUMN status varchar(50) DEFAULT 'OK' AFTER finish_timestamp");
+        }
     }
 
     /**
@@ -155,7 +165,9 @@ class ChronoTrack_Database {
             net_time varchar(50),
             net_time_seconds int(11),
             split_times text,
+            bracket_positions text,
             finish_timestamp datetime,
+            status varchar(50) DEFAULT 'OK',
             raw_data text,
             created_at datetime DEFAULT CURRENT_TIMESTAMP,
             updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -405,6 +417,7 @@ class ChronoTrack_Database {
                 'split_times' => wp_json_encode($result['split_times'] ?? array()),
                 'bracket_positions' => wp_json_encode($result['bracket_positions'] ?? array()),
                 'finish_timestamp' => $result['finish_timestamp'] ?? current_time('mysql'),
+                'status' => sanitize_text_field($result['status'] ?? 'OK'),  // CRITICAL: Save status (Finished/DNF/DNS)
                 'raw_data' => wp_json_encode($result),
             );
 
@@ -416,19 +429,26 @@ class ChronoTrack_Database {
             ));
 
             if ($existing) {
-                // Update existing result - merge data instead of replacing
+                // CRITICAL FIX: ALWAYS use NEW data from API, don't keep old data
+                // This ensures that manual corrections in ChronoTrack (e.g., adding missing times) are reflected
+                // The old logic kept old data if new was empty, which prevented updates from showing
+
+                // EXCEPTION: Preserve personal data (city, club, country) if not in new data
+                // because these might only be in entries, not in results
                 $existing_data = $wpdb->get_row($wpdb->prepare(
-                    "SELECT * FROM $table WHERE id = %d",
+                    "SELECT city, club, country, nationality, birthdate, birth_year FROM $table WHERE id = %d",
                     $existing->id
                 ), ARRAY_A);
 
-                // Merge: use new data if available, keep old if new is empty
-                foreach ($data as $key => $value) {
-                    if (empty($value) && !empty($existing_data[$key])) {
-                        $data[$key] = $existing_data[$key];
+                // Only preserve personal data if new data is empty
+                $preserve_fields = array('city', 'club', 'country', 'nationality', 'birthdate', 'birth_year');
+                foreach ($preserve_fields as $field) {
+                    if (empty($data[$field]) && !empty($existing_data[$field])) {
+                        $data[$field] = $existing_data[$field];
                     }
                 }
 
+                // For all other fields (times, positions, status), ALWAYS use new data from API
                 $update_result = $wpdb->update(
                     $table,
                     $data,
