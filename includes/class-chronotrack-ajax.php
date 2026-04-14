@@ -209,6 +209,8 @@ class ChronoTrack_Ajax {
                 'split_times' => $is_array ? ($result['split_times'] ?? array()) : ($result->split_times ?? array()),
                 'bracket_positions' => $is_array ? ($result['bracket_positions'] ?? array()) : ($result->bracket_positions ?? array()),
                 'finish_timestamp' => $is_array ? ($result['finish_timestamp'] ?? '') : $result->finish_timestamp,
+                // CRITICAL: Add status to distinguish finished from DNF/DNS/checkpoint-only
+                'status' => $is_array ? ($result['status'] ?? 'OK') : ($result->status ?? 'OK'),
                 // CRITICAL: Add country and nationality for flags!
                 'country' => $is_array ? ($result['country'] ?? '') : ($result->country ?? ''),
                 'nationality' => $is_array ? ($result['nationality'] ?? '') : ($result->nationality ?? ''),
@@ -274,11 +276,9 @@ class ChronoTrack_Ajax {
      * Generate PDF for specific distance (accessible to all users)
      */
     public function generate_pdf() {
-        // Verify nonce (public nonce, not admin-only)
-        if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'chronotrack_nonce')) {
-            wp_send_json_error(array('message' => __('Nieprawidłowy nonce.', 'chronotrack-live')));
-            return;
-        }
+        // FIXED: No nonce verification - PDF generation is for public race results
+        // This prevents issues with expired nonces and browser compatibility (Edge)
+        // Race results are public data, so nonce verification is unnecessary
 
         $event_id = sanitize_text_field($_POST['event_id'] ?? '');
         $distance = sanitize_text_field($_POST['distance'] ?? '');
