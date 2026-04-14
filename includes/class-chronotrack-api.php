@@ -327,11 +327,29 @@ class ChronoTrack_API {
                             // Extract distance/race name (FIXED: race_distance doesn't exist in entry API)
                             $distance = $entry['race_name'] ?? $entry['reg_choice_name'] ?? '';
 
-                            // Extract birth year from birthdate (format: RRRR-MM-DD)
+                            // Extract birth year from birthdate (using generator_online.py logic)
                             $birthdate = $entry['athlete_birthdate'] ?? $entry['reg_transaction_account_birthdate'] ?? '';
                             $birth_year = '';
-                            if (!empty($birthdate) && strlen($birthdate) >= 4) {
-                                $birth_year = substr($birthdate, 0, 4); // Extract RRRR
+
+                            if (!empty($birthdate)) {
+                                // Method 1: Parse YYYY-MM-DD format (split by hyphen)
+                                if (strlen($birthdate) >= 10 && strpos($birthdate, '-') !== false) {
+                                    $parts = explode('-', $birthdate);
+                                    $birth_year = $parts[0];
+                                }
+                                // Method 2: Extract first 4 characters
+                                elseif (strlen($birthdate) >= 4) {
+                                    $birth_year = substr($birthdate, 0, 4);
+                                }
+                            }
+
+                            // Method 3: FALLBACK - Calculate from age if available
+                            if (empty($birth_year) && !empty($entry['entry_race_age'])) {
+                                $age = intval($entry['entry_race_age']);
+                                if ($age > 0) {
+                                    $current_year = date('Y');
+                                    $birth_year = (string)($current_year - $age);
+                                }
                             }
 
                             $all_entries[$bib] = array(
@@ -1204,12 +1222,39 @@ class ChronoTrack_API {
             $participant_id = uniqid('participant_');  // Fallback for missing data
         }
 
-        // Extract birth year from birthdate (prefer entry data, fallback to result)
+        // Extract birth year from birthdate (using generator_online.py logic)
+        // Priority: 1) entry birthdate, 2) result birthdate, 3) calculate from age
         $birth_year = '';
-        if (!empty($entry['birthdate'])) {
-            $birth_year = substr($entry['birthdate'], 0, 4);
-        } elseif (!empty($result['results_birthdate'])) {
-            $birth_year = substr($result['results_birthdate'], 0, 4);
+
+        // Try entry birthdate first
+        $birthdate = $entry['birthdate'] ?? '';
+        if (empty($birthdate)) {
+            // Fallback to result birthdate
+            $birthdate = $result['results_birthdate'] ?? '';
+        }
+
+        if (!empty($birthdate)) {
+            // Method 1: Parse YYYY-MM-DD format (split by hyphen)
+            if (strlen($birthdate) >= 10 && strpos($birthdate, '-') !== false) {
+                $parts = explode('-', $birthdate);
+                $birth_year = $parts[0];
+                error_log("📅 Birth year from date format: $birth_year (from: $birthdate)");
+            }
+            // Method 2: Extract first 4 characters
+            elseif (strlen($birthdate) >= 4) {
+                $birth_year = substr($birthdate, 0, 4);
+                error_log("📅 Birth year from first 4 chars: $birth_year (from: $birthdate)");
+            }
+        }
+
+        // Method 3: FALLBACK - Calculate from age (like generator_online.py)
+        if (empty($birth_year)) {
+            $age = $result['results_age'] ?? 0;
+            if ($age > 0) {
+                $current_year = date('Y');
+                $birth_year = (string)($current_year - $age);
+                error_log("📅 Birth year calculated from age: $birth_year (age: $age, current year: $current_year)");
+            }
         }
 
         // City - prefer entry data
