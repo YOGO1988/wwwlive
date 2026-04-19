@@ -265,7 +265,7 @@
                         this.populateFilters(response.data.results);
                     } else {
                         this.consecutiveErrors++;
-                        this.showError(response.data.message || 'Błąd pobierania wyników');
+                        this.showError((response.data && response.data.message) || 'Błąd pobierania wyników');
                     }
                 },
                 error: (xhr, status, error) => {
@@ -344,8 +344,9 @@
                         console.log('📥 Calling loadResults after API refresh...');
                         this.loadResults(this.currentView);
                     } else {
-                        console.error('❌ API refresh failed:', response.data.message);
-                        this.showError(response.data.message || 'Błąd odświeżania');
+                        const errMsg = (response.data && response.data.message) || 'Błąd odświeżania';
+                        console.error('❌ API refresh failed:', errMsg);
+                        this.showError(errMsg);
                         this.consecutiveErrors++;
                     }
                 },
@@ -1590,13 +1591,15 @@
                     this.showUpcomingMessage(countdownMsg, true);
 
                     // Check every minute if it's time to start
-                    setInterval(() => {
+                    const upcomingInterval = setInterval(() => {
                         const nowCheck = new Date();
                         if (nowCheck >= startTime) {
+                            clearInterval(upcomingInterval);
                             console.log('🚀 Event time reached! Starting auto-refresh...');
-                            location.reload(); // Reload page to start auto-refresh
+                            location.reload();
                         }
-                    }, 60000); // Check every minute
+                    }, 60000);
+                    $(window).one('beforeunload', () => clearInterval(upcomingInterval));
 
                     return;
                 }
@@ -1718,7 +1721,9 @@
         isFinished: function(r) {
             const time = r.finish_time || r.net_time;
             if (!time || time === '-' || time === '00:00:00' || time === '') return false;
-            if (r.status && (r.status === 'DNF' || r.status === 'DNS' || r.status === 'CHECKPOINT')) return false;
+            // Treat null/undefined/empty status as 'OK' to handle old DB records without status column
+            const status = r.status || 'OK';
+            if (status === 'DNF' || status === 'DNS' || status === 'CHECKPOINT') return false;
             if (Number(r.position) <= 0) return false;
             return true;
         },

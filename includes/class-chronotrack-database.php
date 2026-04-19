@@ -456,9 +456,19 @@ class ChronoTrack_Database {
 
             $query_result = $wpdb->query($sql);
             if ($query_result !== false) {
-                $result_id = $wpdb->insert_id; // LAST_INSERT_ID(id) trick ensures correct id for both INSERT and UPDATE
-                $saved_count++;
-                $this->save_split_times($result_id, $event_id, $result);
+                // LAST_INSERT_ID(id) trick returns existing id on UPDATE, new id on INSERT.
+                // Fallback SELECT ensures correctness across all MySQL versions.
+                $result_id = $wpdb->insert_id;
+                if (empty($result_id)) {
+                    $result_id = $wpdb->get_var($wpdb->prepare(
+                        "SELECT id FROM $table WHERE event_id = %s AND bib_number = %s",
+                        $event_id_safe, $bib_number
+                    ));
+                }
+                if ($result_id) {
+                    $saved_count++;
+                    $this->save_split_times($result_id, $event_id, $result);
+                }
             } else {
                 error_log("⚠️ UPSERT FAILED for BIB {$bib_number}: " . $wpdb->last_error);
             }
@@ -477,16 +487,18 @@ class ChronoTrack_Database {
 
         $wpdb->query('START TRANSACTION');
 
-        // Delete existing splits for this result
-        $wpdb->delete($splits_table, array('result_id' => $result_id));
+        $delete_result = $wpdb->delete($splits_table, array('result_id' => $result_id));
+        if ($delete_result === false) {
+            $wpdb->query('ROLLBACK');
+            error_log("⚠️ save_split_times: DELETE failed for result_id={$result_id}: " . $wpdb->last_error);
+            return;
+        }
 
-        // Insert new splits
         if (!empty($result['split_times']) && is_array($result['split_times'])) {
             foreach ($result['split_times'] as $split) {
                 $cumulative_km = floatval($split['cumulative_distance_km'] ?? ($split['distance_m'] ?? 0) / 1000);
 
-
-                $wpdb->insert($splits_table, array(
+                $insert_result = $wpdb->insert($splits_table, array(
                     'result_id' => $result_id,
                     'event_id' => sanitize_text_field($event_id),
                     'participant_id' => sanitize_text_field($result['participant_id'] ?? ''),
@@ -503,6 +515,12 @@ class ChronoTrack_Database {
                     'pace_unit' => sanitize_text_field($split['pace_unit'] ?? 'min/km'),
                     'show_pace' => absint($split['show_pace'] ?? 1),
                 ));
+
+                if ($insert_result === false) {
+                    $wpdb->query('ROLLBACK');
+                    error_log("⚠️ save_split_times: INSERT failed for result_id={$result_id}: " . $wpdb->last_error);
+                    return;
+                }
             }
         }
 
