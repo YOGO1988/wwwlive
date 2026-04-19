@@ -301,7 +301,8 @@ class ChronoTrack_Database {
         ));
 
         if ($event && !empty($event->split_times_config)) {
-            $event->split_times_config = json_decode($event->split_times_config, true);
+            $decoded = json_decode($event->split_times_config, true);
+            $event->split_times_config = ($decoded !== null) ? $decoded : array();
         }
 
         return $event;
@@ -320,7 +321,8 @@ class ChronoTrack_Database {
         ));
 
         if ($event && !empty($event->split_times_config)) {
-            $event->split_times_config = json_decode($event->split_times_config, true);
+            $decoded = json_decode($event->split_times_config, true);
+            $event->split_times_config = ($decoded !== null) ? $decoded : array();
         }
 
         return $event;
@@ -513,6 +515,13 @@ class ChronoTrack_Database {
     public function get_results($event_id, $order_by = 'position', $order = 'ASC', $limit = null) {
         global $wpdb;
         $table = $wpdb->prefix . 'chronotrack_results';
+
+        // Whitelist ORDER BY to prevent SQL injection
+        $allowed_columns = array('position', 'bib_number', 'first_name', 'last_name', 'finish_time', 'net_time', 'finish_timestamp', 'category', 'gender');
+        if (!in_array($order_by, $allowed_columns, true)) {
+            $order_by = 'position';
+        }
+        $order = strtoupper($order) === 'DESC' ? 'DESC' : 'ASC';
 
         $query = $wpdb->prepare(
             "SELECT * FROM $table WHERE event_id = %s ORDER BY $order_by $order",

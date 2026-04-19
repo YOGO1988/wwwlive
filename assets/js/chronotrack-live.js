@@ -891,7 +891,9 @@
                 $('#chronotrack-meta-body') :
                 $('#chronotrack-results-body');
 
-            const thead = tbody.closest('table').find('thead');
+            const tableEl = tbody.closest('table');
+            if (!tableEl || tableEl.length === 0) return;
+            const thead = tableEl.find('thead');
 
             console.log('🔍 Checking split_time column visibility for', this.columns.length, 'columns');
 
@@ -945,7 +947,9 @@
                 $('#chronotrack-meta-body') :
                 $('#chronotrack-results-body');
 
-            const thead = tbody.closest('table').find('thead');
+            const tableEl2 = tbody.closest('table');
+            if (!tableEl2 || tableEl2.length === 0) return;
+            const thead = tableEl2.find('thead');
 
             // Show all split_time columns
             this.columns.forEach((column) => {
