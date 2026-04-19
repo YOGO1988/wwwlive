@@ -221,6 +221,7 @@ class ChronoTrack_Live_Results {
      */
     public function activate() {
         $this->db->create_tables();
+        $this->db->maybe_run_migrations();
         flush_rewrite_rules();
     }
 

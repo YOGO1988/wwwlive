@@ -383,40 +383,8 @@
                 return;
             }
 
-            // CRITICAL: Filter out participants who haven't finished
-            // Only show participants who actually FINISHED (not just at checkpoints)
-            const finishedResults = results.filter(r => {
-                // Check if has finish time/net_time
-                const time = r.finish_time || r.net_time;
-                if (!time || time === '-' || time === '00:00:00' || time === '') {
-                    return false;
-                }
-
-                // CRITICAL: Check status to exclude DNF, DNS
-                if (r.status && (r.status === 'DNF' || r.status === 'DNS')) {
-                    console.log('🚫 Filtering out', r.first_name, r.last_name, 'status:', r.status);
-                    return false;
-                }
-
-                // Check if position exists (finished participants have positions)
-                // IMPORTANT: This relies on API returning position=0 for checkpoint-only
-                if (!r.position || r.position === 0 || r.position === '0') {
-                    console.log('🚫 Filtering out', r.first_name, r.last_name, 'no position (checkpoint only)');
-                    return false;
-                }
-
-                // DEBUG: Log first few results to see what data we have
-                if (typeof window.debugFilterCount === 'undefined') {
-                    window.debugFilterCount = 0;
-                }
-                if (window.debugFilterCount < 5) {
-                    console.log('✅ Keeping:', r.first_name, r.last_name,
-                        'pos:', r.position, 'time:', time, 'status:', r.status || 'MISSING');
-                    window.debugFilterCount++;
-                }
-
-                return true;
-            });
+            // Filter out participants who haven't finished (checkpoint-only, DNF, DNS)
+            const finishedResults = results.filter(r => this.isFinished(r));
 
             console.log('📊 Filtered results:', results.length, '→', finishedResults.length, '(removed', results.length - finishedResults.length, 'without finish)');
 
@@ -433,19 +401,7 @@
                 console.log('🔄 Force rebuild - clearing table and rebuilding in sorted order');
                 tbody.empty();
 
-                // Use FILTERED results (only finished) for display
-                const filteredForDisplay = this.allResults.filter(r => {
-                    const time = r.finish_time || r.net_time;
-                    if (!time || time === '-' || time === '00:00:00' || time === '') return false;
-
-                    // Exclude DNF/DNS
-                    if (r.status && (r.status === 'DNF' || r.status === 'DNS')) return false;
-
-                    // Exclude checkpoint-only (no overall position)
-                    if (!r.position || r.position === 0 || r.position === '0') return false;
-
-                    return true;
-                });
+                const filteredForDisplay = this.allResults.filter(r => this.isFinished(r));
 
                 filteredForDisplay.forEach((result) => {
                     const newRow = this.createResultRow(result);
@@ -1753,6 +1709,16 @@
             $('#chronotrack-timestamp').text('Aktualizacja: ' + timeString);
         },
 
+        // Single source of truth for "did this participant finish?" used by renderResults,
+        // forceRebuild block, and updateStats. Excludes DNF/DNS/CHECKPOINT and position=0.
+        isFinished: function(r) {
+            const time = r.finish_time || r.net_time;
+            if (!time || time === '-' || time === '00:00:00' || time === '') return false;
+            if (r.status && (r.status === 'DNF' || r.status === 'DNS' || r.status === 'CHECKPOINT')) return false;
+            if (Number(r.position) <= 0) return false;
+            return true;
+        },
+
         updateStats: function() {
             if (!this.allResults || this.allResults.length === 0) {
                 // Hide stats if no results
@@ -1768,19 +1734,7 @@
 
             const started = filteredResults.length; // All results for this distance = all who started
 
-            // Count ACTUALLY finished (not just at checkpoints)
-            const finished = filteredResults.filter(r => {
-                const time = r.finish_time || r.net_time;
-                if (!time || time === '-' || time === '00:00:00' || time === '') return false;
-
-                // CRITICAL: Exclude DNF/DNS
-                if (r.status && (r.status === 'DNF' || r.status === 'DNS')) return false;
-
-                // CRITICAL: Exclude checkpoint-only participants (no overall position)
-                if (!r.position || r.position === 0 || r.position === '0') return false;
-
-                return true;
-            }).length;
+            const finished = filteredResults.filter(r => this.isFinished(r)).length;
 
             // On course = started - finished (started but not finished yet)
             const onCourse = started - finished;

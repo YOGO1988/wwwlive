@@ -11,11 +11,16 @@ if (!defined('ABSPATH')) {
 class ChronoTrack_API {
 
     private $api_base = 'https://api.chronotrack.com';
-    private $client_id = '727dae7f';
-    private $user_id = 'lukasz@yogoevents.pl';
-    private $user_pass = 'f2b2f3082a9d2ae5091eb5920bee538dc01bb413';
+    private $client_id;
+    private $user_id;
+    private $user_pass;
 
     public function __construct() {
+        // Load credentials from wp_options (fallback to defaults if not configured)
+        $creds = get_option('chronotrack_api_credentials', array());
+        $this->client_id = $creds['client_id'] ?? '727dae7f';
+        $this->user_id   = $creds['user_id']   ?? 'lukasz@yogoevents.pl';
+        $this->user_pass = $creds['user_pass']  ?? 'f2b2f3082a9d2ae5091eb5920bee538dc01bb413';
         // Schedule automatic refresh for active events
         add_action('chronotrack_auto_refresh', array($this, 'auto_refresh_active_events'));
 
@@ -54,7 +59,9 @@ class ChronoTrack_API {
     private function make_api_request($endpoint, $params = array()) {
         $url = $this->build_api_url($endpoint, $params);
 
-        error_log('ChronoTrack API Request: ' . $endpoint);
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('ChronoTrack API Request: ' . $endpoint);
+        }
 
         $response = wp_remote_get($url, array(
             'timeout' => 30,
@@ -770,10 +777,14 @@ class ChronoTrack_API {
                     if (in_array($interval_name, array('Full Course', 'Finish', '')) || empty($interval_name)) {
                         $is_main_result = true;
                     }
-                    // Fallback: if we don't have a main result yet, accept first result for this BIB
+                    // Fallback: if we don't have a main result yet, accept first result for this BIB.
+                    // Mark as fallback so process_single_result() sets position=0 (checkpoint-only).
                     else if ($all_results_by_bib[$bib]['main_result'] === null) {
                         $is_main_result = true;
-                        error_log("FALLBACK: Using interval_name '{$interval_name}' as main result for BIB {$bib}");
+                        $result['_is_fallback'] = true;
+                        if (defined('WP_DEBUG') && WP_DEBUG) {
+                            error_log("FALLBACK: Using interval_name '{$interval_name}' as main result for BIB {$bib}");
+                        }
                     }
 
                     if ($is_main_result) {
@@ -791,23 +802,16 @@ class ChronoTrack_API {
                         $distance_meters = 0;
                         $distance_km_value = 0;
 
-                        // DEBUG: Log the lookup attempt
-                        error_log("🔍 Looking for interval: '" . bin2hex($interval_name) . "' (hex) = '{$interval_name}'");
-                        error_log("🔍 Available in metadata: " . implode(", ", array_map(function($k) { return "'{$k}'"; }, array_keys($intervals_metadata))));
-
                         // Try to get distance from interval metadata first (most accurate - from API)
                         $interval_data = $this->find_interval_metadata($interval_name, $intervals_metadata);
                         if ($interval_data && $interval_data['distance_m'] > 0) {
                             $distance_meters = $interval_data['distance_m'];
                             $distance_km_value = $interval_data['distance_km'];
-                            error_log("✅ FOUND in metadata for '{$interval_name}': {$distance_meters}m");
                         }
-                        // NEW FALLBACK: Check if result itself contains distance data
+                        // Check if result itself contains distance data
                         elseif (isset($result['interval_iv_distance_m']) && intval($result['interval_iv_distance_m']) > 0) {
                             $distance_meters = intval($result['interval_iv_distance_m']);
                             $distance_km_value = $distance_meters / 1000;
-                            error_log("✅ Using RESULT distance data for '{$interval_name}': {$distance_meters}m (from result record)");
-                            // Also populate intervals_metadata for future use
                             if (!isset($intervals_metadata[$interval_name])) {
                                 $intervals_metadata[$interval_name] = array(
                                     'interval_name' => $interval_name,
@@ -820,22 +824,14 @@ class ChronoTrack_API {
                         elseif (isset($manual_distances[$interval_name])) {
                             $distance_meters = $manual_distances[$interval_name]['distance_m'];
                             $distance_km_value = $manual_distances[$interval_name]['distance_km'];
-                            error_log("✅ Using MANUAL distance config for '{$interval_name}': {$distance_meters}m");
                         }
                         // Fallback: extract from interval name
                         elseif (preg_match('/(\d+)\s*m/', $interval_name, $matches)) {
                             $distance_meters = intval($matches[1]);
                             $distance_km_value = $distance_meters / 1000;
-                            error_log("✅ Using REGEX (meters) for '{$interval_name}': {$distance_meters}m");
                         } elseif (preg_match('/(\d+(?:\.\d+)?)\s*km/', $interval_name, $matches)) {
                             $distance_meters = floatval($matches[1]) * 1000;
                             $distance_km_value = floatval($matches[1]);
-                            error_log("✅ Using REGEX (km) for '{$interval_name}': {$distance_meters}m");
-                        }
-
-                        // Log warning if still no distance
-                        if ($distance_meters == 0) {
-                            error_log("⚠️ No distance found for '{$interval_name}' - pace calculation may be inaccurate");
                         }
 
                         // Format distance for display
@@ -854,14 +850,10 @@ class ChronoTrack_API {
                         $pace_unit = 'min/km';
 
                         if (!empty($result['results_pace'])) {
-                            // Use pace from API directly - it's already calculated correctly
                             $pace = $this->format_pace($result['results_pace']);
                             $pace_unit = $result['results_pace_unit'] ?? 'min/km';
-                            error_log("✅ Using API pace for '{$interval_name}': {$pace} {$pace_unit}");
                         } else {
-                            // Only calculate pace if API didn't provide it
                             $pace = $this->calculate_pace($result['results_time'] ?? '', $distance_km_value);
-                            error_log("⚠️ Calculated pace for '{$interval_name}': {$pace} (API pace was missing, distance_km={$distance_km_value})");
                         }
 
                         $split_data = array(
@@ -1132,7 +1124,7 @@ class ChronoTrack_API {
             if (!empty($split['pace']) && $split['pace'] !== '-') {
                 // Use API pace directly - it's the average pace from start to this checkpoint
                 $average_pace = $split['pace'];
-                error_log("Using API pace for checkpoint '{$checkpoint_name}': {$average_pace}");
+                if (defined('WP_DEBUG') && WP_DEBUG) error_log("Using API pace for checkpoint '{$checkpoint_name}': {$average_pace}");
 
                 // For segment pace, calculate only if we have valid data
                 if ($segment_distance_km > 0 && $segment_time_seconds > 0) {
@@ -1238,12 +1230,12 @@ class ChronoTrack_API {
             if (strlen($birthdate) >= 10 && strpos($birthdate, '-') !== false) {
                 $parts = explode('-', $birthdate);
                 $birth_year = $parts[0];
-                error_log("📅 Birth year from date format: $birth_year (from: $birthdate)");
+                if (defined('WP_DEBUG') && WP_DEBUG) error_log("📅 Birth year from date format: $birth_year");
             }
             // Method 2: Extract first 4 characters
             elseif (strlen($birthdate) >= 4) {
                 $birth_year = substr($birthdate, 0, 4);
-                error_log("📅 Birth year from first 4 chars: $birth_year (from: $birthdate)");
+                if (defined('WP_DEBUG') && WP_DEBUG) error_log("📅 Birth year from first 4 chars: $birth_year");
             }
         }
 
@@ -1253,7 +1245,7 @@ class ChronoTrack_API {
             if ($age > 0) {
                 $current_year = date('Y');
                 $birth_year = (string)($current_year - $age);
-                error_log("📅 Birth year calculated from age: $birth_year (age: $age, current year: $current_year)");
+                if (defined('WP_DEBUG') && WP_DEBUG) error_log("📅 Birth year calculated from age: $birth_year");
             }
         }
 
@@ -1365,17 +1357,10 @@ class ChronoTrack_API {
             $nationality = $country;
         }
 
-        // DEBUG: Log all available country-related fields for diagnostics
-        error_log("COUNTRY DEBUG for BIB {$result['results_bib']}: entry[country_name]=" . ($entry['country_name'] ?? 'NULL') .
-                  ", entry[country]=" . ($entry['country'] ?? 'NULL') .
-                  ", result[results_country]=" . ($result['results_country'] ?? 'NULL') .
-                  ", result[results_country_code]=" . ($result['results_country_code'] ?? 'NULL') .
-                  ", result[results_hometown]=" . ($result['results_hometown'] ?? 'NULL') .
-                  ", entry[location_country]=" . ($entry['location_country'] ?? 'NULL') .
-                  ", entry[nationality]=" . ($entry['nationality'] ?? 'NULL') .
-                  ", result[results_nationality]=" . ($result['results_nationality'] ?? 'NULL') .
-                  ", city={$city}" .
-                  ", FINAL country={$country}, nationality={$nationality}");
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log("COUNTRY DEBUG for BIB {$result['results_bib']}: entry[country_name]=" . ($entry['country_name'] ?? 'NULL') .
+                      ", FINAL country={$country}, nationality={$nationality}");
+        }
 
         // Club - prefer entry data
         $club = $entry['club'] ?? $result['results_club'] ?? '';
@@ -1450,9 +1435,10 @@ class ChronoTrack_API {
             'category' => $category_name,
             'bracket_name' => $category_name,  // Alternative
             'results_primary_bracket_name' => $category_name,  // Alternative
-            'position' => $result['results_rank'] ?? 0,
-            'overall_place' => $result['results_rank'] ?? 0,  // Alternative
-            'results_rank' => $result['results_rank'] ?? 0,  // Alternative
+            // Checkpoint-only fallback results get position=0 so JS filter excludes them from the table
+            'position' => ($result['_is_fallback'] ?? false) ? 0 : ($result['results_rank'] ?? 0),
+            'overall_place' => ($result['_is_fallback'] ?? false) ? 0 : ($result['results_rank'] ?? 0),
+            'results_rank' => ($result['_is_fallback'] ?? false) ? 0 : ($result['results_rank'] ?? 0),
             'category_position' => $category_position,
             'division_place' => $category_position,  // Alternative
             'results_division_rank' => $category_position,  // Alternative
@@ -1472,7 +1458,7 @@ class ChronoTrack_API {
             'split_times' => $split_times,
             'bracket_positions' => $bracket_positions,  // All bracket/category positions (bracket_name => position)
             'finish_timestamp' => current_time('mysql'),
-            'status' => $result['results_status'] ?? 'OK',
+            'status' => ($result['_is_fallback'] ?? false) ? 'CHECKPOINT' : ($result['results_status'] ?? 'OK'),
         );
     }
 

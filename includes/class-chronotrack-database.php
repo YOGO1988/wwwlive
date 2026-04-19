@@ -15,11 +15,11 @@ class ChronoTrack_Database {
     }
 
     /**
-     * Run database migrations if needed
+     * Run database migrations if needed (public so activate() can call it)
      */
-    private function maybe_run_migrations() {
+    public function maybe_run_migrations() {
         $db_version = get_option('chronotrack_db_version', '0');
-        $current_version = '4.3.0';  // UPDATED: Increment version for status column migration
+        $current_version = '5.0.0';  // Bumped to 5.0.0 to force re-run on installs missing status column
 
         if (version_compare($db_version, $current_version, '<')) {
             $this->run_migrations();
@@ -378,99 +378,87 @@ class ChronoTrack_Database {
         error_log("After deduplication: " . count($deduplicated) . " unique BIBs");
 
         $saved_count = 0;
-        $first_logged = false;
         foreach ($deduplicated as $result) {
-            // Debug first result
-            if (!$first_logged) {
-                error_log("========== FIRST RESULT TO SAVE ==========");
-                error_log("BIB: " . ($result['bib_number'] ?? 'NULL'));
-                error_log("Name: " . ($result['first_name'] ?? '') . ' ' . ($result['last_name'] ?? ''));
-                error_log("Position: " . ($result['position'] ?? 'NULL'));
-                error_log("Finish time: " . ($result['finish_time'] ?? 'NULL'));
-                error_log("==========================================");
-                $first_logged = true;
-            }
+            $bib_number = sanitize_text_field($result['bib_number'] ?? '');
+            $event_id_safe = sanitize_text_field($event_id);
 
-            $data = array(
-                'event_id' => sanitize_text_field($event_id),
-                'participant_id' => sanitize_text_field($result['participant_id'] ?? ''),
-                'bib_number' => sanitize_text_field($result['bib_number'] ?? ''),
-                'first_name' => sanitize_text_field($result['first_name'] ?? ''),
-                'last_name' => sanitize_text_field($result['last_name'] ?? ''),
-                'age' => absint($result['age'] ?? 0),
-                'gender' => sanitize_text_field($result['gender'] ?? ''),
-                'city' => sanitize_text_field($result['city'] ?? ''),
-                'country' => sanitize_text_field($result['country'] ?? ''),
-                'nationality' => sanitize_text_field($result['nationality'] ?? ''),
-                'club' => sanitize_text_field($result['club'] ?? ''),
-                'birthdate' => sanitize_text_field($result['birthdate'] ?? ''),  // NEW: Save birthdate
-                'birth_year' => sanitize_text_field($result['birth_year'] ?? ''),  // NEW: Save birth_year
-                'distance' => sanitize_text_field($result['distance'] ?? ''),
-                'category' => sanitize_text_field($result['category'] ?? ''),
-                'position' => absint($result['position'] ?? 0),
-                'category_position' => absint($result['category_position'] ?? 0),
-                'gender_position' => absint($result['gender_position'] ?? 0),
-                'finish_time' => sanitize_text_field($result['finish_time'] ?? ''),
-                'finish_time_seconds' => absint($result['finish_time_seconds'] ?? 0),
-                'net_time' => sanitize_text_field($result['net_time'] ?? ''),
-                'net_time_seconds' => absint($result['net_time_seconds'] ?? 0),
-                'split_times' => wp_json_encode($result['split_times'] ?? array()),
-                'bracket_positions' => wp_json_encode($result['bracket_positions'] ?? array()),
-                'finish_timestamp' => $result['finish_timestamp'] ?? current_time('mysql'),
-                'status' => sanitize_text_field($result['status'] ?? 'OK'),  // CRITICAL: Save status (Finished/DNF/DNS)
-                'raw_data' => wp_json_encode($result),
+            // Use INSERT ... ON DUPLICATE KEY UPDATE for atomic upsert (fixes race condition).
+            // Personal fields (city, club, country, etc.) use COALESCE so existing values are
+            // preserved when the new value is empty (happens in live/results-only mode).
+            $sql = $wpdb->prepare(
+                "INSERT INTO `$table`
+                    (`event_id`, `participant_id`, `bib_number`, `first_name`, `last_name`,
+                     `age`, `gender`, `city`, `country`, `nationality`, `club`,
+                     `birthdate`, `birth_year`, `distance`, `category`,
+                     `position`, `category_position`, `gender_position`,
+                     `finish_time`, `finish_time_seconds`, `net_time`, `net_time_seconds`,
+                     `split_times`, `bracket_positions`, `finish_timestamp`, `status`, `raw_data`)
+                VALUES
+                    (%s, %s, %s, %s, %s, %d, %s, %s, %s, %s, %s, %s, %s, %s, %s,
+                     %d, %d, %d, %s, %d, %s, %d, %s, %s, %s, %s, %s)
+                ON DUPLICATE KEY UPDATE
+                    `id`                = LAST_INSERT_ID(`id`),
+                    `participant_id`    = VALUES(`participant_id`),
+                    `first_name`        = VALUES(`first_name`),
+                    `last_name`         = VALUES(`last_name`),
+                    `age`               = VALUES(`age`),
+                    `gender`            = VALUES(`gender`),
+                    `city`              = COALESCE(NULLIF(VALUES(`city`), ''), `city`),
+                    `country`           = COALESCE(NULLIF(VALUES(`country`), ''), `country`),
+                    `nationality`       = COALESCE(NULLIF(VALUES(`nationality`), ''), `nationality`),
+                    `club`              = COALESCE(NULLIF(VALUES(`club`), ''), `club`),
+                    `birthdate`         = COALESCE(NULLIF(VALUES(`birthdate`), ''), `birthdate`),
+                    `birth_year`        = COALESCE(NULLIF(VALUES(`birth_year`), ''), `birth_year`),
+                    `distance`          = VALUES(`distance`),
+                    `category`          = VALUES(`category`),
+                    `position`          = VALUES(`position`),
+                    `category_position` = VALUES(`category_position`),
+                    `gender_position`   = VALUES(`gender_position`),
+                    `finish_time`       = VALUES(`finish_time`),
+                    `finish_time_seconds` = VALUES(`finish_time_seconds`),
+                    `net_time`          = VALUES(`net_time`),
+                    `net_time_seconds`  = VALUES(`net_time_seconds`),
+                    `split_times`       = VALUES(`split_times`),
+                    `bracket_positions` = VALUES(`bracket_positions`),
+                    `finish_timestamp`  = VALUES(`finish_timestamp`),
+                    `status`            = VALUES(`status`),
+                    `raw_data`          = VALUES(`raw_data`)",
+                $event_id_safe,
+                sanitize_text_field($result['participant_id'] ?? ''),
+                $bib_number,
+                sanitize_text_field($result['first_name'] ?? ''),
+                sanitize_text_field($result['last_name'] ?? ''),
+                absint($result['age'] ?? 0),
+                sanitize_text_field($result['gender'] ?? ''),
+                sanitize_text_field($result['city'] ?? ''),
+                sanitize_text_field($result['country'] ?? ''),
+                sanitize_text_field($result['nationality'] ?? ''),
+                sanitize_text_field($result['club'] ?? ''),
+                sanitize_text_field($result['birthdate'] ?? ''),
+                sanitize_text_field($result['birth_year'] ?? ''),
+                sanitize_text_field($result['distance'] ?? ''),
+                sanitize_text_field($result['category'] ?? ''),
+                absint($result['position'] ?? 0),
+                absint($result['category_position'] ?? 0),
+                absint($result['gender_position'] ?? 0),
+                sanitize_text_field($result['finish_time'] ?? ''),
+                absint($result['finish_time_seconds'] ?? 0),
+                sanitize_text_field($result['net_time'] ?? ''),
+                absint($result['net_time_seconds'] ?? 0),
+                wp_json_encode($result['split_times'] ?? array()),
+                wp_json_encode($result['bracket_positions'] ?? array()),
+                $result['finish_timestamp'] ?? current_time('mysql'),
+                sanitize_text_field($result['status'] ?? 'OK'),
+                wp_json_encode($result)
             );
 
-            // Check if result exists by bib_number (unique per event)
-            $existing = $wpdb->get_row($wpdb->prepare(
-                "SELECT id FROM $table WHERE event_id = %s AND bib_number = %s",
-                $data['event_id'],
-                $data['bib_number']
-            ));
-
-            if ($existing) {
-                // CRITICAL FIX: ALWAYS use NEW data from API, don't keep old data
-                // This ensures that manual corrections in ChronoTrack (e.g., adding missing times) are reflected
-                // The old logic kept old data if new was empty, which prevented updates from showing
-
-                // EXCEPTION: Preserve personal data (city, club, country) if not in new data
-                // because these might only be in entries, not in results
-                $existing_data = $wpdb->get_row($wpdb->prepare(
-                    "SELECT city, club, country, nationality, birthdate, birth_year FROM $table WHERE id = %d",
-                    $existing->id
-                ), ARRAY_A);
-
-                // Only preserve personal data if new data is empty
-                $preserve_fields = array('city', 'club', 'country', 'nationality', 'birthdate', 'birth_year');
-                foreach ($preserve_fields as $field) {
-                    if (empty($data[$field]) && !empty($existing_data[$field])) {
-                        $data[$field] = $existing_data[$field];
-                    }
-                }
-
-                // For all other fields (times, positions, status), ALWAYS use new data from API
-                $update_result = $wpdb->update(
-                    $table,
-                    $data,
-                    array('id' => $existing->id)
-                );
-                if ($update_result !== false) {
-                    $saved_count++;
-                    // Save split times to splits table
-                    $this->save_split_times($existing->id, $event_id, $result);
-                } else {
-                    error_log("⚠️ UPDATE FAILED for BIB {$data['bib_number']}: " . $wpdb->last_error);
-                }
+            $query_result = $wpdb->query($sql);
+            if ($query_result !== false) {
+                $result_id = $wpdb->insert_id; // LAST_INSERT_ID(id) trick ensures correct id for both INSERT and UPDATE
+                $saved_count++;
+                $this->save_split_times($result_id, $event_id, $result);
             } else {
-                $insert_result = $wpdb->insert($table, $data);
-                if ($insert_result !== false) {
-                    $result_id = $wpdb->insert_id;
-                    $saved_count++;
-                    // Save split times to splits table
-                    $this->save_split_times($result_id, $event_id, $result);
-                } else {
-                    error_log("⚠️ INSERT FAILED for BIB {$data['bib_number']}: " . $wpdb->last_error);
-                }
+                error_log("⚠️ UPSERT FAILED for BIB {$bib_number}: " . $wpdb->last_error);
             }
         }
 
@@ -479,11 +467,13 @@ class ChronoTrack_Database {
     }
 
     /**
-     * Save split times to splits table
+     * Save split times to splits table (wrapped in transaction for atomicity)
      */
     private function save_split_times($result_id, $event_id, $result) {
         global $wpdb;
         $splits_table = $wpdb->prefix . 'chronotrack_splits';
+
+        $wpdb->query('START TRANSACTION');
 
         // Delete existing splits for this result
         $wpdb->delete($splits_table, array('result_id' => $result_id));
@@ -493,15 +483,6 @@ class ChronoTrack_Database {
             foreach ($result['split_times'] as $split) {
                 $cumulative_km = floatval($split['cumulative_distance_km'] ?? ($split['distance_m'] ?? 0) / 1000);
 
-                // DEBUG: Log distance data for first few splits
-                static $split_log_count = 0;
-                if ($split_log_count < 5) {
-                    error_log("💾 SAVING SPLIT: checkpoint='" . ($split['interval_name'] ?? $split['checkpoint_name'] ?? '') .
-                        "' | cumulative_distance_km=" . ($split['cumulative_distance_km'] ?? 'NULL') .
-                        " | distance_m=" . ($split['distance_m'] ?? 'NULL') .
-                        " | FINAL cumulative_km=" . $cumulative_km);
-                    $split_log_count++;
-                }
 
                 $wpdb->insert($splits_table, array(
                     'result_id' => $result_id,
@@ -522,6 +503,8 @@ class ChronoTrack_Database {
                 ));
             }
         }
+
+        $wpdb->query('COMMIT');
     }
 
     /**
