@@ -1741,16 +1741,26 @@
                 filteredResults = this.allResults.filter(r => r.distance === this.selectedDistance);
             }
 
-            const started = filteredResults.length; // All results for this distance = all who started
-
             const finished = filteredResults.filter(r => this.isFinished(r)).length;
 
-            // On course = started - finished (started but not finished yet)
-            const onCourse = started - finished;
+            // Check if event is completed - if so, anyone not finished = DNF (not "on course")
+            const eventStatus = chronotrackData.eventStatus || 'live';
+            let started, onCourse;
 
-            console.log('📊 Stats calculated for distance "' + (this.selectedDistance || 'ALL') + '":', {started, finished, onCourse});
+            if (eventStatus === 'completed') {
+                // Event finished - only count finishers, no "on course"
+                started = finished;  // Only finishers count as starters
+                onCourse = 0;        // No one is "on course" after event ends
+                console.log('🏁 Event completed - showing only finishers, treating non-finishers as DNF');
+            } else {
+                // Event live/upcoming - normal calculation
+                started = filteredResults.length;
+                onCourse = started - finished;
+            }
 
-            // Update UI - changed from stat-registered to stat-started
+            console.log('📊 Stats calculated for distance "' + (this.selectedDistance || 'ALL') + '":', {started, finished, onCourse, eventStatus});
+
+            // Update UI
             $('#stat-started').text(started);
             $('#stat-on-course').text(onCourse);
             $('#stat-finished').text(finished);

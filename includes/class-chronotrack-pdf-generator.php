@@ -160,9 +160,31 @@ class ChronoTrack_PDF_Generator {
             return new WP_Error('no_results', __('No results found for this event.', 'chronotrack-live'));
         }
 
-        // Filter by distance
+        // Filter by distance AND exclude non-finishers (same logic as website isFinished())
         $filtered_results = array_filter($results, function($result) use ($distance) {
-            return isset($result->distance) && $result->distance === $distance;
+            // Must match distance
+            if (!isset($result->distance) || $result->distance !== $distance) {
+                return false;
+            }
+
+            // Must have valid finish time
+            $time = $result->finish_time ?? $result->net_time ?? '';
+            if (empty($time) || $time === '-' || $time === '00:00:00') {
+                return false;
+            }
+
+            // Must NOT be DNF/DNS/CHECKPOINT
+            $status = $result->status ?? 'OK';
+            if (in_array($status, array('DNF', 'DNS', 'CHECKPOINT'), true)) {
+                return false;
+            }
+
+            // Must have position > 0
+            if (empty($result->position) || $result->position <= 0) {
+                return false;
+            }
+
+            return true;
         });
 
         if (empty($filtered_results)) {
@@ -294,9 +316,31 @@ class ChronoTrack_PDF_Generator {
             return new WP_Error('no_results', __('No results found for this event.', 'chronotrack-live'));
         }
 
-        // Filter by distance
+        // Filter by distance AND exclude non-finishers (same logic as website isFinished())
         $filtered_results = array_filter($results, function($result) use ($distance) {
-            return isset($result->distance) && $result->distance === $distance;
+            // Must match distance
+            if (!isset($result->distance) || $result->distance !== $distance) {
+                return false;
+            }
+
+            // Must have valid finish time
+            $time = $result->finish_time ?? $result->net_time ?? '';
+            if (empty($time) || $time === '-' || $time === '00:00:00') {
+                return false;
+            }
+
+            // Must NOT be DNF/DNS/CHECKPOINT
+            $status = $result->status ?? 'OK';
+            if (in_array($status, array('DNF', 'DNS', 'CHECKPOINT'), true)) {
+                return false;
+            }
+
+            // Must have position > 0
+            if (empty($result->position) || $result->position <= 0) {
+                return false;
+            }
+
+            return true;
         });
 
         if (empty($filtered_results)) {
